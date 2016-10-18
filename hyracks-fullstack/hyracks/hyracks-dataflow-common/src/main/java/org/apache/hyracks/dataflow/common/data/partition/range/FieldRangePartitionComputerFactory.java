@@ -22,9 +22,9 @@ import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.dataflow.value.IBinaryComparator;
 import org.apache.hyracks.api.dataflow.value.IBinaryRangeComparatorFactory;
 import org.apache.hyracks.api.dataflow.value.IRangeMap;
+import org.apache.hyracks.api.dataflow.value.IRangePartitionType.RangePartitioningType;
 import org.apache.hyracks.api.dataflow.value.ITupleRangePartitionComputer;
 import org.apache.hyracks.api.dataflow.value.ITupleRangePartitionComputerFactory;
-import org.apache.hyracks.api.dataflow.value.IRangePartitionType.RangePartitioningType;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.api.storage.IGrowableIntArray;
 
@@ -41,6 +41,7 @@ public class FieldRangePartitionComputerFactory implements ITupleRangePartitionC
         this.rangeType = rangeType;
     }
 
+    @Override
     public ITupleRangePartitionComputer createPartitioner(IRangeMap rangeMap) {
         final IBinaryComparator[] minComparators = new IBinaryComparator[comparatorFactories.length];
         for (int i = 0; i < comparatorFactories.length; ++i) {
@@ -54,6 +55,7 @@ public class FieldRangePartitionComputerFactory implements ITupleRangePartitionC
             private int partionCount;
             private double rangesPerPart = 1;
 
+            @Override
             public void partition(IFrameTupleAccessor accessor, int tIndex, int nParts, IGrowableIntArray map)
                     throws HyracksDataException {
                 if (nParts == 1) {
@@ -75,38 +77,29 @@ public class FieldRangePartitionComputerFactory implements ITupleRangePartitionC
              */
             private void getRangePartitions(IFrameTupleAccessor accessor, int tIndex, IGrowableIntArray map)
                     throws HyracksDataException {
+                int minPartition = getPartitionMap(binarySearchRangePartition(accessor, tIndex, minComparators));
+                int maxPartition = getPartitionMap(binarySearchRangePartition(accessor, tIndex, maxComparators));
                 switch (rangeType) {
-                    case PROJECT: {
-                        int minPartition = getPartitionMap(
-                                binarySearchRangePartition(accessor, tIndex, minComparators));
+                    case PROJECT:
                         addPartition(minPartition, map);
                         break;
-                    }
-                    case PROJECT_END: {
-                        int maxPartition = getPartitionMap(
-                                binarySearchRangePartition(accessor, tIndex, maxComparators));
+
+                    case PROJECT_END:
                         addPartition(maxPartition, map);
                         break;
-                    }
-                    case REPLICATE: {
-                        int minPartition = getPartitionMap(
-                                binarySearchRangePartition(accessor, tIndex, minComparators));
-                        int maxPartition = getPartitionMap(rangeMap.getSplitCount() + 1);
+
+                    case REPLICATE:
                         for (int pid = minPartition; pid < maxPartition; ++pid) {
                             addPartition(pid, map);
                         }
                         break;
-                    }
-                    case SPLIT: {
-                        int minPartition = getPartitionMap(
-                                binarySearchRangePartition(accessor, tIndex, minComparators));
-                        int maxPartition = getPartitionMap(
-                                binarySearchRangePartition(accessor, tIndex, maxComparators));
+
+                    case SPLIT:
                         for (int pid = minPartition; pid <= maxPartition; ++pid) {
                             addPartition(pid, map);
                         }
                         break;
-                    }
+
                     default:
                 }
             }

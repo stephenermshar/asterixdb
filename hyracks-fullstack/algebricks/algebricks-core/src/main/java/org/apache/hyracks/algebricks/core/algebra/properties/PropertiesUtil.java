@@ -127,19 +127,18 @@ public class PropertiesUtil {
         }
 
         switch (reqd.getPartitioningType()) {
-            case RANDOM: {
+            case RANDOM:
                 // anything matches RANDOM
                 return true;
-            }
             case UNORDERED_PARTITIONED: {
                 switch (dlvd.getPartitioningType()) {
                     case UNORDERED_PARTITIONED: {
                         UnorderedPartitionedProperty ur = (UnorderedPartitionedProperty) reqd;
                         UnorderedPartitionedProperty ud = (UnorderedPartitionedProperty) dlvd;
                         if (mayExpandProperties) {
-                            return (!ud.getColumnSet().isEmpty() && ur.getColumnSet().containsAll(ud.getColumnSet()));
+                            return !ud.getColumnSet().isEmpty() && ur.getColumnSet().containsAll(ud.getColumnSet());
                         } else {
-                            return (ud.getColumnSet().equals(ur.getColumnSet()));
+                            return ud.getColumnSet().equals(ur.getColumnSet());
                         }
                     }
                     case ORDERED_PARTITIONED: {
@@ -153,9 +152,8 @@ public class PropertiesUtil {
                                     && od.getOrderColumns().containsAll(ur.getColumnSet());
                         }
                     }
-                    default: {
+                    default:
                         return false;
-                    }
                 }
             }
             case ORDERED_PARTITIONED: {
@@ -164,23 +162,21 @@ public class PropertiesUtil {
                         OrderedPartitionedProperty or = (OrderedPartitionedProperty) reqd;
                         OrderedPartitionedProperty od = (OrderedPartitionedProperty) dlvd;
                         if (mayExpandProperties) {
-                            return (isPrefixOf(od.getOrderColumns().iterator(), or.getOrderColumns().iterator())
+                            return isPrefixOf(od.getOrderColumns().iterator(), or.getOrderColumns().iterator())
                                     && or.getRangePartitioningType().equals(od.getRangePartitioningType())
-                                    && or.getRangeId().equals(od.getRangeId()));
+                                    && or.getRangeId().equals(od.getRangeId());
                         } else {
-                            return (or.getOrderColumns().equals(od.getOrderColumns())
+                            return or.getOrderColumns().equals(od.getOrderColumns())
                                     && or.getRangePartitioningType().equals(od.getRangePartitioningType())
-                                    && or.getRangeId().equals(od.getRangeId()));
+                                    && or.getRangeId().equals(od.getRangeId());
                         }
                     }
-                    default: {
+                    default:
                         return false;
-                    }
                 }
             }
-            default: {
-                return (dlvd.getPartitioningType() == reqd.getPartitioningType());
-            }
+            default:
+                return dlvd.getPartitioningType() == reqd.getPartitioningType();
         }
     }
 

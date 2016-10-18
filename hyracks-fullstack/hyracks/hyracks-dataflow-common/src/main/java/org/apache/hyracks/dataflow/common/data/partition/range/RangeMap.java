@@ -18,8 +18,6 @@
  */
 package org.apache.hyracks.dataflow.common.data.partition.range;
 
-import java.io.Serializable;
-
 import org.apache.hyracks.api.dataflow.value.IRangeMap;
 
 /**
@@ -29,7 +27,7 @@ import org.apache.hyracks.api.dataflow.value.IRangeMap;
  * Example for columns A and B with three split values.
  * {min A, min B, split 1 A, split 1 B, split 2 A, split 2 B, split 3 A, split 3 B, max A, max B}
  */
-public class RangeMap implements IRangeMap, Serializable {
+public class RangeMap implements IRangeMap {
     private static final long serialVersionUID = 1L;
     private final int fields;
     private final byte[] bytes;

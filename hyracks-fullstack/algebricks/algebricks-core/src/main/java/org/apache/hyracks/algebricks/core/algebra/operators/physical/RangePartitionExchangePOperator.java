@@ -142,8 +142,8 @@ public class RangePartitionExchangePOperator extends AbstractExchangePOperator {
         }
         ITupleRangePartitionComputerFactory tpcf = new FieldRangePartitionComputerFactory(sortFields, rangeComps,
                 rangeType);
-        IConnectorDescriptor conn = new MToNRangePartitioningConnectorDescriptor(spec, tpcf, rangeId, sortFields, binaryComps,
-                nkcf);
+        IConnectorDescriptor conn = new MToNRangePartitioningConnectorDescriptor(spec, tpcf, rangeId, sortFields,
+                binaryComps, nkcf);
         return new Pair<>(conn, null);
     }
 

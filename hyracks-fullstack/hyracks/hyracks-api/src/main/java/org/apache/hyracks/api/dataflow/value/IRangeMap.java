@@ -18,7 +18,9 @@
  */
 package org.apache.hyracks.api.dataflow.value;
 
-public interface IRangeMap {
+import java.io.Serializable;
+
+public interface IRangeMap extends Serializable {
 
     public int getSplitCount();
 
