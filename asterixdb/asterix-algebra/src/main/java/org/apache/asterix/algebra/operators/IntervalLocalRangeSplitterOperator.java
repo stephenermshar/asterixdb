@@ -24,11 +24,11 @@ import java.util.List;
 
 import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
 import org.apache.hyracks.algebricks.core.algebra.base.LogicalVariable;
-import org.apache.hyracks.algebricks.core.algebra.operators.logical.AbstractExtensibleLogicalOperator;
-import org.apache.hyracks.algebricks.core.algebra.operators.logical.IOperatorExtension;
+import org.apache.hyracks.algebricks.core.algebra.operators.logical.AbstractDelegatedLogicalOperator;
+import org.apache.hyracks.algebricks.core.algebra.operators.logical.IOperatorDelegate;
 import org.apache.hyracks.algebricks.core.algebra.visitors.ILogicalExpressionReferenceTransform;
 
-public class IntervalLocalRangeSplitterOperator extends AbstractExtensibleLogicalOperator {
+public class IntervalLocalRangeSplitterOperator extends AbstractDelegatedLogicalOperator {
 
     private final List<LogicalVariable> joinKeyLogicalVars;
 
@@ -42,7 +42,7 @@ public class IntervalLocalRangeSplitterOperator extends AbstractExtensibleLogica
     }
 
     @Override
-    public IOperatorExtension newInstance() {
+    public IOperatorDelegate newInstance() {
         return new IntervalLocalRangeSplitterOperator(joinKeyLogicalVars);
     }
 
