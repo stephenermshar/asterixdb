@@ -41,6 +41,7 @@ import org.apache.hyracks.dataflow.std.join.AbstractMergeJoiner;
 import org.apache.hyracks.dataflow.std.join.MergeJoinLocks;
 import org.apache.hyracks.dataflow.std.join.MergeStatus;
 import org.apache.hyracks.dataflow.std.join.RunFileStream;
+import org.apache.hyracks.dataflow.std.structures.RunFilePointer;
 import org.apache.hyracks.dataflow.std.structures.TuplePointer;
 
 /**
@@ -60,6 +61,7 @@ public class IntervalIndexJoiner extends AbstractMergeJoiner {
     private final ITuplePointerAccessor[] memoryAccessor;
     private final int[] streamIndex;
     private final RunFileStream[] runFileStream;
+    private final RunFilePointer[] runFilePointer;
 
     //    private final LinkedList<TuplePointer> buffer = new LinkedList<>();
 
@@ -74,9 +76,9 @@ public class IntervalIndexJoiner extends AbstractMergeJoiner {
     private long joinResultCount = 0;
     private long leftSpillCount = 0;
     private long rightSpillCount = 0;
-    private long[] spillFileCount = { 0, 0 };
-    private long[] spillReadCount = { 0, 0 };
-    private long[] spillWriteCount = { 0, 0 };
+    //    private long[] spillFileCount = { 0, 0 };
+    //    private long[] spillReadCount = { 0, 0 };
+    //    private long[] spillWriteCount = { 0, 0 };
 
     public IntervalIndexJoiner(IHyracksTaskContext ctx, int memorySize, int partition, MergeStatus status,
             MergeJoinLocks locks, Comparator<EndPointIndexItem> endPointComparator,
@@ -122,9 +124,11 @@ public class IntervalIndexJoiner extends AbstractMergeJoiner {
         runFileStream = new RunFileStream[JOIN_PARTITIONS];
         runFileStream[LEFT_PARTITION] = new RunFileStream(ctx, "left", status.branch[LEFT_PARTITION]);
         runFileStream[RIGHT_PARTITION] = new RunFileStream(ctx, "right", status.branch[RIGHT_PARTITION]);
+        runFilePointer = new RunFilePointer[JOIN_PARTITIONS];
+        runFilePointer[LEFT_PARTITION] = new RunFilePointer();
+        runFilePointer[RIGHT_PARTITION] = new RunFilePointer();
 
         LOGGER.setLevel(Level.FINE);
-        System.out.println("IntervalIndexJoiner: Logging level is: " + LOGGER.getLevel());
         if (LOGGER.isLoggable(Level.FINE)) {
             LOGGER.fine("IntervalIndexJoiner has started partition " + partition + " with " + memorySize
                     + " frames of memory.");
@@ -147,6 +151,7 @@ public class IntervalIndexJoiner extends AbstractMergeJoiner {
 
     private TupleStatus loadSpilledTuple(int partition) throws HyracksDataException {
         if (!inputAccessor[partition].exists()) {
+            // if statement must be separate.
             if (!runFileStream[partition].loadNextBuffer(inputAccessor[partition])) {
                 return TupleStatus.EMPTY;
             }
@@ -196,10 +201,10 @@ public class IntervalIndexJoiner extends AbstractMergeJoiner {
         TupleStatus rightTs = loadRightTuple();
         while (leftTs.isKnown() && checkHasMoreProcessing(leftTs, LEFT_PARTITION, RIGHT_PARTITION)
                 && checkHasMoreProcessing(rightTs, RIGHT_PARTITION, LEFT_PARTITION)) {
-            if (status.branch[RIGHT_PARTITION].isRunFileWriting()) {
+            if (runFileStream[RIGHT_PARTITION].isWriting()) {
                 // Right side from disk
                 rightTs = processRightTupleSpill(writer);
-            } else if (status.branch[LEFT_PARTITION].isRunFileWriting()) {
+            } else if (runFileStream[LEFT_PARTITION].isWriting()) {
                 // Left side from disk
                 leftTs = processLeftTupleSpill(writer);
             } else {
@@ -225,16 +230,14 @@ public class IntervalIndexJoiner extends AbstractMergeJoiner {
         activeManager[RIGHT_PARTITION].clear();
         runFileStream[LEFT_PARTITION].close();
         runFileStream[RIGHT_PARTITION].close();
-        if (LOGGER.isLoggable(Level.WARNING)) {
-            LOGGER.warning("IntervalIndexJoiner statitics: " + joinComparisonCount + " comparisons, " + joinResultCount
-                    + " results, left[" + leftSpillCount + " spills, " + runFileStream[LEFT_PARTITION].getFileCount()
-                    + " files, " + runFileStream[LEFT_PARTITION].getWriteCount() + " written, "
-                    + runFileStream[LEFT_PARTITION].getReadCount() + " read]. right[" + rightSpillCount + " spills, "
-                    + runFileStream[RIGHT_PARTITION].getFileCount() + " files, "
-                    + runFileStream[RIGHT_PARTITION].getWriteCount() + " written, "
-                    + runFileStream[RIGHT_PARTITION].getReadCount() + " read].");
-        }
 
+        if (LOGGER.isLoggable(Level.WARNING)) {
+            LOGGER.warning("IntervalIndexJoinerStatiticsLog," + joinComparisonCount + ",comparisons," + joinResultCount
+                    + ",results,left," + leftSpillCount + ",spills," + runFileStream[LEFT_PARTITION].getWriteCount()
+                    + ",written," + runFileStream[LEFT_PARTITION].getReadCount() + ",read,right," + rightSpillCount
+                    + ",spills," + runFileStream[RIGHT_PARTITION].getWriteCount() + ",written,"
+                    + runFileStream[RIGHT_PARTITION].getReadCount() + ",read");
+        }
     }
 
     private boolean checkHasMoreProcessing(TupleStatus ts, int partition, int joinPartition) {
@@ -275,7 +278,9 @@ public class IntervalIndexJoiner extends AbstractMergeJoiner {
                 // Add individual tuples.
                 processTupleJoin(activeManager[RIGHT_PARTITION].getActiveList(), memoryAccessor[RIGHT_PARTITION],
                         inputAccessor[LEFT_PARTITION], true, writer);
-                runFileStream[LEFT_PARTITION].addToRunFile(inputAccessor[LEFT_PARTITION]);
+                if (!runFileStream[LEFT_PARTITION].isReading()) {
+                    runFileStream[LEFT_PARTITION].addToRunFile(inputAccessor[LEFT_PARTITION]);
+                }
                 inputAccessor[LEFT_PARTITION].next();
                 ts = loadLeftTuple();
                 ++count;
@@ -308,7 +313,9 @@ public class IntervalIndexJoiner extends AbstractMergeJoiner {
                 // Add individual tuples.
                 processTupleJoin(activeManager[LEFT_PARTITION].getActiveList(), memoryAccessor[LEFT_PARTITION],
                         inputAccessor[RIGHT_PARTITION], false, writer);
-                runFileStream[RIGHT_PARTITION].addToRunFile(inputAccessor[RIGHT_PARTITION]);
+                if (!runFileStream[RIGHT_PARTITION].isReading()) {
+                    runFileStream[RIGHT_PARTITION].addToRunFile(inputAccessor[RIGHT_PARTITION]);
+                }
                 inputAccessor[RIGHT_PARTITION].next();
                 ts = loadRightTuple();
                 ++count;
@@ -429,34 +436,49 @@ public class IntervalIndexJoiner extends AbstractMergeJoiner {
     }
 
     private void freezeAndSpill() throws HyracksDataException {
-        if (LOGGER.isLoggable(Level.WARNING)) {
-            LOGGER.warning("freeze snapshot: " + frameCounts[RIGHT_PARTITION] + " right, " + frameCounts[LEFT_PARTITION]
-                    + " left, left[" + bufferManager.getNumTuples(LEFT_PARTITION) + " memory]. right["
-                    + bufferManager.getNumTuples(RIGHT_PARTITION) + " memory].");
-        }
+        //        if (LOGGER.isLoggable(Level.WARNING)) {
+        //            LOGGER.warning("freeze snapshot: " + frameCounts[RIGHT_PARTITION] + " right, " + frameCounts[LEFT_PARTITION]
+        //                    + " left, left[" + bufferManager.getNumTuples(LEFT_PARTITION) + " memory]. right["
+        //                    + bufferManager.getNumTuples(RIGHT_PARTITION) + " memory].");
+        //        }
+        int freezePartition;
         if (bufferManager.getNumTuples(LEFT_PARTITION) > bufferManager.getNumTuples(RIGHT_PARTITION)) {
-            runFileStream[RIGHT_PARTITION].startRunFileWriting();
-            if (LOGGER.isLoggable(Level.FINE)) {
-                LOGGER.fine("Memory is full. Freezing the left branch. (Left memory tuples: "
-                        + bufferManager.getNumTuples(LEFT_PARTITION) + ", Right memory tuples: "
-                        + bufferManager.getNumTuples(RIGHT_PARTITION) + ")");
-            }
-            bufferManager.printStats("memory details");
+            freezePartition = RIGHT_PARTITION;
             rightSpillCount++;
         } else {
-            runFileStream[LEFT_PARTITION].startRunFileWriting();
-            if (LOGGER.isLoggable(Level.FINE)) {
-                LOGGER.fine("Memory is full. Freezing the right branch. (Left memory tuples: "
-                        + bufferManager.getNumTuples(LEFT_PARTITION) + ", Right memory tuples: "
-                        + bufferManager.getNumTuples(RIGHT_PARTITION) + ")");
-            }
-            bufferManager.printStats("memory details");
+            freezePartition = LEFT_PARTITION;
             leftSpillCount++;
         }
+
+        // Mark where to start reading
+        if (runFileStream[freezePartition].isReading()) {
+            runFilePointer[freezePartition].reset(runFileStream[freezePartition].getReadPointer(),
+                    inputAccessor[freezePartition].getTupleId());
+        } else {
+            runFilePointer[freezePartition].reset(0, 0);
+            runFileStream[freezePartition].createRunFileWriting();
+        }
+        // Start writing
+        runFileStream[freezePartition].startRunFileWriting();
+
+        if (LOGGER.isLoggable(Level.FINE)) {
+            LOGGER.fine("Memory is full. Freezing the " + freezePartition + " branch. (Left memory tuples: "
+                    + bufferManager.getNumTuples(LEFT_PARTITION) + ", Right memory tuples: "
+                    + bufferManager.getNumTuples(RIGHT_PARTITION) + ")");
+        }
+        bufferManager.printStats("memory details");
     }
 
     private void continueStream(int diskPartition, ITupleAccessor accessor) throws HyracksDataException {
+        // Stop reading.
         runFileStream[diskPartition].closeRunFileReading();
+        if (runFilePointer[diskPartition].getFileOffset() < 0) {
+            // Remove file if not needed.
+            runFileStream[diskPartition].close();
+            runFileStream[diskPartition].removeRunFile();
+        }
+
+        // Continue on stream
         accessor.reset(inputBuffer[diskPartition]);
         accessor.setTupleId(streamIndex[diskPartition]);
         if (LOGGER.isLoggable(Level.FINE)) {
@@ -466,31 +488,40 @@ public class IntervalIndexJoiner extends AbstractMergeJoiner {
 
     private void unfreezeAndContinue(int frozenPartition, ITupleAccessor accessor) throws HyracksDataException {
         int flushPartition = frozenPartition == LEFT_PARTITION ? RIGHT_PARTITION : LEFT_PARTITION;
-        runFileStream[frozenPartition].flushAndStopRunFile(accessor);
-        if (LOGGER.isLoggable(Level.WARNING)) {
-            LOGGER.warning("snapshot(" + frozenPartition + "): " + frameCounts[RIGHT_PARTITION] + " right, "
-                    + frameCounts[LEFT_PARTITION] + " left, left[" + bufferManager.getNumTuples(LEFT_PARTITION)
-                    + " memory, " + leftSpillCount + " spills, "
-                    + (runFileStream[LEFT_PARTITION].getFileCount() - spillFileCount[LEFT_PARTITION]) + " files, "
-                    + (runFileStream[LEFT_PARTITION].getWriteCount() - spillWriteCount[LEFT_PARTITION]) + " written, "
-                    + (runFileStream[LEFT_PARTITION].getReadCount() - spillReadCount[LEFT_PARTITION]) + " read]. right["
-                    + bufferManager.getNumTuples(RIGHT_PARTITION) + " memory, " + +rightSpillCount + " spills, "
-                    + (runFileStream[RIGHT_PARTITION].getFileCount() - spillFileCount[RIGHT_PARTITION]) + " files, "
-                    + (runFileStream[RIGHT_PARTITION].getWriteCount() - spillWriteCount[RIGHT_PARTITION]) + " written, "
-                    + (runFileStream[RIGHT_PARTITION].getReadCount() - spillReadCount[RIGHT_PARTITION]) + " read].");
-            spillFileCount[LEFT_PARTITION] = runFileStream[LEFT_PARTITION].getFileCount();
-            spillReadCount[LEFT_PARTITION] = runFileStream[LEFT_PARTITION].getReadCount();
-            spillWriteCount[LEFT_PARTITION] = runFileStream[LEFT_PARTITION].getWriteCount();
-            spillFileCount[RIGHT_PARTITION] = runFileStream[RIGHT_PARTITION].getFileCount();
-            spillReadCount[RIGHT_PARTITION] = runFileStream[RIGHT_PARTITION].getReadCount();
-            spillWriteCount[RIGHT_PARTITION] = runFileStream[RIGHT_PARTITION].getWriteCount();
-        }
+        //        if (LOGGER.isLoggable(Level.WARNING)) {
+        //            LOGGER.warning("snapshot(" + frozenPartition + "): " + frameCounts[RIGHT_PARTITION] + " right, "
+        //                    + frameCounts[LEFT_PARTITION] + " left, left[" + bufferManager.getNumTuples(LEFT_PARTITION)
+        //                    + " memory, " + leftSpillCount + " spills, "
+        //                    + (runFileStream[LEFT_PARTITION].getFileCount() - spillFileCount[LEFT_PARTITION]) + " files, "
+        //                    + (runFileStream[LEFT_PARTITION].getWriteCount() - spillWriteCount[LEFT_PARTITION]) + " written, "
+        //                    + (runFileStream[LEFT_PARTITION].getReadCount() - spillReadCount[LEFT_PARTITION]) + " read]. right["
+        //                    + bufferManager.getNumTuples(RIGHT_PARTITION) + " memory, " + +rightSpillCount + " spills, "
+        //                    + (runFileStream[RIGHT_PARTITION].getFileCount() - spillFileCount[RIGHT_PARTITION]) + " files, "
+        //                    + (runFileStream[RIGHT_PARTITION].getWriteCount() - spillWriteCount[RIGHT_PARTITION]) + " written, "
+        //                    + (runFileStream[RIGHT_PARTITION].getReadCount() - spillReadCount[RIGHT_PARTITION]) + " read].");
+        //            spillFileCount[LEFT_PARTITION] = runFileStream[LEFT_PARTITION].getFileCount();
+        //            spillReadCount[LEFT_PARTITION] = runFileStream[LEFT_PARTITION].getReadCount();
+        //            spillWriteCount[LEFT_PARTITION] = runFileStream[LEFT_PARTITION].getWriteCount();
+        //            spillFileCount[RIGHT_PARTITION] = runFileStream[RIGHT_PARTITION].getFileCount();
+        //            spillReadCount[RIGHT_PARTITION] = runFileStream[RIGHT_PARTITION].getReadCount();
+        //            spillWriteCount[RIGHT_PARTITION] = runFileStream[RIGHT_PARTITION].getWriteCount();
+        //        }
+
+        // Finish writing
+        runFileStream[frozenPartition].flushRunFile();
+
+        // Clear memory
         flushMemory(flushPartition);
-        if ((LEFT_PARTITION == frozenPartition && !status.branch[LEFT_PARTITION].isRunFileReading())
-                || (RIGHT_PARTITION == frozenPartition && !status.branch[RIGHT_PARTITION].isRunFileReading())) {
+        if ((LEFT_PARTITION == frozenPartition && !runFileStream[LEFT_PARTITION].isReading())
+                || (RIGHT_PARTITION == frozenPartition && !runFileStream[RIGHT_PARTITION].isReading())) {
             streamIndex[frozenPartition] = accessor.getTupleId();
         }
-        runFileStream[frozenPartition].startReadingRunFile(accessor);
+
+        // Start reading
+        runFileStream[frozenPartition].startReadingRunFile(accessor, runFilePointer[frozenPartition].getFileOffset());
+        accessor.setTupleId(runFilePointer[frozenPartition].getTupleIndex());
+        runFilePointer[frozenPartition].reset(-1, -1);
+
         if (LOGGER.isLoggable(Level.FINE)) {
             LOGGER.fine("Unfreezing (" + frozenPartition + ").");
         }

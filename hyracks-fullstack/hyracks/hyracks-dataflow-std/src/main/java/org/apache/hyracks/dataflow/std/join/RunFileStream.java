@@ -21,6 +21,7 @@ package org.apache.hyracks.dataflow.std.join;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.hyracks.api.comm.IFrame;
 import org.apache.hyracks.api.comm.IFrameTupleAppender;
 import org.apache.hyracks.api.comm.VSizeFrame;
@@ -31,7 +32,6 @@ import org.apache.hyracks.dataflow.common.comm.io.FrameTupleAppender;
 import org.apache.hyracks.dataflow.common.io.RunFileReader;
 import org.apache.hyracks.dataflow.common.io.RunFileWriter;
 import org.apache.hyracks.dataflow.std.buffermanager.ITupleAccessor;
-import org.apache.hyracks.dataflow.std.structures.RunFilePointer;
 
 public class RunFileStream {
 
@@ -43,13 +43,15 @@ public class RunFileStream {
     private RunFileWriter runFileWriter;
     private RunFileReader runFileReader;
     private final IRunFileStreamStatus status;
+    private FileReference runfile;
 
     private final IHyracksTaskContext ctx;
 
     private long runFileCounter = 0;
     private long readCount = 0;
     private long writeCount = 0;
-    private long tupleCount = 0;
+    private long frameTupleCount = 0;
+    private long totalTupleCount = 0;
 
     /**
      * The RunFileSream uses two frames to buffer read and write operations.
@@ -66,10 +68,17 @@ public class RunFileStream {
 
         runFileBuffer = new VSizeFrame(ctx);
         runFileAppender = new FrameTupleAppender(new VSizeFrame(ctx));
+
+        String prefix = this.getClass().getSimpleName() + '-' + key + '-' + this.toString();
+        runfile = ctx.getJobletContext().createManagedWorkspaceFile(prefix);
     }
 
     public long getFileCount() {
         return runFileCounter;
+    }
+
+    public long getTupleCount() {
+        return totalTupleCount;
     }
 
     public long getReadCount() {
@@ -80,32 +89,21 @@ public class RunFileStream {
         return writeCount;
     }
 
-    public void startRunFileWriting() throws HyracksDataException {
+    public void createRunFileWriting() throws HyracksDataException {
         runFileCounter++;
 
-        status.setRunFileWriting(true);
-        String prefix = this.getClass().getSimpleName() + '-' + key + '-' + Long.toString(runFileCounter) + '-'
-                + this.toString();
-        FileReference file = ctx.getJobletContext().createManagedWorkspaceFile(prefix);
-        runFileWriter = new RunFileWriter(file, ctx.getIOManager());
+        runFileWriter = new RunFileWriter(runfile, ctx.getIOManager());
         runFileWriter.open();
         if (LOGGER.isLoggable(Level.FINE)) {
             LOGGER.fine("A new run file has been started (key: " + key + ", number: " + runFileCounter + ", file: "
-                    + file + ").");
+                    + runfile + ").");
         }
+
+        totalTupleCount = 0;
     }
 
-    public void resumeRunFileWriting() throws HyracksDataException {
+    public void startRunFileWriting() throws HyracksDataException {
         status.setRunFileWriting(true);
-        String prefix = this.getClass().getSimpleName() + '-' + key + '-' + Long.toString(runFileCounter) + '-'
-                + this.toString();
-        FileReference file = ctx.getJobletContext().createManagedWorkspaceFile(prefix);
-        runFileWriter = new RunFileWriter(file, ctx.getIOManager());
-        runFileWriter.open();
-        if (LOGGER.isLoggable(Level.FINE)) {
-            LOGGER.fine("A new run file has been started (key: " + key + ", number: " + runFileCounter + ", file: "
-                    + file + ").");
-        }
     }
 
     public void addToRunFile(ITupleAccessor accessor) throws HyracksDataException {
@@ -114,33 +112,25 @@ public class RunFileStream {
             runFileAppender.write(runFileWriter, true);
             writeCount++;
             runFileAppender.append(accessor, idx);
-            tupleCount = 0;
         }
-        tupleCount++;
+        totalTupleCount++;
     }
 
     public void startReadingRunFile(ITupleAccessor accessor) throws HyracksDataException {
+        startReadingRunFile( accessor, 0);
+    }
+
+    public void startReadingRunFile(ITupleAccessor accessor, long startOffset) throws HyracksDataException {
         status.setRunFileReading(true);
 
         // Create reader
         runFileReader = runFileWriter.createReader();
         runFileReader.open();
+        runFileReader.reset(startOffset);
 
         // Load first frame
         loadNextBuffer(accessor);
     }
-
-//    public void resetReader(ITupleAccessor accessor) throws HyracksDataException {
-//        if (status.isRunFileWriting()) {
-//            flushAndStopRunFile(accessor);
-//            startReadingRunFile(accessor);
-//        } else {
-//            runFileReader.reset();
-//
-//            // Load first frame
-//            loadNextBuffer(accessor);
-//        }
-//    }
 
     public boolean loadNextBuffer(ITupleAccessor accessor) throws HyracksDataException {
         if (runFileReader.nextFrame(runFileBuffer)) {
@@ -152,31 +142,41 @@ public class RunFileStream {
         return false;
     }
 
-    public long getReadPointer() throws HyracksDataException {
-        return runFileReader.getReadPointer();
-    }
+//    public long getReadPointer() throws HyracksDataException {
+//        return runFileReader.getReadPointer();
+//    }
+//
+//    public void resetReadPointer(long fileOffset) throws HyracksDataException {
+//        runFileReader.reset(fileOffset);
+//    }
 
-    public void resetReadPointer(long fileOffset) throws HyracksDataException {
-        runFileReader.reset(fileOffset);
-    }
+//    public void flushAndStopRunFile(ITupleAccessor accessor) throws HyracksDataException {
+//        status.setRunFileWriting(false);
+//
+//        // Copy left over tuples into new run file.
+//        if (status.isRunFileReading()) {
+//            if (!accessor.exists()) {
+//                loadNextBuffer(accessor);
+//            }
+//            while (accessor.exists()) {
+//                addToRunFile(accessor);
+//                accessor.next();
+//                if (!accessor.exists()) {
+//                    loadNextBuffer(accessor);
+//                }
+//            }
+//            runFileReader.close();
+//        }
+//
+//        // Flush buffer.
+//        if (runFileAppender.getTupleCount() > 0) {
+//            runFileAppender.write(runFileWriter, true);
+//            writeCount++;
+//        }
+//    }
 
-    public void flushAndStopRunFile(ITupleAccessor accessor) throws HyracksDataException {
+    public void flushRunFile() throws HyracksDataException {
         status.setRunFileWriting(false);
-
-        // Copy left over tuples into new run file.
-        if (status.isRunFileReading()) {
-            if (!accessor.exists()) {
-                loadNextBuffer(accessor);
-            }
-            while (accessor.exists()) {
-                addToRunFile(accessor);
-                accessor.next();
-                if (!accessor.exists()) {
-                    loadNextBuffer(accessor);
-                }
-            }
-            runFileReader.close();
-        }
 
         // Flush buffer.
         if (runFileAppender.getTupleCount() > 0) {
@@ -197,6 +197,25 @@ public class RunFileStream {
         if (runFileWriter != null) {
             runFileWriter.close();
         }
+    }
+
+    public void removeRunFile() {
+        FileUtils.deleteQuietly(runfile.getFile());
+    }
+
+    public long getReadPointer() {
+        if (runFileReader != null) {
+            return runFileReader.getReadPointer();
+        }
+        return -1;
+    }
+
+    public boolean isReading() {
+        return status.isRunFileReading();
+    }
+
+    public boolean isWriting() {
+        return status.isRunFileWriting();
     }
 
 }
