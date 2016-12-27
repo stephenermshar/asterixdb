@@ -72,6 +72,7 @@ public class IntervalPartitionUtil {
         }
         if (count == ITERATION_LIMIT) {
             kn = (kn + knMinusOne + knMinusTwo) / 3;
+            System.err.println("Iteration limit reach for calculating k.");
         } else if (kn == knMinusTwo) {
             kn = (kn + knMinusTwo) / 2;
         }

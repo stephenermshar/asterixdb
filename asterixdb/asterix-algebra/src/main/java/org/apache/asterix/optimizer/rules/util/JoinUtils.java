@@ -188,6 +188,8 @@ public class JoinUtils {
 
         int k = IntervalPartitionUtil.determineK(leftCount, leftMaxDuration, rightCount, rightMaxDuration,
                 tuplesPerFrame);
+        // Add two partition for intervals that start or end outside the given range.
+        k += 2;
         if (k <= 2) {
             k = 3;
             if (LOGGER.isLoggable(Level.WARNING)) {

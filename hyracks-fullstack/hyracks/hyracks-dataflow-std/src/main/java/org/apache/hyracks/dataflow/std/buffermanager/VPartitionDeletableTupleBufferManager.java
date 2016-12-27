@@ -97,7 +97,7 @@ public class VPartitionDeletableTupleBufferManager extends VPartitionTupleBuffer
     }
 
     private void reOrganizeFrames(int partition) {
-        System.err.printf("reOrganizeFrames -- %d:[", partition);
+//        System.err.printf("reOrganizeFrames -- %d:[", partition);
         policy[partition].reset();
         partitionArray[partition].resetIterator();
         int f = partitionArray[partition].next();
@@ -110,11 +110,11 @@ public class VPartitionDeletableTupleBufferManager extends VPartitionTupleBuffer
                 framePool.deAllocateBuffer(tempInfo.getBuffer());
             } else {
                 policy[partition].pushNewFrame(f, accessor[partition].getContiguousFreeSpace());
-                accessor[partition].printStats(System.err);
+//                accessor[partition].printStats(System.err);
             }
             f = partitionArray[partition].next();
         }
-        System.err.println("] ");
+//        System.err.println("] ");
     }
 
     private boolean canBeInsertedAfterCleanUpFragmentation(int partition, int requiredFreeSpace) {

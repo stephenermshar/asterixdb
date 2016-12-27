@@ -121,9 +121,9 @@ public class IntervalPartitionJoiner extends AbstractMergeJoiner {
         this.accessorBuild = new FrameTupleAccessor(rightRd);
 
         LOGGER.setLevel(Level.FINE);
-        System.out.println("IntervalIndexJoiner: Logging level is: " + LOGGER.getLevel());
+        System.out.println("IntervalPartitionJoiner: Logging level is: " + LOGGER.getLevel());
         if (LOGGER.isLoggable(Level.FINE)) {
-            LOGGER.fine("IntervalIndexJoiner has started partition " + partition + " with " + memorySize
+            LOGGER.fine("IntervalPartitionJoiner has started partition " + partition + " with " + memorySize
                     + " frames of memory.");
         }
     }
@@ -159,7 +159,7 @@ public class IntervalPartitionJoiner extends AbstractMergeJoiner {
             LOGGER.warning("IntervalPartitionJoiner statitics: " + k + " k, " + joinComparisonCount + " comparisons, "
                     + joinResultCount + " results, " + spillWriteCount + " written, " + spillReadCount + " read.");
         }
-        System.err.println("build: [");
+        System.err.println("build[");
         for (int i = 0; i < buildPartitionSizes.length; i++) {
             if (buildPartitionSizes[i] > 0) {
                 System.err.println("  (" + IntervalPartitionUtil.getIntervalPartition(i, k) + ") "
@@ -168,7 +168,7 @@ public class IntervalPartitionJoiner extends AbstractMergeJoiner {
         }
         System.err.println("]");
 
-        System.err.println("probe: [");
+        System.err.println("probe[");
         for (int i = 0; i < probePartitionSizes.length; i++) {
             if (probePartitionSizes[i] > 0) {
                 System.err.println("  (" + IntervalPartitionUtil.getIntervalPartition(i, k) + ") "
@@ -177,7 +177,7 @@ public class IntervalPartitionJoiner extends AbstractMergeJoiner {
         }
         System.err.println("]");
 
-        System.err.println("join: [");
+        System.err.println("join[");
         for (int i = 0; i < joinPartitionSizes.length; i++) {
             for (int j = 0; j < joinPartitionSizes[i].length; j++) {
                 if (joinPartitionSizes[i][j] > 0) {
@@ -215,17 +215,24 @@ public class IntervalPartitionJoiner extends AbstractMergeJoiner {
         for (RunFilePointer probeId : probeRunFilePointers.navigableKeySet()) {
             Pair<Integer, Integer> probe = IntervalPartitionUtil.getIntervalPartition(probeRunFilePointers.get(probeId),
                     k);
+//            System.err.print("join " + probe + " (" + probePartitionSizes[probeRunFilePointers.get(probeId)]
+//                    + ") with ");
+
             for (int buildId : buildInMemoryPartitions) {
                 Pair<Integer, Integer> build = IntervalPartitionUtil.getIntervalPartition(buildId, k);
                 if (imjc.compareIntervalPartition(probe.first, probe.second, build.first, build.second)) {
                     fbms.add(buildBufferManager.getPartitionFrameBufferManager(buildId));
-                    System.err.println("join " + probe + "(" + probePartitionSizes[probeRunFilePointers.get(probeId)]
-                            + ") with " + build + "(" + buildPartitionSizes[buildId] + ")");
+//                    System.err.print(build + " (" + buildPartitionSizes[buildId] + "), ");
                 }
             }
+
             if (!fbms.isEmpty()) {
                 join(pReader, probeId, fbms, writer);
+            } else {
+//                System.err.print("none");
             }
+
+//            System.err.println("");
             fbms.clear();
         }
     }
@@ -298,11 +305,18 @@ public class IntervalPartitionJoiner extends AbstractMergeJoiner {
     }
 
     private void fillMemory() throws HyracksDataException {
+        // TODO Add check this partition is needed for a join.
         int buildPid = -1;
         TupleStatus ts;
         for (ts = loadRightTuple(); ts.isLoaded(); ts = loadRightTuple()) {
             int pid = buildHpc.partition(inputAccessor[RIGHT_PARTITION], inputAccessor[RIGHT_PARTITION].getTupleId(),
                     k);
+
+            if (buildPid > 0 && buildPid != pid) {
+                // Only add one partition
+                return;
+            }
+
             if (!buildBufferManager.insertTuple(pid, inputAccessor[RIGHT_PARTITION],
                     inputAccessor[RIGHT_PARTITION].getTupleId(), tempPtr)) {
                 return;

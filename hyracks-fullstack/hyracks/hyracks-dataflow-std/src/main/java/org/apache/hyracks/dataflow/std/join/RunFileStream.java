@@ -66,6 +66,7 @@ public class RunFileStream {
         this.key = key;
         this.status = status;
 
+        // TODO make the stream only use one buffer.
         runFileBuffer = new VSizeFrame(ctx);
         runFileAppender = new FrameTupleAppender(new VSizeFrame(ctx));
 
@@ -104,6 +105,7 @@ public class RunFileStream {
 
     public void startRunFileWriting() throws HyracksDataException {
         status.setRunFileWriting(true);
+        runFileBuffer.reset();
     }
 
     public void addToRunFile(ITupleAccessor accessor) throws HyracksDataException {
@@ -117,7 +119,7 @@ public class RunFileStream {
     }
 
     public void startReadingRunFile(ITupleAccessor accessor) throws HyracksDataException {
-        startReadingRunFile( accessor, 0);
+        startReadingRunFile(accessor, 0);
     }
 
     public void startReadingRunFile(ITupleAccessor accessor, long startOffset) throws HyracksDataException {
@@ -142,38 +144,38 @@ public class RunFileStream {
         return false;
     }
 
-//    public long getReadPointer() throws HyracksDataException {
-//        return runFileReader.getReadPointer();
-//    }
-//
-//    public void resetReadPointer(long fileOffset) throws HyracksDataException {
-//        runFileReader.reset(fileOffset);
-//    }
+    //    public long getReadPointer() throws HyracksDataException {
+    //        return runFileReader.getReadPointer();
+    //    }
+    //
+    //    public void resetReadPointer(long fileOffset) throws HyracksDataException {
+    //        runFileReader.reset(fileOffset);
+    //    }
 
-//    public void flushAndStopRunFile(ITupleAccessor accessor) throws HyracksDataException {
-//        status.setRunFileWriting(false);
-//
-//        // Copy left over tuples into new run file.
-//        if (status.isRunFileReading()) {
-//            if (!accessor.exists()) {
-//                loadNextBuffer(accessor);
-//            }
-//            while (accessor.exists()) {
-//                addToRunFile(accessor);
-//                accessor.next();
-//                if (!accessor.exists()) {
-//                    loadNextBuffer(accessor);
-//                }
-//            }
-//            runFileReader.close();
-//        }
-//
-//        // Flush buffer.
-//        if (runFileAppender.getTupleCount() > 0) {
-//            runFileAppender.write(runFileWriter, true);
-//            writeCount++;
-//        }
-//    }
+    //    public void flushAndStopRunFile(ITupleAccessor accessor) throws HyracksDataException {
+    //        status.setRunFileWriting(false);
+    //
+    //        // Copy left over tuples into new run file.
+    //        if (status.isRunFileReading()) {
+    //            if (!accessor.exists()) {
+    //                loadNextBuffer(accessor);
+    //            }
+    //            while (accessor.exists()) {
+    //                addToRunFile(accessor);
+    //                accessor.next();
+    //                if (!accessor.exists()) {
+    //                    loadNextBuffer(accessor);
+    //                }
+    //            }
+    //            runFileReader.close();
+    //        }
+    //
+    //        // Flush buffer.
+    //        if (runFileAppender.getTupleCount() > 0) {
+    //            runFileAppender.write(runFileWriter, true);
+    //            writeCount++;
+    //        }
+    //    }
 
     public void flushRunFile() throws HyracksDataException {
         status.setRunFileWriting(false);
@@ -183,6 +185,7 @@ public class RunFileStream {
             runFileAppender.write(runFileWriter, true);
             writeCount++;
         }
+        runFileBuffer.reset();
     }
 
     public void closeRunFileReading() throws HyracksDataException {
