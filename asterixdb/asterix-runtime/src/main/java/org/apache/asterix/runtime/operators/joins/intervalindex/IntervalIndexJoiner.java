@@ -498,7 +498,7 @@ public class IntervalIndexJoiner extends AbstractMergeJoiner {
         }
 
         // Continue on stream
-        accessor.reset(inputBuffer[diskPartition]);
+        accessor.reset(inputBuffer[diskPartition].getBuffer());
         accessor.setTupleId(streamIndex[diskPartition]);
         if (LOGGER.isLoggable(Level.FINE)) {
             LOGGER.fine("Continue with stream (" + diskPartition + ").");

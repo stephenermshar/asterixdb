@@ -29,8 +29,9 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.apache.asterix.algebra.operators.physical.DisjointIntervalPartitionJoinPOperator;
 import org.apache.asterix.algebra.operators.physical.IntervalIndexJoinPOperator;
-import org.apache.asterix.algebra.operators.physical.IntervalPartitionJoinPOperator;
+import org.apache.asterix.algebra.operators.physical.OverlappingIntervalPartitionJoinPOperator;
 import org.apache.asterix.common.annotations.IntervalJoinExpressionAnnotation;
 import org.apache.asterix.lang.common.util.FunctionUtil;
 import org.apache.asterix.om.base.AInt32;
@@ -50,7 +51,7 @@ import org.apache.asterix.runtime.operators.joins.OverlappingIntervalMergeJoinCh
 import org.apache.asterix.runtime.operators.joins.OverlapsIntervalMergeJoinCheckerFactory;
 import org.apache.asterix.runtime.operators.joins.StartedByIntervalMergeJoinCheckerFactory;
 import org.apache.asterix.runtime.operators.joins.StartsIntervalMergeJoinCheckerFactory;
-import org.apache.asterix.runtime.operators.joins.intervalpartition.IntervalPartitionUtil;
+import org.apache.asterix.runtime.operators.joins.overlappingintervalpartition.OverlappingIntervalPartitionUtil;
 import org.apache.commons.lang3.mutable.Mutable;
 import org.apache.commons.lang3.mutable.MutableObject;
 import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
@@ -133,13 +134,14 @@ public class JoinUtils {
                 // Sort Merge.
                 LOGGER.fine("Interval Join - Merge");
                 setSortMergeIntervalJoinOp(op, fi, sideLeft, sideRight, ijea, context);
-            } else if (ijea.isPartitionJoin()) {
+            } else if (ijea.isOverlappingIntervalPartitionJoin()) {
                 // Overlapping Interval Partition.
-                LOGGER.fine("Interval Join - Cluster Parititioning");
-                setIntervalPartitionJoinOp(op, fi, sideLeft, sideRight, ijea, context);
-            } else if (ijea.isSpatialJoin()) {
-                // Spatial Partition.
-                LOGGER.fine("Interval Join - Spatial Partitioning");
+                LOGGER.fine("Interval Join - Overlapping Interval Parititioning");
+                setOverlappingIntervalPartitionJoinOp(op, fi, sideLeft, sideRight, ijea, context);
+            } else if (ijea.isDisjointIntervalPartitionJoin()) {
+                // Disjoint Interval Partition.
+                LOGGER.fine("Interval Join - Disjoing Interval Partitioning");
+                setDisjointIntervalPartitionJoinOp(op, fi, sideLeft, sideRight, ijea, context);
             } else if (ijea.isIndexJoin()) {
                 // Endpoint Index.
                 LOGGER.fine("Interval Join - Endpoint Index");
@@ -173,7 +175,7 @@ public class JoinUtils {
                 rightRangeId, ijea.getRangeMap()));
     }
 
-    private static void setIntervalPartitionJoinOp(AbstractBinaryJoinOperator op, FunctionIdentifier fi,
+    private static void setOverlappingIntervalPartitionJoinOp(AbstractBinaryJoinOperator op, FunctionIdentifier fi,
             List<LogicalVariable> leftKeys, List<LogicalVariable> rightKeys, IntervalJoinExpressionAnnotation ijea,
             IOptimizationContext context) throws AlgebricksException {
         long leftCount = ijea.getLeftRecordCount() > 0 ? ijea.getLeftRecordCount() : getCardinality(leftKeys, context);
@@ -186,7 +188,7 @@ public class JoinUtils {
         int tuplesPerFrame = ijea.getTuplesPerFrame() > 0 ? ijea.getTuplesPerFrame()
                 : context.getPhysicalOptimizationConfig().getMaxRecordsPerFrame();
 
-        int k = IntervalPartitionUtil.determineK(leftCount, leftMaxDuration, rightCount, rightMaxDuration,
+        int k = OverlappingIntervalPartitionUtil.determineK(leftCount, leftMaxDuration, rightCount, rightMaxDuration,
                 tuplesPerFrame);
         // Add two partition for intervals that start or end outside the given range.
         k += 2;
@@ -208,9 +210,24 @@ public class JoinUtils {
         insertPartitionSortKey(op, RIGHT, rightPartitionVar, rightKeys.get(0), rightRangeId, k, context);
 
         IIntervalMergeJoinCheckerFactory mjcf = getIntervalMergeJoinCheckerFactory(fi, leftRangeId);
-        op.setPhysicalOperator(new IntervalPartitionJoinPOperator(op.getJoinKind(), JoinPartitioningType.BROADCAST,
-                leftKeys, rightKeys, context.getPhysicalOptimizationConfig().getMaxFramesForJoin(), k, mjcf,
-                leftPartitionVar, rightPartitionVar, leftRangeId, rightRangeId, ijea.getRangeMap()));
+        op.setPhysicalOperator(
+                new OverlappingIntervalPartitionJoinPOperator(op.getJoinKind(), JoinPartitioningType.BROADCAST,
+                        leftKeys, rightKeys, context.getPhysicalOptimizationConfig().getMaxFramesForJoin(), k, mjcf,
+                        leftPartitionVar, rightPartitionVar, leftRangeId, rightRangeId, ijea.getRangeMap()));
+    }
+
+    private static void setDisjointIntervalPartitionJoinOp(AbstractBinaryJoinOperator op, FunctionIdentifier fi,
+            List<LogicalVariable> leftKeys, List<LogicalVariable> rightKeys, IntervalJoinExpressionAnnotation ijea,
+            IOptimizationContext context) throws AlgebricksException {
+        RangeId leftRangeId = context.newRangeId();
+        RangeId rightRangeId = context.newRangeId();
+        insertRangeForward(op, LEFT, leftRangeId, ijea.getRangeMap(), context);
+        insertRangeForward(op, RIGHT, rightRangeId, ijea.getRangeMap(), context);
+
+        IIntervalMergeJoinCheckerFactory mjcf = getIntervalMergeJoinCheckerFactory(fi, leftRangeId);
+        op.setPhysicalOperator(new DisjointIntervalPartitionJoinPOperator(op.getJoinKind(), JoinPartitioningType.BROADCAST,
+                leftKeys, rightKeys, context.getPhysicalOptimizationConfig().getMaxFramesForJoin(), mjcf, leftRangeId,
+                rightRangeId, ijea.getRangeMap()));
     }
 
     private static void insertRangeForward(AbstractBinaryJoinOperator op, int branch, RangeId rangeId,

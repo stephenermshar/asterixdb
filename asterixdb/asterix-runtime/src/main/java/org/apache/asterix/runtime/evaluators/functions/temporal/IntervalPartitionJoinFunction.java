@@ -28,7 +28,7 @@ import org.apache.asterix.om.base.AMutableInt32;
 import org.apache.asterix.om.types.ATypeTag;
 import org.apache.asterix.om.types.BuiltinType;
 import org.apache.asterix.om.types.EnumDeserializer;
-import org.apache.asterix.runtime.operators.joins.intervalpartition.IntervalPartitionUtil;
+import org.apache.asterix.runtime.operators.joins.overlappingintervalpartition.OverlappingIntervalPartitionUtil;
 import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
 import org.apache.hyracks.algebricks.runtime.base.IScalarEvaluator;
 import org.apache.hyracks.algebricks.runtime.base.IScalarEvaluatorFactory;
@@ -122,11 +122,11 @@ public class IntervalPartitionJoinFunction implements IScalarEvaluator {
                 partitionStart = LongPointable.getLong(rangeMap.getMinByteArray(0), rangeMap.getMinStartOffset(0) + 1);
                 long partitionEnd = LongPointable.getLong(rangeMap.getMaxByteArray(0),
                         rangeMap.getMaxStartOffset(0) + 1);
-                partitionDuration = IntervalPartitionUtil.getPartitionDuration(partitionStart, partitionEnd, k);
+                partitionDuration = OverlappingIntervalPartitionUtil.getPartitionDuration(partitionStart, partitionEnd, k);
                 rangeIdCache = rangeId;
             }
 
-            int partition = IntervalPartitionUtil.getIntervalPartition(point, partitionStart, partitionDuration, k);
+            int partition = OverlappingIntervalPartitionUtil.getIntervalPartition(point, partitionStart, partitionDuration, k);
             aInt.setValue(partition);
             intSerde.serialize(aInt, out);
         } catch (HyracksDataException hex) {

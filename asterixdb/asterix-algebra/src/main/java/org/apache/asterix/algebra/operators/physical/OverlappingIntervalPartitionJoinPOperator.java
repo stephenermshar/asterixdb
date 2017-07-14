@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.logging.Logger;
 
 import org.apache.asterix.runtime.operators.joins.IIntervalMergeJoinCheckerFactory;
-import org.apache.asterix.runtime.operators.joins.intervalpartition.IntervalPartitionJoinOperatorDescriptor;
+import org.apache.asterix.runtime.operators.joins.overlappingintervalpartition.OverlappingIntervalPartitionJoinOperatorDescriptor;
 import org.apache.hyracks.algebricks.core.algebra.base.LogicalVariable;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.AbstractBinaryJoinOperator.JoinKind;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.OrderOperator.IOrder.OrderKind;
@@ -34,7 +34,7 @@ import org.apache.hyracks.api.dataflow.value.RecordDescriptor;
 import org.apache.hyracks.api.job.IOperatorDescriptorRegistry;
 import org.apache.hyracks.dataflow.std.base.RangeId;
 
-public class IntervalPartitionJoinPOperator extends AbstractIntervalJoinPOperator {
+public class OverlappingIntervalPartitionJoinPOperator extends AbstractIntervalJoinPOperator {
     private static final int START = 0;
     private static final int END = 1;
 
@@ -43,9 +43,9 @@ public class IntervalPartitionJoinPOperator extends AbstractIntervalJoinPOperato
     private final List<LogicalVariable> leftPartitionVar;
     private final List<LogicalVariable> rightPartitionVar;
 
-    private static final Logger LOGGER = Logger.getLogger(IntervalPartitionJoinPOperator.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(OverlappingIntervalPartitionJoinPOperator.class.getName());
 
-    public IntervalPartitionJoinPOperator(JoinKind kind, JoinPartitioningType partitioningType,
+    public OverlappingIntervalPartitionJoinPOperator(JoinKind kind, JoinPartitioningType partitioningType,
             List<LogicalVariable> sideLeftOfEqualities, List<LogicalVariable> sideRightOfEqualities,
             int memSizeInFrames, int k, IIntervalMergeJoinCheckerFactory mjcf, List<LogicalVariable> leftPartitionVar,
             List<LogicalVariable> rightPartitionVar, RangeId leftRangeId, RangeId rightRangeId,
@@ -78,13 +78,13 @@ public class IntervalPartitionJoinPOperator extends AbstractIntervalJoinPOperato
 
     @Override
     public String getIntervalJoin() {
-        return "INTERVAL_PARTITION_JOIN";
+        return "OVERLAPPING_INTERVAL_PARTITION_JOIN";
     }
 
     @Override
     IOperatorDescriptor getIntervalOperatorDescriptor(int[] keysLeft, int[] keysRight, IOperatorDescriptorRegistry spec,
             RecordDescriptor recordDescriptor, IIntervalMergeJoinCheckerFactory mjcf, RangeId rangeId) {
-        return new IntervalPartitionJoinOperatorDescriptor(spec, memSizeInFrames, k, keysLeft, keysRight,
+        return new OverlappingIntervalPartitionJoinOperatorDescriptor(spec, memSizeInFrames, k, keysLeft, keysRight,
                 recordDescriptor, mjcf, rangeId);
     }
 

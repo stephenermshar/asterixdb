@@ -125,8 +125,8 @@ public class APIServlet extends HttpServlet {
             sessionConfig.setOOBData(isSet(printExprParam), isSet(printRewrittenExprParam),
                     isSet(printLogicalPlanParam), isSet(printOptimizedLogicalPlanParam), isSet(printJob));
             MetadataManager.INSTANCE.init();
-            IStatementExecutor translator =
-                    statementExectorFactory.create(aqlStatements, sessionConfig, compilationProvider);
+            IStatementExecutor translator = statementExectorFactory.create(aqlStatements, sessionConfig,
+                    compilationProvider);
             double duration = 0;
             long startTime = System.currentTimeMillis();
             translator.compileAndExecute(hcc, hds, IStatementExecutor.ResultDelivery.SYNC);
@@ -134,7 +134,7 @@ public class APIServlet extends HttpServlet {
             duration = (endTime - startTime) / 1000.00;
             out.println(HTML_STATEMENT_SEPARATOR);
             out.println("<PRE>Duration of all jobs: " + duration + " sec</PRE>");
-        } catch (AsterixException | TokenMgrError | org.apache.asterix.aqlplus.parser.TokenMgrError pe) {
+        } catch (AsterixException | TokenMgrError pe) {
             GlobalConfig.ASTERIX_LOGGER.log(Level.INFO, pe.toString(), pe);
             ResultUtil.webUIParseExceptionHandler(out, pe, query);
         } catch (Exception e) {

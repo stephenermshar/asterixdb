@@ -58,7 +58,7 @@ public class EndPointIndexItem implements Serializable {
     private long point;
 
     public EndPointIndexItem() {
-        reset(new TuplePointer(), (byte) -1, 0);
+        reset(new TuplePointer(), (byte) -1, Long.MIN_VALUE);
     }
 
     public EndPointIndexItem(TuplePointer tp, byte start, long point) {

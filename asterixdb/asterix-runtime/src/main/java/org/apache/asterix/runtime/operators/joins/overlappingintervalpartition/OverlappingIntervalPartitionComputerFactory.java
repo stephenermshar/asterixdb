@@ -16,7 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.asterix.runtime.operators.joins.intervalpartition;
+package org.apache.asterix.runtime.operators.joins.overlappingintervalpartition;
 
 import org.apache.asterix.runtime.operators.joins.IntervalJoinUtil;
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
@@ -24,19 +24,19 @@ import org.apache.hyracks.api.dataflow.value.ITuplePartitionComputer;
 import org.apache.hyracks.api.dataflow.value.ITuplePartitionComputerFactory;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 
-public class IntervalPartitionComputerFactory implements ITuplePartitionComputerFactory {
+public class OverlappingIntervalPartitionComputerFactory implements ITuplePartitionComputerFactory {
     private static final long serialVersionUID = 1L;
     private final int intervalFieldId;
     private final int k;
     private final long partitionStart;
     private final long partitionDuration;
 
-    public IntervalPartitionComputerFactory(int intervalFieldId, int k, long partitionStart, long partitionEnd)
+    public OverlappingIntervalPartitionComputerFactory(int intervalFieldId, int k, long partitionStart, long partitionEnd)
             throws HyracksDataException {
         this.intervalFieldId = intervalFieldId;
         this.k = k;
         this.partitionStart = partitionStart;
-        this.partitionDuration = IntervalPartitionUtil.getPartitionDuration(partitionStart, partitionEnd, k);
+        this.partitionDuration = OverlappingIntervalPartitionUtil.getPartitionDuration(partitionStart, partitionEnd, k);
     }
 
     @Override
@@ -47,11 +47,11 @@ public class IntervalPartitionComputerFactory implements ITuplePartitionComputer
                     throws HyracksDataException {
                 int partitionI = getIntervalPartitionI(accessor, tIndex, intervalFieldId);
                 int partitionJ = getIntervalPartitionJ(accessor, tIndex, intervalFieldId);
-                return IntervalPartitionUtil.intervalPartitionMap(partitionI, partitionJ, k);
+                return OverlappingIntervalPartitionUtil.intervalPartitionMap(partitionI, partitionJ, k);
             }
 
             private int getIntervalPartition(long point) throws HyracksDataException {
-                return IntervalPartitionUtil.getIntervalPartition(point, partitionStart, partitionDuration, k);
+                return OverlappingIntervalPartitionUtil.getIntervalPartition(point, partitionStart, partitionDuration, k);
             }
 
             public int getIntervalPartitionI(IFrameTupleAccessor accessor, int tIndex, int fieldId)

@@ -16,7 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.asterix.runtime.operators.joins.intervalpartition;
+package org.apache.asterix.runtime.operators.joins.overlappingintervalpartition;
 
 import org.apache.hyracks.algebricks.common.utils.Pair;
 import org.apache.hyracks.algebricks.core.rewriter.base.PhysicalOptimizationConfig;
@@ -24,12 +24,12 @@ import org.apache.hyracks.api.dataflow.value.IRangeMap;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.data.std.primitive.LongPointable;
 
-public class IntervalPartitionUtil {
+public class OverlappingIntervalPartitionUtil {
     public static final double C_CPU = 0.5;
     public static final double C_IO = 100000;
     public static final int ITERATION_LIMIT = 20;
 
-    private IntervalPartitionUtil() {
+    private OverlappingIntervalPartitionUtil() {
     }
 
     public static void main(String[] args) {

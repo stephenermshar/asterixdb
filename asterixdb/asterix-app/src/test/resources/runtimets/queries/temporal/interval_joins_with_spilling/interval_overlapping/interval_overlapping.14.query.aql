@@ -16,19 +16,17 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.hyracks.dataflow.std.join;
+/*
+ * Description      :   Check temporal join functionality when spilling for interval
+ * Expected Result  :   Success
+ * Date             :   11th Jul, 2017
+ */
 
-import java.nio.ByteBuffer;
+use dataverse CostModel;
 
-import org.apache.hyracks.api.comm.IFrameWriter;
-import org.apache.hyracks.api.exceptions.HyracksDataException;
-
-public interface IMergeJoiner {
-
-    void processLeftFrame(IFrameWriter writer) throws HyracksDataException;
-
-    void processLeftClose(IFrameWriter writer) throws HyracksDataException;
-
-    void setFrame(int partition, ByteBuffer buffer) throws HyracksDataException;
-
-}
+count(
+  for $r in dataset R
+    for $s in dataset S
+    where /*+ interval-index-join [0,256,512,768,1025] */ interval-overlapping($s.data, $r.data)
+    return [$r, $s]
+);

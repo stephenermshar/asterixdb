@@ -16,19 +16,18 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.hyracks.dataflow.std.join;
+package org.apache.asterix.runtime.operators.joins.overlappingintervalpartition;
 
-import java.nio.ByteBuffer;
+import org.apache.hyracks.api.dataflow.TaskId;
+import org.apache.hyracks.api.job.JobId;
+import org.apache.hyracks.dataflow.std.join.MergeJoinTaskState;
 
-import org.apache.hyracks.api.comm.IFrameWriter;
-import org.apache.hyracks.api.exceptions.HyracksDataException;
+public class OverlappingIntervalPartitionJoinTaskState extends MergeJoinTaskState {
+    protected OverlappingIntervalPartitionJoiner partitionJoiner;
+    public int k;
 
-public interface IMergeJoiner {
-
-    void processLeftFrame(IFrameWriter writer) throws HyracksDataException;
-
-    void processLeftClose(IFrameWriter writer) throws HyracksDataException;
-
-    void setFrame(int partition, ByteBuffer buffer) throws HyracksDataException;
+    public OverlappingIntervalPartitionJoinTaskState(JobId jobId, TaskId taskId) {
+        super(jobId, taskId);
+    }
 
 }

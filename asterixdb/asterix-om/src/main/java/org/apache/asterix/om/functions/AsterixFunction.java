@@ -22,9 +22,9 @@ public class AsterixFunction {
 
     private final String name;
     private final int arity;
-    public final static int VARARGS = -1;
+    public static final int VARARGS = -1;
 
-    public AsterixFunction(String name, int arity) throws IllegalArgumentException {
+    public AsterixFunction(String name, int arity) {
         this.name = name;
         this.arity = arity;
     }

@@ -16,18 +16,17 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.asterix.runtime.operators.joins.intervalpartition;
+/*
+ * Description      :   Check temporal join functionality when spilling for interval
+ * Expected Result  :   Success
+ * Date             :   11th Jul, 2017
+ */
 
-import org.apache.hyracks.api.dataflow.TaskId;
-import org.apache.hyracks.api.job.JobId;
-import org.apache.hyracks.dataflow.std.join.MergeJoinTaskState;
+use dataverse CostModel;
 
-public class IntervalPartitionJoinTaskState extends MergeJoinTaskState {
-    protected IntervalPartitionJoiner partitionJoiner;
-    public int k;
-
-    public IntervalPartitionJoinTaskState(JobId jobId, TaskId taskId) {
-        super(jobId, taskId);
-    }
-
-}
+count(
+  for $s in dataset S
+    for $r in dataset R
+    where /*+ interval-merge-join [0,256,512,768,1025] */ interval-overlapping($r.data, $s.data)
+    return [$r, $s]
+);

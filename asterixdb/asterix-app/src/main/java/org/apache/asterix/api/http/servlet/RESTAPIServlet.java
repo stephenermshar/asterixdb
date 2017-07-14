@@ -198,15 +198,15 @@ abstract class RESTAPIServlet extends HttpServlet {
             List<Statement> aqlStatements = parser.parse();
             if (!containsForbiddenStatements(aqlStatements)) {
                 MetadataManager.INSTANCE.init();
-                IStatementExecutor translator =
-                        statementExecutorFactory.create(aqlStatements, sessionConfig, compilationProvider);
+                IStatementExecutor translator = statementExecutorFactory.create(aqlStatements, sessionConfig,
+                        compilationProvider);
                 translator.compileAndExecute(hcc, hds, resultDelivery);
             }
-        } catch (AsterixException | TokenMgrError | org.apache.asterix.aqlplus.parser.TokenMgrError pe) {
+        } catch (AsterixException | TokenMgrError pe) {
             GlobalConfig.ASTERIX_LOGGER.log(Level.SEVERE, pe.getMessage(), pe);
             String errorMessage = ResultUtil.buildParseExceptionMessage(pe, query);
-            JSONObject errorResp =
-                    ResultUtil.getErrorResponse(2, errorMessage, "", ResultUtil.extractFullStackTrace(pe));
+            JSONObject errorResp = ResultUtil.getErrorResponse(2, errorMessage, "",
+                    ResultUtil.extractFullStackTrace(pe));
             sessionConfig.out().write(errorResp.toString());
             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
         } catch (Exception e) {

@@ -16,19 +16,17 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.hyracks.dataflow.std.join;
+package org.apache.asterix.runtime.operators.joins.disjointintervalpartition;
 
-import java.nio.ByteBuffer;
+import org.apache.hyracks.api.dataflow.TaskId;
+import org.apache.hyracks.api.job.JobId;
+import org.apache.hyracks.dataflow.std.join.MergeJoinTaskState;
 
-import org.apache.hyracks.api.comm.IFrameWriter;
-import org.apache.hyracks.api.exceptions.HyracksDataException;
+public class DisjointIntervalPartitionJoinTaskState extends MergeJoinTaskState {
+    protected DisjointIntervalPartitionJoiner partitionJoiner;
 
-public interface IMergeJoiner {
-
-    void processLeftFrame(IFrameWriter writer) throws HyracksDataException;
-
-    void processLeftClose(IFrameWriter writer) throws HyracksDataException;
-
-    void setFrame(int partition, ByteBuffer buffer) throws HyracksDataException;
+    public DisjointIntervalPartitionJoinTaskState(JobId jobId, TaskId taskId) {
+        super(jobId, taskId);
+    }
 
 }

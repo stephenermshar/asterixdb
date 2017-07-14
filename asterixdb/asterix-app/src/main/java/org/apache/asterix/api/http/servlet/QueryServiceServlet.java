@@ -500,7 +500,7 @@ public class QueryServiceServlet extends HttpServlet {
             translator.compileAndExecute(hcc, hds, QueryTranslator.ResultDelivery.SYNC, stats);
             execEnd = System.nanoTime();
             printStatus(resultWriter, ResultStatus.SUCCESS);
-        } catch (AsterixException | TokenMgrError | org.apache.asterix.aqlplus.parser.TokenMgrError pe) {
+        } catch (AsterixException | TokenMgrError pe) {
             GlobalConfig.ASTERIX_LOGGER.log(Level.SEVERE, pe.getMessage(), pe);
             printError(resultWriter, pe);
             printStatus(resultWriter, ResultStatus.FATAL);

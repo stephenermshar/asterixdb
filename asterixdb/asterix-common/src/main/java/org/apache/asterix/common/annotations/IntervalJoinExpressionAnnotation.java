@@ -25,10 +25,10 @@ import org.apache.hyracks.api.dataflow.value.IRangeMap;
 public class IntervalJoinExpressionAnnotation extends AbstractExpressionAnnotation {
 
     private static final String RAW_HINT_STRING = "interval-raw-join";
-    private static final String PARTITION_HINT_STRING = "interval-partition-join";
-    private static final String MERGE_HINT_STRING = "interval-merge-join";
-    private static final String SPATIAL_HINT_STRING = "interval-spatial-join";
+    private static final String DISJOINT_INTERVAL_PARTITION_HINT_STRING = "disjoint-interval-partition-join";
     private static final String INDEX_HINT_STRING = "interval-index-join";
+    private static final String MERGE_HINT_STRING = "interval-merge-join";
+    private static final String OVERLAPPING_INTERVAL_PARTITION_HINT_STRING = "interval-partition-join";
     public static final IntervalJoinExpressionAnnotation INSTANCE = new IntervalJoinExpressionAnnotation();
 
     private IRangeMap map = null;
@@ -56,7 +56,7 @@ public class IntervalJoinExpressionAnnotation extends AbstractExpressionAnnotati
         String hint = (String) object;
         setJoinType(hint);
 
-        if (joinType.equals(PARTITION_HINT_STRING)) {
+        if (joinType.equals(OVERLAPPING_INTERVAL_PARTITION_HINT_STRING)) {
             hint = hint.substring(hint.indexOf(']', 0) + 1).trim();
             String[] args = hint.split(" ");
             if (args.length == 5) {
@@ -72,14 +72,14 @@ public class IntervalJoinExpressionAnnotation extends AbstractExpressionAnnotati
     private void setJoinType(String hint) {
         if (hint.startsWith(RAW_HINT_STRING)) {
             joinType = RAW_HINT_STRING;
-        } else if (hint.startsWith(PARTITION_HINT_STRING)) {
-            joinType = PARTITION_HINT_STRING;
-        } else if (hint.startsWith(MERGE_HINT_STRING)) {
-            joinType = MERGE_HINT_STRING;
-        } else if (hint.startsWith(SPATIAL_HINT_STRING)) {
-            joinType = SPATIAL_HINT_STRING;
+        } else if (hint.startsWith(DISJOINT_INTERVAL_PARTITION_HINT_STRING)) {
+            joinType = DISJOINT_INTERVAL_PARTITION_HINT_STRING;
         } else if (hint.startsWith(INDEX_HINT_STRING)) {
             joinType = INDEX_HINT_STRING;
+        } else if (hint.startsWith(MERGE_HINT_STRING)) {
+            joinType = MERGE_HINT_STRING;
+        } else if (hint.startsWith(OVERLAPPING_INTERVAL_PARTITION_HINT_STRING)) {
+            joinType = OVERLAPPING_INTERVAL_PARTITION_HINT_STRING;
         }
     }
 
@@ -129,22 +129,8 @@ public class IntervalJoinExpressionAnnotation extends AbstractExpressionAnnotati
         return false;
     }
 
-    public boolean isPartitionJoin() {
-        if (joinType.equals(PARTITION_HINT_STRING)) {
-            return true;
-        }
-        return false;
-    }
-
-    public boolean isMergeJoin() {
-        if (joinType.equals(MERGE_HINT_STRING)) {
-            return true;
-        }
-        return false;
-    }
-
-    public boolean isSpatialJoin() {
-        if (joinType.equals(SPATIAL_HINT_STRING)) {
+    public boolean isDisjointIntervalPartitionJoin() {
+        if (joinType.equals(DISJOINT_INTERVAL_PARTITION_HINT_STRING)) {
             return true;
         }
         return false;
@@ -157,23 +143,37 @@ public class IntervalJoinExpressionAnnotation extends AbstractExpressionAnnotati
         return false;
     }
 
+    public boolean isMergeJoin() {
+        if (joinType.equals(MERGE_HINT_STRING)) {
+            return true;
+        }
+        return false;
+    }
+
+    public boolean isOverlappingIntervalPartitionJoin() {
+        if (joinType.equals(OVERLAPPING_INTERVAL_PARTITION_HINT_STRING)) {
+            return true;
+        }
+        return false;
+    }
+
     public static boolean isIntervalJoinHint(String hint) {
-        return hint.startsWith(RAW_HINT_STRING) || hint.startsWith(PARTITION_HINT_STRING)
-                || hint.startsWith(MERGE_HINT_STRING) || hint.startsWith(SPATIAL_HINT_STRING)
-                || hint.startsWith(INDEX_HINT_STRING);
+        return hint.startsWith(RAW_HINT_STRING) || hint.startsWith(DISJOINT_INTERVAL_PARTITION_HINT_STRING)
+                || hint.startsWith(INDEX_HINT_STRING) || hint.startsWith(MERGE_HINT_STRING)
+                || hint.startsWith(OVERLAPPING_INTERVAL_PARTITION_HINT_STRING);
     }
 
     public static int getHintLength(String hint) {
         if (hint.startsWith(RAW_HINT_STRING)) {
             return RAW_HINT_STRING.length();
-        } else if (hint.startsWith(PARTITION_HINT_STRING)) {
-            return PARTITION_HINT_STRING.length();
-        } else if (hint.startsWith(MERGE_HINT_STRING)) {
-            return MERGE_HINT_STRING.length();
-        } else if (hint.startsWith(SPATIAL_HINT_STRING)) {
-            return SPATIAL_HINT_STRING.length();
+        } else if (hint.startsWith(DISJOINT_INTERVAL_PARTITION_HINT_STRING)) {
+            return DISJOINT_INTERVAL_PARTITION_HINT_STRING.length();
         } else if (hint.startsWith(INDEX_HINT_STRING)) {
             return INDEX_HINT_STRING.length();
+        } else if (hint.startsWith(MERGE_HINT_STRING)) {
+            return MERGE_HINT_STRING.length();
+        } else if (hint.startsWith(OVERLAPPING_INTERVAL_PARTITION_HINT_STRING)) {
+            return OVERLAPPING_INTERVAL_PARTITION_HINT_STRING.length();
         }
         return 0;
     }

@@ -1,0 +1,75 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+/*
+ * Description      :   Check temporal join functionality when spilling for interval
+ * Expected Result  :   Success
+ * Date             :   11th Jul, 2017
+ */
+
+/*
+ * The number of active tuples must exceed join memory.
+ *
+ * 1024 time points * 2 arrival rate = 2048 records
+ * 2048 records / 4 nodes = 512 tuples per node
+ *
+ * 32000 byte frame size / ~1000 byte record = 32 records per frame
+ * 256000 byte join size / ~1000 byte record = 256 records join memory
+ *
+ * 256 duration * 2 arrival rate = 512 active records
+ * 512 active records > 256 records join memory = spilling
+ *
+ * Also, note that 512 tuples per node plus the overlapping intervals (512 before and 
+ * 512 after) ensures enough active tuples for spilling.
+ */
+
+
+use dataverse CostModel;
+
+insert into dataset R
+let $filler := repeat("i", 859)
+let $start := 1
+let $end := 1024
+let $lambda := 2
+let $d := 256
+for $s in range($start, $end)
+  for $l in range(1, $lambda)
+  return {
+    "id": create-uuid(),
+    "data": interval(datetime-from-unix-time-in-ms($s), datetime-from-unix-time-in-ms($s + $d)),
+    "s": $s,
+    "l": $l,
+    "filler": $filler
+  };
+
+
+insert into dataset S
+let $filler := repeat("i", 859)
+let $start := 1
+let $end := 1024
+let $lambda := 2
+let $d := 256
+for $s in range($start, $end)
+  for $l in range(1, $lambda)
+  return {
+    "id": create-uuid(),
+    "data": interval(datetime-from-unix-time-in-ms($s), datetime-from-unix-time-in-ms($s + $d)),
+    "s": $s,
+    "l": $l,
+    "filler": $filler
+  };

@@ -98,6 +98,10 @@ public class RunFileReader implements IFrameReader {
         }
     }
 
+    public void delete() {
+        FileUtils.deleteQuietly(file.getFile());
+    }
+
     public long getFileSize() {
         return size;
     }

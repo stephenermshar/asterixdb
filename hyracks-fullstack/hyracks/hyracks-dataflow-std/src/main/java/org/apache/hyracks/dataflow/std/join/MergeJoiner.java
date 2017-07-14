@@ -287,7 +287,7 @@ public class MergeJoiner extends AbstractMergeJoiner {
         }
 
         // Continue on stream
-        accessor.reset(inputBuffer[LEFT_PARTITION]);
+        accessor.reset(inputBuffer[LEFT_PARTITION].getBuffer());
         accessor.setTupleId(leftStreamIndex);
         if (LOGGER.isLoggable(Level.FINE)) {
             LOGGER.fine("Continue with left stream.");

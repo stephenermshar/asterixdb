@@ -16,19 +16,19 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.hyracks.dataflow.std.join;
+/*
+ * Description      :   Check temporal join functionality when spilling for interval
+ * Expected Result  :   Success
+ * Date             :   11th Jul, 2017
+ */
 
-import java.nio.ByteBuffer;
+drop dataverse CostModel if exists;
+create dataverse CostModel;
+use dataverse CostModel;
 
-import org.apache.hyracks.api.comm.IFrameWriter;
-import org.apache.hyracks.api.exceptions.HyracksDataException;
-
-public interface IMergeJoiner {
-
-    void processLeftFrame(IFrameWriter writer) throws HyracksDataException;
-
-    void processLeftClose(IFrameWriter writer) throws HyracksDataException;
-
-    void setFrame(int partition, ByteBuffer buffer) throws HyracksDataException;
-
+create type IntervalType as open {
+    id: uuid,
+    data: interval
 }
+create dataset R(IntervalType) primary key id;
+create dataset S(IntervalType) primary key id;

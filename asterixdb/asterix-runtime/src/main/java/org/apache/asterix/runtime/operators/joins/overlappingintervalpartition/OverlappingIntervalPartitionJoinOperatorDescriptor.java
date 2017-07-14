@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.asterix.runtime.operators.joins.intervalpartition;
+package org.apache.asterix.runtime.operators.joins.overlappingintervalpartition;
 
 import java.nio.ByteBuffer;
 import java.util.logging.Logger;
@@ -44,7 +44,7 @@ import org.apache.hyracks.dataflow.std.join.MergeBranchStatus.Stage;
 import org.apache.hyracks.dataflow.std.join.MergeJoinLocks;
 import org.apache.hyracks.dataflow.std.misc.RangeForwardOperatorDescriptor.RangeForwardTaskState;
 
-public class IntervalPartitionJoinOperatorDescriptor extends AbstractOperatorDescriptor {
+public class OverlappingIntervalPartitionJoinOperatorDescriptor extends AbstractOperatorDescriptor {
     private static final long serialVersionUID = 1L;
 
     private static final int LEFT_ACTIVITY_ID = 0;
@@ -59,9 +59,9 @@ public class IntervalPartitionJoinOperatorDescriptor extends AbstractOperatorDes
     private final int probeKey;
     private final int buildKey;
 
-    private static final Logger LOGGER = Logger.getLogger(IntervalPartitionJoinOperatorDescriptor.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(OverlappingIntervalPartitionJoinOperatorDescriptor.class.getName());
 
-    public IntervalPartitionJoinOperatorDescriptor(IOperatorDescriptorRegistry spec, int memoryForJoin, int k,
+    public OverlappingIntervalPartitionJoinOperatorDescriptor(IOperatorDescriptorRegistry spec, int memoryForJoin, int k,
             int[] leftKeys, int[] rightKeys, RecordDescriptor recordDescriptor, IIntervalMergeJoinCheckerFactory imjcf,
             RangeId rangeId) {
         super(spec, 2, 1);
@@ -118,7 +118,7 @@ public class IntervalPartitionJoinOperatorDescriptor extends AbstractOperatorDes
             private final IHyracksTaskContext ctx;
             private final int partition;
             private final RecordDescriptor leftRd;
-            private IntervalPartitionJoinTaskState state;
+            private OverlappingIntervalPartitionJoinTaskState state;
             private boolean first = true;
 
             public LeftJoinerOperator(IHyracksTaskContext ctx, int partition, RecordDescriptor inRecordDesc) {
@@ -132,7 +132,7 @@ public class IntervalPartitionJoinOperatorDescriptor extends AbstractOperatorDes
                 locks.getLock(partition).lock();
                 try {
                     writer.open();
-                    state = new IntervalPartitionJoinTaskState(ctx.getJobletContext().getJobId(),
+                    state = new OverlappingIntervalPartitionJoinTaskState(ctx.getJobletContext().getJobId(),
                             new TaskId(getActivityId(), partition));;
                     state.leftRd = leftRd;
                     ctx.setStateObject(state);
@@ -224,7 +224,7 @@ public class IntervalPartitionJoinOperatorDescriptor extends AbstractOperatorDes
             private int partition;
             private IHyracksTaskContext ctx;
             private final RecordDescriptor rightRd;
-            private IntervalPartitionJoinTaskState state;
+            private OverlappingIntervalPartitionJoinTaskState state;
             private boolean first = true;
 
             public RightDataOperator(IHyracksTaskContext ctx, int partition, RecordDescriptor inRecordDesc) {
@@ -239,7 +239,7 @@ public class IntervalPartitionJoinOperatorDescriptor extends AbstractOperatorDes
                 try {
                     do {
                         // Wait for the state to be set in the context form Left.
-                        state = (IntervalPartitionJoinTaskState) ctx.getStateObject(new TaskId(joinAid, partition));
+                        state = (OverlappingIntervalPartitionJoinTaskState) ctx.getStateObject(new TaskId(joinAid, partition));
                         if (state == null) {
                             locks.getRight(partition).await();
                         }
@@ -247,17 +247,17 @@ public class IntervalPartitionJoinOperatorDescriptor extends AbstractOperatorDes
                     state.k = k;
 
                     RangeForwardTaskState rangeState = RangeForwardTaskState.getRangeState(rangeId.getId(), ctx);
-                    long partitionStart = IntervalPartitionUtil.getStartOfPartition(rangeState.getRangeMap(),
+                    long partitionStart = OverlappingIntervalPartitionUtil.getStartOfPartition(rangeState.getRangeMap(),
                             partition);
-                    long partitionEnd = IntervalPartitionUtil.getEndOfPartition(rangeState.getRangeMap(), partition);
-                    ITuplePartitionComputer buildHpc = new IntervalPartitionComputerFactory(buildKey, state.k,
+                    long partitionEnd = OverlappingIntervalPartitionUtil.getEndOfPartition(rangeState.getRangeMap(), partition);
+                    ITuplePartitionComputer buildHpc = new OverlappingIntervalPartitionComputerFactory(buildKey, state.k,
                             partitionStart, partitionEnd).createPartitioner();
-                    ITuplePartitionComputer probeHpc = new IntervalPartitionComputerFactory(probeKey, state.k,
+                    ITuplePartitionComputer probeHpc = new OverlappingIntervalPartitionComputerFactory(probeKey, state.k,
                             partitionStart, partitionEnd).createPartitioner();
                     IIntervalMergeJoinChecker imjc = imjcf.createMergeJoinChecker(leftKeys, rightKeys, partition, ctx);
 
                     state.rightRd = rightRd;
-                    state.partitionJoiner = new IntervalPartitionJoiner(ctx, memoryForJoin, partition, state.k,
+                    state.partitionJoiner = new OverlappingIntervalPartitionJoiner(ctx, memoryForJoin, partition, state.k,
                             state.status, locks, imjc, state.leftRd, state.rightRd, buildHpc, probeHpc);
                     state.status.branch[RIGHT_ACTIVITY_ID].setStageOpen();
                     locks.getLeft(partition).signal();

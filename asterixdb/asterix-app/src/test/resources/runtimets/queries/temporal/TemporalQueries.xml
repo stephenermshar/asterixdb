@@ -169,6 +169,11 @@
                 <output-dir compare="Text">interval_starts</output-dir>
             </compilation-unit>
         </test-case>
+        <test-case FilePath="temporal/interval_joins_with_spilling">
+            <compilation-unit name="interval_overlapping">
+                <output-dir compare="Text">interval_overlapping</output-dir>
+            </compilation-unit>
+        </test-case>
         <test-case FilePath="temporal">
             <compilation-unit name="time_functions">
                 <output-dir compare="Text">time_functions</output-dir>

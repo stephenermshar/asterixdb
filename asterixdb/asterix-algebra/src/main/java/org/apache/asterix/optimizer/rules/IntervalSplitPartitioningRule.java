@@ -23,9 +23,10 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.apache.asterix.algebra.operators.physical.DisjointIntervalPartitionJoinPOperator;
 import org.apache.asterix.algebra.operators.physical.IntervalIndexJoinPOperator;
 import org.apache.asterix.algebra.operators.physical.IntervalLocalRangeSplitterPOperator;
-import org.apache.asterix.algebra.operators.physical.IntervalPartitionJoinPOperator;
+import org.apache.asterix.algebra.operators.physical.OverlappingIntervalPartitionJoinPOperator;
 import org.apache.asterix.om.functions.AsterixBuiltinFunctions;
 import org.apache.commons.lang3.mutable.Mutable;
 import org.apache.commons.lang3.mutable.MutableObject;
@@ -56,7 +57,6 @@ import org.apache.hyracks.algebricks.core.algebra.operators.logical.ReplicateOpe
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.UnionAllOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.visitors.VariableUtilities;
 import org.apache.hyracks.algebricks.core.algebra.operators.physical.AbstractJoinPOperator.JoinPartitioningType;
-import org.apache.hyracks.algebricks.core.algebra.util.OperatorPropertiesUtil;
 import org.apache.hyracks.algebricks.core.algebra.operators.physical.MaterializePOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.physical.MergeJoinPOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.physical.NestedLoopJoinPOperator;
@@ -64,6 +64,7 @@ import org.apache.hyracks.algebricks.core.algebra.operators.physical.OneToOneExc
 import org.apache.hyracks.algebricks.core.algebra.operators.physical.RangePartitionExchangePOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.physical.ReplicatePOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.physical.UnionAllPOperator;
+import org.apache.hyracks.algebricks.core.algebra.util.OperatorPropertiesUtil;
 import org.apache.hyracks.algebricks.core.rewriter.base.IAlgebraicRewriteRule;
 import org.apache.hyracks.api.dataflow.value.IRangePartitionType.RangePartitioningType;
 import org.apache.hyracks.dataflow.std.base.RangeId;
@@ -303,8 +304,8 @@ public class IntervalSplitPartitioningRule implements IAlgebraicRewriteRule {
 
     private void updateOperatorContext(IOptimizationContext context, Mutable<ILogicalOperator> operatorRef)
             throws AlgebricksException {
-//        operatorRef.getValue().recomputeSchema();
-//        operatorRef.getValue().computeDeliveredPhysicalProperties(context);
+        //        operatorRef.getValue().recomputeSchema();
+        //        operatorRef.getValue().computeDeliveredPhysicalProperties(context);
         context.computeAndSetTypeEnvironmentForOperator(operatorRef.getValue());
         OperatorPropertiesUtil.computeSchemaAndPropertiesRecIfNull((AbstractLogicalOperator) operatorRef, context);
     }
@@ -440,14 +441,22 @@ public class IntervalSplitPartitioningRule implements IAlgebraicRewriteRule {
                         memoryJoinSize, iijpo.getIntervalMergeJoinCheckerFactory(), iijpo.getLeftRangeId(),
                         iijpo.getRightRangeId(), iijpo.getRangeMapHint());
                 ijoClone.setPhysicalOperator(iijpoClone);
-            } else if (joinPo instanceof IntervalPartitionJoinPOperator) {
-                IntervalPartitionJoinPOperator ipjpo = (IntervalPartitionJoinPOperator) joinPo;
-                IntervalPartitionJoinPOperator iijpoClone = new IntervalPartitionJoinPOperator(ipjpo.getKind(),
-                        ipjpo.getPartitioningType(), ipjpo.getKeysLeftBranch(), ipjpo.getKeysRightBranch(),
-                        memoryJoinSize, ipjpo.getK(), ipjpo.getIntervalMergeJoinCheckerFactory(),
-                        ipjpo.getLeftPartitionVar(), ipjpo.getRightPartitionVar(), ipjpo.getLeftRangeId(),
-                        ipjpo.getRightRangeId(), ipjpo.getRangeMapHint());
-                ijoClone.setPhysicalOperator(iijpoClone);
+            } else if (joinPo instanceof DisjointIntervalPartitionJoinPOperator) {
+                DisjointIntervalPartitionJoinPOperator dipjpo = (DisjointIntervalPartitionJoinPOperator) joinPo;
+                DisjointIntervalPartitionJoinPOperator dipjpoClone = new DisjointIntervalPartitionJoinPOperator(
+                        dipjpo.getKind(), dipjpo.getPartitioningType(), dipjpo.getKeysLeftBranch(),
+                        dipjpo.getKeysRightBranch(), memoryJoinSize, dipjpo.getIntervalMergeJoinCheckerFactory(),
+                        dipjpo.getLeftRangeId(), dipjpo.getRightRangeId(), dipjpo.getRangeMapHint());
+                ijoClone.setPhysicalOperator(dipjpoClone);
+            } else if (joinPo instanceof OverlappingIntervalPartitionJoinPOperator) {
+                OverlappingIntervalPartitionJoinPOperator oipjpo = (OverlappingIntervalPartitionJoinPOperator) joinPo;
+                OverlappingIntervalPartitionJoinPOperator oipjpoClone = new OverlappingIntervalPartitionJoinPOperator(
+                        oipjpo.getKind(), oipjpo.getPartitioningType(), oipjpo.getKeysLeftBranch(),
+                        oipjpo.getKeysRightBranch(), memoryJoinSize, oipjpo.getK(),
+                        oipjpo.getIntervalMergeJoinCheckerFactory(), oipjpo.getLeftPartitionVar(),
+                        oipjpo.getRightPartitionVar(), oipjpo.getLeftRangeId(), oipjpo.getRightRangeId(),
+                        oipjpo.getRangeMapHint());
+                ijoClone.setPhysicalOperator(oipjpoClone);
             } else {
                 return null;
             }

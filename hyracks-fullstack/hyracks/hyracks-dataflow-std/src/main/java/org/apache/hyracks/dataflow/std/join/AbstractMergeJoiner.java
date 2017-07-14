@@ -20,6 +20,7 @@ package org.apache.hyracks.dataflow.std.join;
 
 import java.nio.ByteBuffer;
 
+import org.apache.hyracks.api.comm.IFrame;
 import org.apache.hyracks.api.comm.VSizeFrame;
 import org.apache.hyracks.api.context.IHyracksTaskContext;
 import org.apache.hyracks.api.dataflow.value.RecordDescriptor;
@@ -53,7 +54,7 @@ public abstract class AbstractMergeJoiner implements IMergeJoiner {
     protected static final int LEFT_PARTITION = 0;
     protected static final int RIGHT_PARTITION = 1;
 
-    protected final ByteBuffer[] inputBuffer;
+    protected final IFrame[] inputBuffer;
     protected final FrameTupleAppender resultAppender;
     protected final ITupleAccessor[] inputAccessor;
     protected final MergeStatus status;
@@ -72,19 +73,19 @@ public abstract class AbstractMergeJoiner implements IMergeJoiner {
         inputAccessor[LEFT_PARTITION] = new TupleAccessor(leftRd);
         inputAccessor[RIGHT_PARTITION] = new TupleAccessor(rightRd);
 
-        inputBuffer = new ByteBuffer[JOIN_PARTITIONS];
-        inputBuffer[LEFT_PARTITION] = ctx.allocateFrame();
-        inputBuffer[RIGHT_PARTITION] = ctx.allocateFrame();
+        inputBuffer = new IFrame[JOIN_PARTITIONS];
+        inputBuffer[LEFT_PARTITION] = new VSizeFrame(ctx);
+        inputBuffer[RIGHT_PARTITION] = new VSizeFrame(ctx);
 
         // Result
         resultAppender = new FrameTupleAppender(new VSizeFrame(ctx));
     }
 
-    public void setLeftFrame(ByteBuffer buffer) {
+    public void setLeftFrame(ByteBuffer buffer) throws HyracksDataException {
         setFrame(LEFT_PARTITION, buffer);
     }
 
-    public void setRightFrame(ByteBuffer buffer) {
+    public void setRightFrame(ByteBuffer buffer) throws HyracksDataException {
         setFrame(RIGHT_PARTITION, buffer);
     }
 
@@ -123,13 +124,13 @@ public abstract class AbstractMergeJoiner implements IMergeJoiner {
     }
 
     @Override
-    public void setFrame(int branch, ByteBuffer buffer) {
-        inputBuffer[branch].clear();
-        if (inputBuffer[branch].capacity() < buffer.capacity()) {
-            inputBuffer[branch].limit(buffer.capacity());
+    public void setFrame(int branch, ByteBuffer buffer) throws HyracksDataException {
+        inputBuffer[branch].getBuffer().clear();
+        if (inputBuffer[branch].getFrameSize() < buffer.capacity()) {
+            inputBuffer[branch].resize(buffer.capacity());
         }
-        inputBuffer[branch].put(buffer.array(), 0, buffer.capacity());
-        inputAccessor[branch].reset(inputBuffer[branch]);
+        inputBuffer[branch].getBuffer().put(buffer.array(), 0, buffer.capacity());
+        inputAccessor[branch].reset(inputBuffer[branch].getBuffer());
         inputAccessor[branch].next();
         frameCounts[branch]++;
     }

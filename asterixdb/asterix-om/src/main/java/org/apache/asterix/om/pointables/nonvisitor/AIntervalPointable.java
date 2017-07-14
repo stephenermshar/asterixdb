@@ -159,4 +159,13 @@ public class AIntervalPointable extends AbstractPointable {
         }
     }
 
+    @Override
+    public String toString() {
+        try {
+            return "raw-interval(" + getTypeTag() + ", " + getStartValue() + ", " + getEndValue() + ")";
+        } catch (HyracksDataException e) {
+            return e.getMessage();
+        }
+    }
+
 }
