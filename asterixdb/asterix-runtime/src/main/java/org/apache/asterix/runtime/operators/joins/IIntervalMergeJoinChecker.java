@@ -20,6 +20,7 @@ package org.apache.asterix.runtime.operators.joins;
 
 import org.apache.asterix.om.pointables.nonvisitor.AIntervalPointable;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
+import org.apache.hyracks.dataflow.std.buffermanager.ITupleAccessor;
 import org.apache.hyracks.dataflow.std.join.IMergeJoinChecker;
 
 public interface IIntervalMergeJoinChecker extends IMergeJoinChecker {
@@ -27,6 +28,8 @@ public interface IIntervalMergeJoinChecker extends IMergeJoinChecker {
     public boolean checkToRemoveLeftActive();
 
     public boolean checkToRemoveRightActive();
+
+    public boolean checkToIncrementMerge(ITupleAccessor accessorLeft, ITupleAccessor accessorRight) throws HyracksDataException;
 
     public boolean compareInterval(AIntervalPointable ipLeft, AIntervalPointable ipRight) throws HyracksDataException;
 

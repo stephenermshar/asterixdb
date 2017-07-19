@@ -160,6 +160,7 @@ public class OverlappingIntervalPartitionJoiner extends AbstractMergeJoiner {
             LOGGER.warning("IntervalPartitionJoiner statitics: " + k + " k, " + joinComparisonCount + " comparisons, "
                     + joinResultCount + " results, " + spillWriteCount + " written, " + spillReadCount + " read.");
         }
+        probeRunFileWriter.close();
         //printPartitionStatus();
     }
 

@@ -192,6 +192,7 @@ public class DisjointIntervalPartitionAndSpill {
         for (int pid = 0; pid < numOfPartitions; pid++) {
             if (bufferManager.getNumTuples(pid) > 0) {
                 spillPartition(pid);
+                runFileWriters[pid].close();
             } else {
                 break;
             }
@@ -199,6 +200,7 @@ public class DisjointIntervalPartitionAndSpill {
         // Flush the spill partition.
         if (spillAppender.getTupleCount() > 0) {
             spillAppender.flush(spillWriter);
+            spillWriter.close();
             spillWriteCount++;
         }
     }

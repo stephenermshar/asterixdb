@@ -168,6 +168,7 @@ public class DisjointIntervalPartitionJoinOperatorDescriptor extends AbstractOpe
                 locks.getLock(partition).lock();
                 try {
                     state.failed = true;
+                    state.partitionJoiner.failureCleanUp();
                 } finally {
                     locks.getLock(partition).unlock();
                 }
@@ -293,6 +294,7 @@ public class DisjointIntervalPartitionJoinOperatorDescriptor extends AbstractOpe
                 locks.getLock(partition).lock();
                 try {
                     state.failed = true;
+                    state.partitionJoiner.failureCleanUp();
                     locks.getLeft(partition).signal();
                 } finally {
                     locks.getLock(partition).unlock();
