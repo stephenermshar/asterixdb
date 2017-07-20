@@ -24,8 +24,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 
-import org.apache.asterix.aqlplus.parser.AQLPlusParser;
-import org.apache.asterix.aqlplus.parser.ParseException;
 import org.apache.asterix.common.exceptions.AsterixException;
 import org.apache.asterix.lang.common.base.Clause;
 import org.apache.asterix.lang.common.struct.Identifier;
@@ -127,235 +125,235 @@ public class FuzzyJoinRule implements IAlgebraicRewriteRule {
     @Override
     public boolean rewritePost(Mutable<ILogicalOperator> opRef, IOptimizationContext context)
             throws AlgebricksException {
-        AbstractLogicalOperator op = (AbstractLogicalOperator) opRef.getValue();
-        // current opperator is join
-        if (op.getOperatorTag() != LogicalOperatorTag.INNERJOIN
-                && op.getOperatorTag() != LogicalOperatorTag.LEFTOUTERJOIN) {
-            return false;
-        }
-
-        // Find GET_ITEM function.
-        AbstractBinaryJoinOperator joinOp = (AbstractBinaryJoinOperator) op;
-        Mutable<ILogicalExpression> expRef = joinOp.getCondition();
-        Mutable<ILogicalExpression> getItemExprRef = getSimilarityExpression(expRef);
-        if (getItemExprRef == null) {
-            return false;
-        }
-        // Check if the GET_ITEM function is on one of the supported similarity-check functions.
-        AbstractFunctionCallExpression getItemFuncExpr = (AbstractFunctionCallExpression) getItemExprRef.getValue();
-        Mutable<ILogicalExpression> argRef = getItemFuncExpr.getArguments().get(0);
-        AbstractFunctionCallExpression simFuncExpr = (AbstractFunctionCallExpression) argRef.getValue();
-        if (!simFuncs.contains(simFuncExpr.getFunctionIdentifier())) {
-            return false;
-        }
-        // Skip this rule based on annotations.
-        if (simFuncExpr.getAnnotations().containsKey(IndexedNLJoinExpressionAnnotation.INSTANCE)) {
-            return false;
-        }
-
-        List<Mutable<ILogicalOperator>> inputOps = joinOp.getInputs();
-        ILogicalOperator leftInputOp = inputOps.get(0).getValue();
-        ILogicalOperator rightInputOp = inputOps.get(1).getValue();
-
-        List<Mutable<ILogicalExpression>> inputExps = simFuncExpr.getArguments();
-
-        ILogicalExpression inputExp0 = inputExps.get(0).getValue();
-        ILogicalExpression inputExp1 = inputExps.get(1).getValue();
-
-        // left and right expressions are variables
-        if (inputExp0.getExpressionTag() != LogicalExpressionTag.VARIABLE
-                || inputExp1.getExpressionTag() != LogicalExpressionTag.VARIABLE) {
-            return false;
-        }
-
-        LogicalVariable inputVar0 = ((VariableReferenceExpression) inputExp0).getVariableReference();
-        LogicalVariable inputVar1 = ((VariableReferenceExpression) inputExp1).getVariableReference();
-
-        LogicalVariable leftInputVar;
-        LogicalVariable rightInputVar;
-
-        liveVars.clear();
-        VariableUtilities.getLiveVariables(leftInputOp, liveVars);
-        if (liveVars.contains(inputVar0)) {
-            leftInputVar = inputVar0;
-            rightInputVar = inputVar1;
-        } else {
-            leftInputVar = inputVar1;
-            rightInputVar = inputVar0;
-        }
-
-        List<LogicalVariable> leftInputPKs = context.findPrimaryKey(leftInputVar);
-        List<LogicalVariable> rightInputPKs = context.findPrimaryKey(rightInputVar);
-        // Bail if primary keys could not be inferred.
-        if (leftInputPKs == null || rightInputPKs == null) {
-            return false;
-        }
-        // primary key has only one variable
-        if (leftInputPKs.size() != 1 || rightInputPKs.size() != 1) {
-            return false;
-        }
-        IAType leftType = (IAType) context.getOutputTypeEnvironment(leftInputOp).getVarType(leftInputVar);
-        IAType rightType = (IAType) context.getOutputTypeEnvironment(rightInputOp).getVarType(rightInputVar);
-        // left-hand side and right-hand side of "~=" has the same type
-        IAType left2 = TypeComputeUtils.getActualType(leftType);
-        IAType right2 = TypeComputeUtils.getActualType(rightType);
-        if (!left2.deepEqual(right2)) {
-            return false;
-        }
-        //
-        // -- - FIRE - --
-        //
-        AqlMetadataProvider metadataProvider = ((AqlMetadataProvider) context.getMetadataProvider());
-        FunctionIdentifier funcId = FuzzyUtils.getTokenizer(leftType.getTypeTag());
-        String tokenizer;
-        if (funcId == null) {
-            tokenizer = "";
-        } else {
-            tokenizer = funcId.getName();
-        }
-
-        float simThreshold = FuzzyUtils.getSimThreshold(metadataProvider);
-        String simFunction = FuzzyUtils.getSimFunction(metadataProvider);
-
-        // finalize AQL+ query
-        String prepareJoin;
-        switch (joinOp.getJoinKind()) {
-            case INNER: {
-                prepareJoin = "join" + AQLPLUS;
-                break;
-            }
-            case LEFT_OUTER: {
-                // TODO To make it work for Left Outer Joins, we should permute
-                // the #LEFT and #RIGHT at the top of the AQL+ query. But, when
-                // doing this, the
-                // fuzzyjoin/user-vis-int-vis-user-lot-aqlplus_1.aql (the one
-                // doing 3-way fuzzy joins) gives a different result. But even
-                // if we don't change the FuzzyJoinRule, permuting the for
-                // clauses in fuzzyjoin/user-vis-int-vis-user-lot-aqlplus_1.aql
-                // leads to different results, which suggests there is some
-                // other sort of bug.
-                return false;
-                // prepareJoin = "loj" + AQLPLUS;
-                // break;
-            }
-            default: {
-                throw new IllegalStateException();
-            }
-        }
-        String aqlPlus = String.format(Locale.US, prepareJoin, tokenizer, tokenizer, simFunction, simThreshold,
-                tokenizer, tokenizer, simFunction, simThreshold, simFunction, simThreshold, simThreshold);
-
-        LogicalVariable leftPKVar = leftInputPKs.get(0);
-        LogicalVariable rightPKVar = rightInputPKs.get(0);
-
-        Counter counter = new Counter(context.getVarCounter());
-
-        AQLPlusParser parser = new AQLPlusParser(new StringReader(aqlPlus));
-        parser.initScope();
-        parser.setVarCounter(counter);
-        List<Clause> clauses;
-        try {
-            clauses = parser.Clauses();
-        } catch (ParseException e) {
-            throw new AlgebricksException(e);
-        }
-        // The translator will compile metadata internally. Run this compilation
-        // under the same transaction id as the "outer" compilation.
-        AqlPlusExpressionToPlanTranslator translator = new AqlPlusExpressionToPlanTranslator(
-                metadataProvider.getJobId(), metadataProvider, counter, null, null);
-        context.setVarCounter(counter.get());
-
-        LogicalOperatorDeepCopyWithNewVariablesVisitor deepCopyVisitor = new LogicalOperatorDeepCopyWithNewVariablesVisitor(
-                context, context);
-
-        translator.addOperatorToMetaScope(new Identifier("#LEFT"), leftInputOp);
-        translator.addVariableToMetaScope(new Identifier("$$LEFT"), leftInputVar);
-        translator.addVariableToMetaScope(new Identifier("$$LEFTPK"), leftPKVar);
-
-        translator.addOperatorToMetaScope(new Identifier("#RIGHT"), rightInputOp);
-        translator.addVariableToMetaScope(new Identifier("$$RIGHT"), rightInputVar);
-        translator.addVariableToMetaScope(new Identifier("$$RIGHTPK"), rightPKVar);
-
-        translator.addOperatorToMetaScope(new Identifier("#LEFT_1"), deepCopyVisitor.deepCopy(leftInputOp));
-        translator.addVariableToMetaScope(new Identifier("$$LEFT_1"), deepCopyVisitor.varCopy(leftInputVar));
-        translator.addVariableToMetaScope(new Identifier("$$LEFTPK_1"), deepCopyVisitor.varCopy(leftPKVar));
-        deepCopyVisitor.updatePrimaryKeys(context);
-        deepCopyVisitor.reset();
-
-        // translator.addOperatorToMetaScope(new Identifier("#LEFT_2"),
-        // deepCopyVisitor.deepCopy(leftInputOp, null));
-        // translator.addVariableToMetaScope(new Identifier("$$LEFT_2"),
-        // deepCopyVisitor.varCopy(leftInputVar));
-        // translator.addVariableToMetaScope(new Identifier("$$LEFTPK_2"),
-        // deepCopyVisitor.varCopy(leftPKVar));
-        // deepCopyVisitor.updatePrimaryKeys(context);
-        // deepCopyVisitor.reset();
-        //
-        // translator.addOperatorToMetaScope(new Identifier("#LEFT_3"),
-        // deepCopyVisitor.deepCopy(leftInputOp, null));
-        // translator.addVariableToMetaScope(new Identifier("$$LEFT_3"),
-        // deepCopyVisitor.varCopy(leftInputVar));
-        // translator.addVariableToMetaScope(new Identifier("$$LEFTPK_3"),
-        // deepCopyVisitor.varCopy(leftPKVar));
-        // deepCopyVisitor.updatePrimaryKeys(context);
-        // deepCopyVisitor.reset();
-
-        translator.addOperatorToMetaScope(new Identifier("#RIGHT_1"), deepCopyVisitor.deepCopy(rightInputOp));
-        translator.addVariableToMetaScope(new Identifier("$$RIGHT_1"), deepCopyVisitor.varCopy(rightInputVar));
-        translator.addVariableToMetaScope(new Identifier("$$RIGHTPK_1"), deepCopyVisitor.varCopy(rightPKVar));
-        deepCopyVisitor.updatePrimaryKeys(context);
-        deepCopyVisitor.reset();
-
-        // TODO pick side to run Stage 1, currently always picks RIGHT side
-        translator.addOperatorToMetaScope(new Identifier("#RIGHT_2"), deepCopyVisitor.deepCopy(rightInputOp));
-        translator.addVariableToMetaScope(new Identifier("$$RIGHT_2"), deepCopyVisitor.varCopy(rightInputVar));
-        translator.addVariableToMetaScope(new Identifier("$$RIGHTPK_2"), deepCopyVisitor.varCopy(rightPKVar));
-        deepCopyVisitor.updatePrimaryKeys(context);
-        deepCopyVisitor.reset();
-
-        translator.addOperatorToMetaScope(new Identifier("#RIGHT_3"), deepCopyVisitor.deepCopy(rightInputOp));
-        translator.addVariableToMetaScope(new Identifier("$$RIGHT_3"), deepCopyVisitor.varCopy(rightInputVar));
-        translator.addVariableToMetaScope(new Identifier("$$RIGHTPK_3"), deepCopyVisitor.varCopy(rightPKVar));
-        deepCopyVisitor.updatePrimaryKeys(context);
-        deepCopyVisitor.reset();
-
-        ILogicalPlan plan;
-        try {
-            plan = translator.translate(clauses);
-        } catch (AsterixException e) {
-            throw new AlgebricksException(e);
-        }
-        context.setVarCounter(counter.get());
-
-        ILogicalOperator outputOp = plan.getRoots().get(0).getValue();
-
-        SelectOperator extraSelect = null;
-        if (getItemExprRef != expRef) {
-            // more than one join condition
-            getItemExprRef.setValue(ConstantExpression.TRUE);
-            switch (joinOp.getJoinKind()) {
-                case INNER: {
-                    extraSelect = new SelectOperator(expRef, false, null);
-                    extraSelect.getInputs().add(new MutableObject<ILogicalOperator>(outputOp));
-                    outputOp = extraSelect;
-                    break;
-                }
-                case LEFT_OUTER: {
-                    if (((AbstractLogicalOperator) outputOp).getOperatorTag() != LogicalOperatorTag.LEFTOUTERJOIN) {
-                        throw new IllegalStateException();
-                    }
-                    LeftOuterJoinOperator topJoin = (LeftOuterJoinOperator) outputOp;
-                    topJoin.getCondition().setValue(expRef.getValue());
-                    break;
-                }
-                default: {
-                    throw new IllegalStateException();
-                }
-            }
-        }
-        opRef.setValue(outputOp);
-        OperatorPropertiesUtil.typeOpRec(opRef, context);
-        return true;
+//        AbstractLogicalOperator op = (AbstractLogicalOperator) opRef.getValue();
+//        // current opperator is join
+//        if (op.getOperatorTag() != LogicalOperatorTag.INNERJOIN
+//                && op.getOperatorTag() != LogicalOperatorTag.LEFTOUTERJOIN) {
+//            return false;
+//        }
+//
+//        // Find GET_ITEM function.
+//        AbstractBinaryJoinOperator joinOp = (AbstractBinaryJoinOperator) op;
+//        Mutable<ILogicalExpression> expRef = joinOp.getCondition();
+//        Mutable<ILogicalExpression> getItemExprRef = getSimilarityExpression(expRef);
+//        if (getItemExprRef == null) {
+//            return false;
+//        }
+//        // Check if the GET_ITEM function is on one of the supported similarity-check functions.
+//        AbstractFunctionCallExpression getItemFuncExpr = (AbstractFunctionCallExpression) getItemExprRef.getValue();
+//        Mutable<ILogicalExpression> argRef = getItemFuncExpr.getArguments().get(0);
+//        AbstractFunctionCallExpression simFuncExpr = (AbstractFunctionCallExpression) argRef.getValue();
+//        if (!simFuncs.contains(simFuncExpr.getFunctionIdentifier())) {
+//            return false;
+//        }
+//        // Skip this rule based on annotations.
+//        if (simFuncExpr.getAnnotations().containsKey(IndexedNLJoinExpressionAnnotation.INSTANCE)) {
+//            return false;
+//        }
+//
+//        List<Mutable<ILogicalOperator>> inputOps = joinOp.getInputs();
+//        ILogicalOperator leftInputOp = inputOps.get(0).getValue();
+//        ILogicalOperator rightInputOp = inputOps.get(1).getValue();
+//
+//        List<Mutable<ILogicalExpression>> inputExps = simFuncExpr.getArguments();
+//
+//        ILogicalExpression inputExp0 = inputExps.get(0).getValue();
+//        ILogicalExpression inputExp1 = inputExps.get(1).getValue();
+//
+//        // left and right expressions are variables
+//        if (inputExp0.getExpressionTag() != LogicalExpressionTag.VARIABLE
+//                || inputExp1.getExpressionTag() != LogicalExpressionTag.VARIABLE) {
+//            return false;
+//        }
+//
+//        LogicalVariable inputVar0 = ((VariableReferenceExpression) inputExp0).getVariableReference();
+//        LogicalVariable inputVar1 = ((VariableReferenceExpression) inputExp1).getVariableReference();
+//
+//        LogicalVariable leftInputVar;
+//        LogicalVariable rightInputVar;
+//
+//        liveVars.clear();
+//        VariableUtilities.getLiveVariables(leftInputOp, liveVars);
+//        if (liveVars.contains(inputVar0)) {
+//            leftInputVar = inputVar0;
+//            rightInputVar = inputVar1;
+//        } else {
+//            leftInputVar = inputVar1;
+//            rightInputVar = inputVar0;
+//        }
+//
+//        List<LogicalVariable> leftInputPKs = context.findPrimaryKey(leftInputVar);
+//        List<LogicalVariable> rightInputPKs = context.findPrimaryKey(rightInputVar);
+//        // Bail if primary keys could not be inferred.
+//        if (leftInputPKs == null || rightInputPKs == null) {
+//            return false;
+//        }
+//        // primary key has only one variable
+//        if (leftInputPKs.size() != 1 || rightInputPKs.size() != 1) {
+//            return false;
+//        }
+//        IAType leftType = (IAType) context.getOutputTypeEnvironment(leftInputOp).getVarType(leftInputVar);
+//        IAType rightType = (IAType) context.getOutputTypeEnvironment(rightInputOp).getVarType(rightInputVar);
+//        // left-hand side and right-hand side of "~=" has the same type
+//        IAType left2 = TypeComputeUtils.getActualType(leftType);
+//        IAType right2 = TypeComputeUtils.getActualType(rightType);
+//        if (!left2.deepEqual(right2)) {
+//            return false;
+//        }
+//        //
+//        // -- - FIRE - --
+//        //
+//        AqlMetadataProvider metadataProvider = ((AqlMetadataProvider) context.getMetadataProvider());
+//        FunctionIdentifier funcId = FuzzyUtils.getTokenizer(leftType.getTypeTag());
+//        String tokenizer;
+//        if (funcId == null) {
+//            tokenizer = "";
+//        } else {
+//            tokenizer = funcId.getName();
+//        }
+//
+//        float simThreshold = FuzzyUtils.getSimThreshold(metadataProvider);
+//        String simFunction = FuzzyUtils.getSimFunction(metadataProvider);
+//
+//        // finalize AQL+ query
+//        String prepareJoin;
+//        switch (joinOp.getJoinKind()) {
+//            case INNER: {
+//                prepareJoin = "join" + AQLPLUS;
+//                break;
+//            }
+//            case LEFT_OUTER: {
+//                // TODO To make it work for Left Outer Joins, we should permute
+//                // the #LEFT and #RIGHT at the top of the AQL+ query. But, when
+//                // doing this, the
+//                // fuzzyjoin/user-vis-int-vis-user-lot-aqlplus_1.aql (the one
+//                // doing 3-way fuzzy joins) gives a different result. But even
+//                // if we don't change the FuzzyJoinRule, permuting the for
+//                // clauses in fuzzyjoin/user-vis-int-vis-user-lot-aqlplus_1.aql
+//                // leads to different results, which suggests there is some
+//                // other sort of bug.
+//                return false;
+//                // prepareJoin = "loj" + AQLPLUS;
+//                // break;
+//            }
+//            default: {
+//                throw new IllegalStateException();
+//            }
+//        }
+//        String aqlPlus = String.format(Locale.US, prepareJoin, tokenizer, tokenizer, simFunction, simThreshold,
+//                tokenizer, tokenizer, simFunction, simThreshold, simFunction, simThreshold, simThreshold);
+//
+//        LogicalVariable leftPKVar = leftInputPKs.get(0);
+//        LogicalVariable rightPKVar = rightInputPKs.get(0);
+//
+//        Counter counter = new Counter(context.getVarCounter());
+//
+//        AQLPlusParser parser = new AQLPlusParser(new StringReader(aqlPlus));
+//        parser.initScope();
+//        parser.setVarCounter(counter);
+//        List<Clause> clauses;
+//        try {
+//            clauses = parser.Clauses();
+//        } catch (ParseException e) {
+//            throw new AlgebricksException(e);
+//        }
+//        // The translator will compile metadata internally. Run this compilation
+//        // under the same transaction id as the "outer" compilation.
+//        AqlPlusExpressionToPlanTranslator translator = new AqlPlusExpressionToPlanTranslator(
+//                metadataProvider.getJobId(), metadataProvider, counter, null, null);
+//        context.setVarCounter(counter.get());
+//
+//        LogicalOperatorDeepCopyWithNewVariablesVisitor deepCopyVisitor = new LogicalOperatorDeepCopyWithNewVariablesVisitor(
+//                context, context);
+//
+//        translator.addOperatorToMetaScope(new Identifier("#LEFT"), leftInputOp);
+//        translator.addVariableToMetaScope(new Identifier("$$LEFT"), leftInputVar);
+//        translator.addVariableToMetaScope(new Identifier("$$LEFTPK"), leftPKVar);
+//
+//        translator.addOperatorToMetaScope(new Identifier("#RIGHT"), rightInputOp);
+//        translator.addVariableToMetaScope(new Identifier("$$RIGHT"), rightInputVar);
+//        translator.addVariableToMetaScope(new Identifier("$$RIGHTPK"), rightPKVar);
+//
+//        translator.addOperatorToMetaScope(new Identifier("#LEFT_1"), deepCopyVisitor.deepCopy(leftInputOp));
+//        translator.addVariableToMetaScope(new Identifier("$$LEFT_1"), deepCopyVisitor.varCopy(leftInputVar));
+//        translator.addVariableToMetaScope(new Identifier("$$LEFTPK_1"), deepCopyVisitor.varCopy(leftPKVar));
+//        deepCopyVisitor.updatePrimaryKeys(context);
+//        deepCopyVisitor.reset();
+//
+//        // translator.addOperatorToMetaScope(new Identifier("#LEFT_2"),
+//        // deepCopyVisitor.deepCopy(leftInputOp, null));
+//        // translator.addVariableToMetaScope(new Identifier("$$LEFT_2"),
+//        // deepCopyVisitor.varCopy(leftInputVar));
+//        // translator.addVariableToMetaScope(new Identifier("$$LEFTPK_2"),
+//        // deepCopyVisitor.varCopy(leftPKVar));
+//        // deepCopyVisitor.updatePrimaryKeys(context);
+//        // deepCopyVisitor.reset();
+//        //
+//        // translator.addOperatorToMetaScope(new Identifier("#LEFT_3"),
+//        // deepCopyVisitor.deepCopy(leftInputOp, null));
+//        // translator.addVariableToMetaScope(new Identifier("$$LEFT_3"),
+//        // deepCopyVisitor.varCopy(leftInputVar));
+//        // translator.addVariableToMetaScope(new Identifier("$$LEFTPK_3"),
+//        // deepCopyVisitor.varCopy(leftPKVar));
+//        // deepCopyVisitor.updatePrimaryKeys(context);
+//        // deepCopyVisitor.reset();
+//
+//        translator.addOperatorToMetaScope(new Identifier("#RIGHT_1"), deepCopyVisitor.deepCopy(rightInputOp));
+//        translator.addVariableToMetaScope(new Identifier("$$RIGHT_1"), deepCopyVisitor.varCopy(rightInputVar));
+//        translator.addVariableToMetaScope(new Identifier("$$RIGHTPK_1"), deepCopyVisitor.varCopy(rightPKVar));
+//        deepCopyVisitor.updatePrimaryKeys(context);
+//        deepCopyVisitor.reset();
+//
+//        // TODO pick side to run Stage 1, currently always picks RIGHT side
+//        translator.addOperatorToMetaScope(new Identifier("#RIGHT_2"), deepCopyVisitor.deepCopy(rightInputOp));
+//        translator.addVariableToMetaScope(new Identifier("$$RIGHT_2"), deepCopyVisitor.varCopy(rightInputVar));
+//        translator.addVariableToMetaScope(new Identifier("$$RIGHTPK_2"), deepCopyVisitor.varCopy(rightPKVar));
+//        deepCopyVisitor.updatePrimaryKeys(context);
+//        deepCopyVisitor.reset();
+//
+//        translator.addOperatorToMetaScope(new Identifier("#RIGHT_3"), deepCopyVisitor.deepCopy(rightInputOp));
+//        translator.addVariableToMetaScope(new Identifier("$$RIGHT_3"), deepCopyVisitor.varCopy(rightInputVar));
+//        translator.addVariableToMetaScope(new Identifier("$$RIGHTPK_3"), deepCopyVisitor.varCopy(rightPKVar));
+//        deepCopyVisitor.updatePrimaryKeys(context);
+//        deepCopyVisitor.reset();
+//
+//        ILogicalPlan plan;
+//        try {
+//            plan = translator.translate(clauses);
+//        } catch (AsterixException e) {
+//            throw new AlgebricksException(e);
+//        }
+//        context.setVarCounter(counter.get());
+//
+//        ILogicalOperator outputOp = plan.getRoots().get(0).getValue();
+//
+//        SelectOperator extraSelect = null;
+//        if (getItemExprRef != expRef) {
+//            // more than one join condition
+//            getItemExprRef.setValue(ConstantExpression.TRUE);
+//            switch (joinOp.getJoinKind()) {
+//                case INNER: {
+//                    extraSelect = new SelectOperator(expRef, false, null);
+//                    extraSelect.getInputs().add(new MutableObject<ILogicalOperator>(outputOp));
+//                    outputOp = extraSelect;
+//                    break;
+//                }
+//                case LEFT_OUTER: {
+//                    if (((AbstractLogicalOperator) outputOp).getOperatorTag() != LogicalOperatorTag.LEFTOUTERJOIN) {
+//                        throw new IllegalStateException();
+//                    }
+//                    LeftOuterJoinOperator topJoin = (LeftOuterJoinOperator) outputOp;
+//                    topJoin.getCondition().setValue(expRef.getValue());
+//                    break;
+//                }
+//                default: {
+//                    throw new IllegalStateException();
+//                }
+//            }
+//        }
+//        opRef.setValue(outputOp);
+//        OperatorPropertiesUtil.typeOpRec(opRef, context);
+        return false;
     }
 
     /**

@@ -112,7 +112,7 @@ public class OverlappingIntervalPartitionJoiner extends AbstractMergeJoiner {
         this.buildHpc = buildHpc;
         this.probeHpc = probeHpc;
 
-        FileReference file = ctx.getJobletContext().createManagedWorkspaceFile("IntervalPartitionJoiner");
+        FileReference file = ctx.getJobletContext().createManagedWorkspaceFile("OverlappingIntervalPartitionJoiner");
         probeRunFileWriter = new RunFileWriter(file, ctx.getIOManager());
         probeRunFileWriter.open();
 
@@ -120,13 +120,6 @@ public class OverlappingIntervalPartitionJoiner extends AbstractMergeJoiner {
         buildInMemoryPartitions = new LinkedList<>();
 
         this.accessorBuild = new FrameTupleAccessor(rightRd);
-
-        LOGGER.setLevel(Level.FINE);
-        System.out.println("IntervalPartitionJoiner: Logging level is: " + LOGGER.getLevel());
-        if (LOGGER.isLoggable(Level.FINE)) {
-            LOGGER.fine("IntervalPartitionJoiner has started partition " + partition + " with " + memorySize
-                    + " frames of memory.");
-        }
     }
 
     @Override
@@ -157,7 +150,7 @@ public class OverlappingIntervalPartitionJoiner extends AbstractMergeJoiner {
         // Flush result.
         resultAppender.write(writer, true);
         if (LOGGER.isLoggable(Level.WARNING)) {
-            LOGGER.warning("IntervalPartitionJoiner statitics: " + k + " k, " + joinComparisonCount + " comparisons, "
+            LOGGER.warning("OverlappingIntervalPartitionJoiner statitics: " + k + " k, " + joinComparisonCount + " comparisons, "
                     + joinResultCount + " results, " + spillWriteCount + " written, " + spillReadCount + " read.");
         }
         probeRunFileWriter.close();
