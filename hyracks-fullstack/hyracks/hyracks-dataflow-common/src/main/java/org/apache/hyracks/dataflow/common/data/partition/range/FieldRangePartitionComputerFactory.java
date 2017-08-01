@@ -51,8 +51,10 @@ public class FieldRangePartitionComputerFactory implements ITupleRangePartitionC
         for (int i = 0; i < comparatorFactories.length; ++i) {
             maxComparators[i] = comparatorFactories[i].createMaxBinaryComparator();
         }
+        final int splitCount = rangeMap.getSplitCount();
+
         return new ITupleRangePartitionComputer() {
-            private int partionCount;
+            private int partitionCount;
             private double rangesPerPart = 1;
 
             @Override
@@ -63,10 +65,10 @@ public class FieldRangePartitionComputerFactory implements ITupleRangePartitionC
                     return;
                 }
                 // Map range partition to node partitions.
-                if (partionCount != nParts) {
-                    partionCount = nParts;
-                    if (rangeMap.getSplitCount() + 1 > nParts) {
-                        rangesPerPart = ((double) rangeMap.getSplitCount() + 1) / nParts;
+                if (partitionCount != nParts) {
+                    partitionCount = nParts;
+                    if (splitCount + 1 > nParts) {
+                        rangesPerPart = ((double) splitCount + 1) / nParts;
                     }
                 }
                 getRangePartitions(accessor, tIndex, map);
@@ -89,13 +91,13 @@ public class FieldRangePartitionComputerFactory implements ITupleRangePartitionC
                         break;
 
                     case REPLICATE:
-                        for (int pid = minPartition; pid < maxPartition; ++pid) {
+                        for (int pid = minPartition; pid < partitionCount; ++pid) {
                             addPartition(pid, map);
                         }
                         break;
 
                     case SPLIT:
-                        for (int pid = minPartition; pid <= maxPartition; ++pid) {
+                        for (int pid = minPartition; pid <= maxPartition && pid < partitionCount; ++pid) {
                             addPartition(pid, map);
                         }
                         break;
@@ -130,7 +132,7 @@ public class FieldRangePartitionComputerFactory implements ITupleRangePartitionC
                     IBinaryComparator[] comparators) throws HyracksDataException {
                 int searchIndex = 0;
                 int left = 0;
-                int right = rangeMap.getSplitCount() - 1;
+                int right = splitCount;
                 int cmp;
                 while (left <= right) {
                     searchIndex = (left + right) / 2;

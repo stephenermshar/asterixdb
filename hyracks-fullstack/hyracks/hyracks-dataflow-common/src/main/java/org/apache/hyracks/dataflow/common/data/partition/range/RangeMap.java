@@ -50,7 +50,7 @@ public class RangeMap implements IRangeMap {
     }
 
     @Override
-    public int getTag(int columnIndex, int splitIndex) {
+    public byte getTag(int columnIndex, int splitIndex) {
         return getFieldTag(getFieldIndex(columnIndex, splitIndex + 1));
     }
 
@@ -68,7 +68,7 @@ public class RangeMap implements IRangeMap {
         return columnIndex + splitIndex * fields;
     }
 
-    private int getFieldTag(int index) {
+    private byte getFieldTag(int index) {
         return bytes[getFieldStart(index)];
     }
 
@@ -104,7 +104,7 @@ public class RangeMap implements IRangeMap {
     }
 
     @Override
-    public int getMinTag(int columnIndex) {
+    public byte getMinTag(int columnIndex) {
         return getFieldTag(getFieldIndex(columnIndex, getMinIndex()));
     }
 
@@ -124,7 +124,7 @@ public class RangeMap implements IRangeMap {
     }
 
     @Override
-    public int getMaxTag(int columnIndex) {
+    public byte getMaxTag(int columnIndex) {
         return getFieldTag(getFieldIndex(columnIndex, getMaxIndex()));
     }
 

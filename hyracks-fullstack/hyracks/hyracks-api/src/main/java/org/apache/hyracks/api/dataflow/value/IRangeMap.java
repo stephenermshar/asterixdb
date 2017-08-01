@@ -30,7 +30,7 @@ public interface IRangeMap extends Serializable {
 
     public int getLength(int columnIndex, int splitIndex);
 
-    public int getTag(int columnIndex, int splitIndex);
+    public byte getTag(int columnIndex, int splitIndex);
 
     // Min value functions
     public byte[] getMinByteArray(int columnIndex);
@@ -39,7 +39,7 @@ public interface IRangeMap extends Serializable {
 
     public int getMinLength(int columnIndex);
 
-    public int getMinTag(int columnIndex);
+    public byte getMinTag(int columnIndex);
 
     // Max value functions
     public byte[] getMaxByteArray(int columnIndex);
@@ -48,5 +48,5 @@ public interface IRangeMap extends Serializable {
 
     public int getMaxLength(int columnIndex);
 
-    public int getMaxTag(int columnIndex);
+    public byte getMaxTag(int columnIndex);
 }

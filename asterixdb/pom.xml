@@ -673,6 +673,12 @@
       </dependency>
       <dependency>
         <groupId>org.apache.hyracks</groupId>
+        <artifactId>hyracks-dataflow-common</artifactId>
+        <version>${hyracks.version}</version>
+        <type>test-jar</type>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hyracks</groupId>
         <artifactId>hyracks-dataflow-std</artifactId>
         <version>${hyracks.version}</version>
       </dependency>
