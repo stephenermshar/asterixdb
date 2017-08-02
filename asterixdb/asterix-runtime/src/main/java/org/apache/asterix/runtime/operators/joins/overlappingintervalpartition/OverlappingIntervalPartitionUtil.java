@@ -26,7 +26,7 @@ import org.apache.hyracks.data.std.primitive.LongPointable;
 
 public class OverlappingIntervalPartitionUtil {
     public static final double C_CPU = 0.5;
-    public static final double C_IO = 100000;
+    public static final double C_IO = 100;
     public static final int ITERATION_LIMIT = 20;
 
     private OverlappingIntervalPartitionUtil() {
@@ -34,9 +34,13 @@ public class OverlappingIntervalPartitionUtil {
 
     public static void main(String[] args) {
         PhysicalOptimizationConfig poc = new PhysicalOptimizationConfig();
-        long[] countList = { poc.getMaxFramesForJoinLeftInput(), 2441, 9766, 39063, 156250, 625000, 2500000, 10000000 };
-        long[] maxDurationList = { poc.getMaxIntervalDuration(), 1, 3, 30, 300, 3000, 30000, 300000 };
-        int[] tuplesList = { poc.getMaxRecordsPerFrame(), 5, 50, 300, 900 };
+        //        long[] countList = { poc.getMaxFramesForJoinLeftInput(), 2441, 9766, 39063, 156250, 625000, 2500000, 10000000 };
+        //        long[] maxDurationList = { poc.getMaxIntervalDuration(), 1, 3, 30, 300, 3000, 30000, 300000 };
+        //        int[] tuplesList = { poc.getMaxRecordsPerFrame(), 5, 50, 300, 900 };
+
+        long[] countList = { poc.getMaxFramesForJoinLeftInput(), 7500, 15000, 30000, 60000, 120000 };
+        long[] maxDurationList = { poc.getMaxIntervalDuration(), 1, 3, 5, 50 };
+        int[] tuplesList = { poc.getMaxRecordsPerFrame(), 300, 350 };
 
         int k;
         for (long count : countList) {
