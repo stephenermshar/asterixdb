@@ -38,7 +38,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 /**
- * @see org.apache.hyracks.dataflow.std.sort.util.DeletableFrameTupleAppender
+ * @see org.apache.hyracks.dataflow.std.sort.util.AppendDeletableFrameTupleAccessor
  */
 public class DeletableFrameTupleAppenderTest {
     private static final int META_DATA_SIZE = 4 + 4 + 4 + 4;
@@ -47,7 +47,7 @@ public class DeletableFrameTupleAppenderTest {
     private static final int TEST_TUPLE_COUNT = 8;
     private static final int TEST_FRAME_SIZE = 256;
 
-    DeletableFrameTupleAppender appender;
+    AppendDeletableFrameTupleAccessor appender;
     ISerializerDeserializer[] fields = new ISerializerDeserializer[] { IntegerSerializerDeserializer.INSTANCE,
             new UTF8StringSerializerDeserializer(), };
     RecordDescriptor recordDescriptor = new RecordDescriptor(fields);
@@ -55,7 +55,7 @@ public class DeletableFrameTupleAppenderTest {
 
     @Before
     public void initial() throws HyracksDataException {
-        appender = new DeletableFrameTupleAppender(recordDescriptor);
+        appender = new AppendDeletableFrameTupleAccessor(recordDescriptor);
     }
 
     @Test
@@ -152,7 +152,7 @@ public class DeletableFrameTupleAppenderTest {
     public void testAppend() throws Exception {
         int count = TEST_TUPLE_COUNT;
         ByteBuffer bufferRead = makeAFrame(TEST_FRAME_SIZE, count, 0);
-        DeletableFrameTupleAppender accessor = new DeletableFrameTupleAppender(recordDescriptor);
+        AppendDeletableFrameTupleAccessor accessor = new AppendDeletableFrameTupleAccessor(recordDescriptor);
         accessor.reset(bufferRead);
         ByteBuffer bufferWrite = ByteBuffer.allocate(TEST_FRAME_SIZE);
         appender.clear(bufferWrite);
@@ -221,7 +221,7 @@ public class DeletableFrameTupleAppenderTest {
         }
 
         ByteBuffer bufferRead = makeAFrame(cap, count * 2, 0);
-        DeletableFrameTupleAppender accessor = new DeletableFrameTupleAppender(recordDescriptor);
+        AppendDeletableFrameTupleAccessor accessor = new AppendDeletableFrameTupleAccessor(recordDescriptor);
         accessor.reset(bufferRead);
 
         int[] appendSet = new int[] { 1, 3, 5, 7, 8, 9, 10, 11 };
@@ -246,7 +246,7 @@ public class DeletableFrameTupleAppenderTest {
         testDelete();
         appender.reOrganizeBuffer();
         ByteBuffer bufferRead = makeAFrame(TEST_FRAME_SIZE, count, 0);
-        DeletableFrameTupleAppender accessor = new DeletableFrameTupleAppender(recordDescriptor);
+        AppendDeletableFrameTupleAccessor accessor = new AppendDeletableFrameTupleAccessor(recordDescriptor);
         accessor.reset(bufferRead);
         for (int i = 0; i < accessor.getTupleCount(); i++) {
             appender.append(accessor, i);

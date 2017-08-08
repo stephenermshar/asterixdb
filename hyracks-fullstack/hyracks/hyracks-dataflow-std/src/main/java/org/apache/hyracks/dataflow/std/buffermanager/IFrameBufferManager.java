@@ -20,6 +20,7 @@ package org.apache.hyracks.dataflow.std.buffermanager;
 
 import java.nio.ByteBuffer;
 
+import org.apache.hyracks.api.dataflow.value.RecordDescriptor;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 
 /**
@@ -75,5 +76,7 @@ public interface IFrameBufferManager {
     boolean exists();
 
     void resetIterator();
+
+    ITupleAccessor getTupleAccessor(RecordDescriptor rd);
 
 }

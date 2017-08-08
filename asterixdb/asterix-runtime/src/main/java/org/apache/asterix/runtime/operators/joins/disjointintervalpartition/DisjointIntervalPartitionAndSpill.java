@@ -32,7 +32,7 @@ import org.apache.hyracks.dataflow.common.comm.io.FrameTupleAccessor;
 import org.apache.hyracks.dataflow.common.comm.io.FrameTupleAppender;
 import org.apache.hyracks.dataflow.common.io.RunFileReader;
 import org.apache.hyracks.dataflow.common.io.RunFileWriter;
-import org.apache.hyracks.dataflow.std.buffermanager.IPartitionedTupleBufferManager;
+import org.apache.hyracks.dataflow.std.buffermanager.IFrameBufferManager;
 import org.apache.hyracks.dataflow.std.buffermanager.ITupleAccessor;
 import org.apache.hyracks.dataflow.std.buffermanager.PreferToSpillFullyOccupiedFramePolicy;
 import org.apache.hyracks.dataflow.std.buffermanager.VPartitionTupleBufferManager;
@@ -46,9 +46,9 @@ public class DisjointIntervalPartitionAndSpill {
 
     private IHyracksTaskContext ctx;
 
-    private final String runFilePrefix;
+    private String runFilePrefix;
 
-    private final DisjointIntervalPartitionComputer dipc;
+    private DisjointIntervalPartitionComputer dipc;
 
     private RunFileWriter[] runFileWriters; //writing spilled build partitions
 
@@ -56,10 +56,10 @@ public class DisjointIntervalPartitionAndSpill {
     private final int numOfPartitions;
     private final int memoryForPartitioning;
 
-    private IPartitionedTupleBufferManager bufferManager;
+    private VPartitionTupleBufferManager bufferManager;
     private PreferToSpillFullyOccupiedFramePolicy spillPolicy;
 
-    private final FrameTupleAccessor accessor;
+    private FrameTupleAccessor accessor;
 
     // stats information
     private final long[] partitionSizeInTups;
@@ -73,16 +73,14 @@ public class DisjointIntervalPartitionAndSpill {
     private final FrameTupleAppender spillAppender;
     private RunFileWriter spillWriter;
 
-    public DisjointIntervalPartitionAndSpill(IHyracksTaskContext ctx, int memory, int numOfPartitions,
-            String runFilePrefix, RecordDescriptor rd, DisjointIntervalPartitionComputer dipc)
+    private RecordDescriptor rd;
+
+    public DisjointIntervalPartitionAndSpill(IHyracksTaskContext ctx, int memory, int numOfPartitions)
             throws HyracksDataException {
         this.ctx = ctx;
         this.memoryForPartitioning = memory - 1;
-        this.dipc = dipc;
-        this.runFilePrefix = runFilePrefix;
         this.numOfPartitions = numOfPartitions;
 
-        accessor = new FrameTupleAccessor(rd);
         runFileWriters = new RunFileWriter[numOfPartitions];
         spilledStatus = new BitSet(numOfPartitions);
 
@@ -98,6 +96,15 @@ public class DisjointIntervalPartitionAndSpill {
                 ctx.getInitialFrameSize());
         spilledStatus.clear();
 
+    }
+
+    public void resetForNewDataset(RecordDescriptor rd, DisjointIntervalPartitionComputer dipc, String runFilePrefix,
+            RunFileWriter writer) throws HyracksDataException {
+        this.rd = rd;
+        this.dipc = dipc;
+        this.runFilePrefix = runFilePrefix;
+        accessor = new FrameTupleAccessor(rd);
+        reset(writer);
     }
 
     public void reset(RunFileWriter writer) throws HyracksDataException {
@@ -127,7 +134,7 @@ public class DisjointIntervalPartitionAndSpill {
     }
 
     private void processTuple(IFrameTupleAccessor fta, int tid, int pid) throws HyracksDataException {
-        //        TuplePrinterUtil.printTuple(runFilePrefix + " Partition: " + pid, fta, tid);
+//        TuplePrinterUtil.printTuple(runFilePrefix + " Partition: " + pid, fta, tid);
         if (pid < 0) {
             addToSpillPartition(fta, tid);
         } else {
@@ -223,6 +230,21 @@ public class DisjointIntervalPartitionAndSpill {
 
     public long getSpillWriteCount() {
         return spillWriteCount;
+    }
+
+    /*
+     * For in memory operations
+     */
+    public boolean hasSpillPartitions() {
+        return 0 < spilledStatus.cardinality() || 0 < spillSizeInTups;
+    }
+
+    public ITupleAccessor getPartitionTupleAccessor(int i) {
+        IFrameBufferManager tmpBm = bufferManager.getPartitionFrameBufferManager(i);
+        if (null != tmpBm) {
+            return tmpBm.getTupleAccessor(rd);
+        }
+        return null;
     }
 
 }

@@ -27,7 +27,7 @@ import java.util.logging.Logger;
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.dataflow.value.RecordDescriptor;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
-import org.apache.hyracks.dataflow.std.sort.util.DeletableFrameTupleAppender;
+import org.apache.hyracks.dataflow.std.sort.util.AppendDeletableFrameTupleAccessor;
 import org.apache.hyracks.dataflow.std.sort.util.IAppendDeletableFrameTupleAccessor;
 import org.apache.hyracks.dataflow.std.structures.TuplePointer;
 
@@ -51,7 +51,7 @@ public class VariableDeletableTupleMemoryManager implements IDeletableTupleBuffe
         this.pool = framePool;
         int maxFrames = framePool.getMemoryBudgetBytes() / framePool.getMinFrameSize();
         this.policy = new FrameFreeSlotLastFit(maxFrames);
-        this.accessor = new DeletableFrameTupleAppender(recordDescriptor);
+        this.accessor = new AppendDeletableFrameTupleAccessor(recordDescriptor);
         this.frames = new ArrayList<>();
         this.minFreeSpace = calculateMinFreeSpace(recordDescriptor);
         this.recordDescriptor = recordDescriptor;
@@ -170,7 +170,7 @@ public class VariableDeletableTupleMemoryManager implements IDeletableTupleBuffe
     @Override
     public ITuplePointerAccessor createTuplePointerAccessor() {
         return new AbstractTuplePointerAccessor() {
-            private IAppendDeletableFrameTupleAccessor bufferAccessor = new DeletableFrameTupleAppender(
+            private IAppendDeletableFrameTupleAccessor bufferAccessor = new AppendDeletableFrameTupleAccessor(
                     recordDescriptor);
 
             @Override
@@ -187,7 +187,7 @@ public class VariableDeletableTupleMemoryManager implements IDeletableTupleBuffe
 
     public ITupleAccessor createTupleAccessor() {
         return new AbstractTupleAccessor() {
-            private IAppendDeletableFrameTupleAccessor bufferAccessor = new DeletableFrameTupleAppender(
+            private IAppendDeletableFrameTupleAccessor bufferAccessor = new AppendDeletableFrameTupleAccessor(
                     recordDescriptor);
 
             @Override

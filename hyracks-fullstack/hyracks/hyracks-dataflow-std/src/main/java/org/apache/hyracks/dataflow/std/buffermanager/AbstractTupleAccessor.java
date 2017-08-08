@@ -178,6 +178,9 @@ public abstract class AbstractTupleAccessor implements ITupleAccessor {
             ++frameId;
             resetInnerAccessor(frameId);
             tupleId = 0;
+        } else {
+            // Force exists to fail, by incrementing the tuple pointer.
+            ++tupleId;
         }
     }
 

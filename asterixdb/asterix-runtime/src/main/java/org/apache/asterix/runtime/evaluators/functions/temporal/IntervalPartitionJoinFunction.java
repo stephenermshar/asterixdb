@@ -21,6 +21,7 @@ package org.apache.asterix.runtime.evaluators.functions.temporal;
 import java.io.DataOutput;
 
 import org.apache.asterix.dataflow.data.nontagged.serde.AInt32SerializerDeserializer;
+import org.apache.asterix.dataflow.data.nontagged.serde.AInt64SerializerDeserializer;
 import org.apache.asterix.dataflow.data.nontagged.serde.AIntervalSerializerDeserializer;
 import org.apache.asterix.formats.nontagged.AqlSerializerDeserializerProvider;
 import org.apache.asterix.om.base.AInt32;
@@ -53,6 +54,7 @@ public class IntervalPartitionJoinFunction implements IScalarEvaluator {
     private int rangeIdCache = -1;
     private long partitionStart;
     private long partitionDuration;
+    private int partitionId;
 
     @SuppressWarnings("unchecked")
     private ISerializerDeserializer<AInt32> intSerde = AqlSerializerDeserializerProvider.INSTANCE
@@ -72,6 +74,37 @@ public class IntervalPartitionJoinFunction implements IScalarEvaluator {
         this.eval1 = args[1].createScalarEvaluator(ctx);
         this.eval2 = args[2].createScalarEvaluator(ctx);
         this.startPoint = startPoint;
+        this.partitionId = ctx.getTaskAttemptId().getTaskId().getPartition();
+    }
+
+    private void setPartitionLocalPartition(int rangeId, int k) throws HyracksDataException {
+        RangeForwardTaskState rangeState = RangeForwardTaskState.getRangeState(rangeId, ctx);
+        IRangeMap rangeMap = rangeState.getRangeMap();
+
+        partitionStart = getPartitionStartValue(rangeMap, partitionId);
+        long partitionEnd = getPartitionEndValue(rangeMap, partitionId);
+        partitionDuration = OverlappingIntervalPartitionUtil.getPartitionDuration(partitionStart, partitionEnd, k);
+    }
+
+    private long getPartitionStartValue(IRangeMap rangeMap, int pid) throws HyracksDataException {
+        if (pid > rangeMap.getSplitCount()) {
+            // RangeMap is smaller than the number of partitions.
+            pid = rangeMap.getSplitCount();
+        }
+        if (pid == 0) {
+            return LongPointable.getLong(rangeMap.getMinByteArray(0), rangeMap.getMinStartOffset(0) + 1);
+        } else {
+            return LongPointable.getLong(rangeMap.getByteArray(0, pid - 1), rangeMap.getStartOffset(0, pid - 1) + 1);
+        }
+    }
+
+    private long getPartitionEndValue(IRangeMap rangeMap, int pid) throws HyracksDataException {
+        if (pid >= rangeMap.getSplitCount()) {
+            // Last available slot.
+            return LongPointable.getLong(rangeMap.getMaxByteArray(0), rangeMap.getMaxStartOffset(0) + 1);
+        } else {
+            return LongPointable.getLong(rangeMap.getByteArray(0, pid), rangeMap.getStartOffset(0, pid) + 1);
+        }
     }
 
     public void evaluate(IFrameTupleReference tuple, IPointable result) throws AlgebricksException {
@@ -96,12 +129,22 @@ public class IntervalPartitionJoinFunction implements IScalarEvaluator {
                         + EnumDeserializer.ATYPETAGDESERIALIZER.deserialize(bytes0[offset0]));
             }
 
-            if (bytes1[offset1] != ATypeTag.SERIALIZED_INT32_TYPE_TAG) {
+            int rangeId;
+            if (bytes1[offset1] == ATypeTag.SERIALIZED_INT32_TYPE_TAG) {
+                rangeId = AInt32SerializerDeserializer.getInt(bytes1, offset1 + 1);
+            } else if (bytes1[offset1] == ATypeTag.SERIALIZED_INT64_TYPE_TAG) {
+                rangeId = (int) AInt64SerializerDeserializer.getLong(bytes1, offset1 + 1);
+            } else {
                 throw new AlgebricksException("Expected type INT32 for parameter 1 but got "
                         + EnumDeserializer.ATYPETAGDESERIALIZER.deserialize(bytes1[offset1]));
             }
 
-            if (bytes2[offset2] != ATypeTag.SERIALIZED_INT32_TYPE_TAG) {
+            int k;
+            if (bytes2[offset2] == ATypeTag.SERIALIZED_INT32_TYPE_TAG) {
+                k = AInt32SerializerDeserializer.getInt(bytes2, offset2 + 1);
+            } else if (bytes2[offset2] == ATypeTag.SERIALIZED_INT64_TYPE_TAG) {
+                k = (int) AInt64SerializerDeserializer.getLong(bytes2, offset2 + 1);
+            } else {
                 throw new AlgebricksException("Expected type INT32 for parameter 2 but got "
                         + EnumDeserializer.ATYPETAGDESERIALIZER.deserialize(bytes2[offset2]));
             }
@@ -112,21 +155,15 @@ public class IntervalPartitionJoinFunction implements IScalarEvaluator {
             } else {
                 point = AIntervalSerializerDeserializer.getIntervalEnd(bytes0, offset0 + 1);
             }
-            int rangeId = AInt32SerializerDeserializer.getInt(bytes1, offset1 + 1);
-            int k = AInt32SerializerDeserializer.getInt(bytes2, offset2 + 1);
 
             if (rangeId != rangeIdCache) {
                 // Only load new values if the range changed.
-                RangeForwardTaskState rangeState = RangeForwardTaskState.getRangeState(rangeId, ctx);
-                IRangeMap rangeMap = rangeState.getRangeMap();
-                partitionStart = LongPointable.getLong(rangeMap.getMinByteArray(0), rangeMap.getMinStartOffset(0) + 1);
-                long partitionEnd = LongPointable.getLong(rangeMap.getMaxByteArray(0),
-                        rangeMap.getMaxStartOffset(0) + 1);
-                partitionDuration = OverlappingIntervalPartitionUtil.getPartitionDuration(partitionStart, partitionEnd, k);
+                setPartitionLocalPartition(rangeId, k);
                 rangeIdCache = rangeId;
             }
 
-            int partition = OverlappingIntervalPartitionUtil.getIntervalPartition(point, partitionStart, partitionDuration, k);
+            int partition = OverlappingIntervalPartitionUtil.getIntervalPartition(point, partitionStart,
+                    partitionDuration, k);
             aInt.setValue(partition);
             intSerde.serialize(aInt, out);
         } catch (HyracksDataException hex) {

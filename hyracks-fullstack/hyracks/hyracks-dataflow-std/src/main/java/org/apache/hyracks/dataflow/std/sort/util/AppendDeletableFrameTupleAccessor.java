@@ -76,7 +76,7 @@ import org.apache.hyracks.util.IntSerDeUtils;
  * ]
  * </pre>
  */
-public class DeletableFrameTupleAppender implements IAppendDeletableFrameTupleAccessor {
+public class AppendDeletableFrameTupleAccessor implements IAppendDeletableFrameTupleAccessor {
 
     public static final Comparator<Pair<Integer, Integer>> INDEX_OFFSET_ASC_COMPARATOR = new Comparator<Pair<Integer, Integer>>() {
         @Override
@@ -107,7 +107,7 @@ public class DeletableFrameTupleAppender implements IAppendDeletableFrameTupleAc
 
     private final PriorityQueue<IntegerPair> reorganizeQueue;
 
-    public DeletableFrameTupleAppender(RecordDescriptor recordDescriptor) {
+    public AppendDeletableFrameTupleAccessor(RecordDescriptor recordDescriptor) {
         this.recordDescriptor = recordDescriptor;
         reorganizeQueue = new PriorityQueue<>(16, IntegerPair.RIGHT_ASC_COMPARATOR);
     }

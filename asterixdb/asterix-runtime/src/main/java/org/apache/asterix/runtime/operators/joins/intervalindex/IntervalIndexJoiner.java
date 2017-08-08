@@ -63,8 +63,6 @@ public class IntervalIndexJoiner extends AbstractMergeJoiner {
     private final RunFileStream[] runFileStream;
     private final RunFilePointer[] runFilePointer;
 
-    //    private final LinkedList<TuplePointer> buffer = new LinkedList<>();
-
     private final IIntervalMergeJoinChecker imjc;
 
     private final byte point;
