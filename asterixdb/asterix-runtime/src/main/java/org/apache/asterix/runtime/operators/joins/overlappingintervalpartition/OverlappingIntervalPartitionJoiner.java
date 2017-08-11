@@ -59,7 +59,6 @@ public class OverlappingIntervalPartitionJoiner extends AbstractMergeJoiner {
     private final ITuplePartitionComputer buildHpc;
     private final ITuplePartitionComputer probeHpc;
 
-    private final int buildMemory;
     private final int k;
     private final int numOfPartitions;
     private long buildSize = 0;
@@ -85,11 +84,16 @@ public class OverlappingIntervalPartitionJoiner extends AbstractMergeJoiner {
     private boolean moreBuildProcessing = true;
     private final List<IFrameBufferManager> fbms = new ArrayList<>();
 
+    private final int partition;
+    private final int memorySize;
+
     public OverlappingIntervalPartitionJoiner(IHyracksTaskContext ctx, int memorySize, int partition, int k,
             MergeStatus status, MergeJoinLocks locks, IIntervalMergeJoinChecker imjc, RecordDescriptor leftRd,
             RecordDescriptor rightRd, ITuplePartitionComputer buildHpc, ITuplePartitionComputer probeHpc)
             throws HyracksDataException {
         super(ctx, partition, status, locks, leftRd, rightRd);
+        this.partition = partition;
+        this.memorySize = memorySize;
 
         bufferInfo = new BufferInfo(null, -1, -1);
 
@@ -104,9 +108,8 @@ public class OverlappingIntervalPartitionJoiner extends AbstractMergeJoiner {
         joinPartitionSizes = new long[numOfPartitions][numOfPartitions];
 
         // TODO fix available memory size
-        this.buildMemory = memorySize;
         buildBufferManager = new VPartitionTupleBufferManager(ctx, VPartitionTupleBufferManager.NO_CONSTRAIN,
-                numOfPartitions, buildMemory * ctx.getInitialFrameSize());
+                numOfPartitions, memorySize * ctx.getInitialFrameSize());
 
         this.k = k;
         this.buildHpc = buildHpc;
@@ -150,8 +153,10 @@ public class OverlappingIntervalPartitionJoiner extends AbstractMergeJoiner {
         // Flush result.
         resultAppender.write(writer, true);
         if (LOGGER.isLoggable(Level.WARNING)) {
-            LOGGER.warning("OverlappingIntervalPartitionJoiner statitics: " + k + " k, " + joinComparisonCount + " comparisons, "
-                    + joinResultCount + " results, " + spillWriteCount + " written, " + spillReadCount + " read.");
+            long ioCost = spillWriteCount + spillReadCount;
+            LOGGER.warning(",OverlappingIntervalPartitionJoiner Statistics Log," + partition + ",partition,"
+                    + memorySize + ",memory," + joinResultCount + ",results," + joinComparisonCount + ",CPU," + ioCost
+                    + ",IO," + k + ",k," + spillWriteCount + ",frames_written," + spillReadCount + ",frames_read");
         }
         probeRunFileWriter.close();
         //printPartitionStatus();

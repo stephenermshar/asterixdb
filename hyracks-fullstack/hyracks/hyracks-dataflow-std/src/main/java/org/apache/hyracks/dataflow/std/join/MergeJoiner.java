@@ -62,15 +62,20 @@ public class MergeJoiner extends AbstractMergeJoiner {
 
     private long joinComparisonCount = 0;
     private long joinResultCount = 0;
-//    private long spillFileCount = 0;
-//    private long spillWriteCount = 0;
-//    private long spillReadCount = 0;
+    //    private long spillFileCount = 0;
+    //    private long spillWriteCount = 0;
+    //    private long spillReadCount = 0;
     private long spillCount = 0;
+
+    private final int partition;
+    private final int memorySize;
 
     public MergeJoiner(IHyracksTaskContext ctx, int memorySize, int partition, MergeStatus status, MergeJoinLocks locks,
             IMergeJoinChecker mjc, RecordDescriptor leftRd, RecordDescriptor rightRd) throws HyracksDataException {
         super(ctx, partition, status, locks, leftRd, rightRd);
         this.mjc = mjc;
+        this.partition = partition;
+        this.memorySize = memorySize;
 
         // Memory (right buffer)
         if (memorySize < 1) {
@@ -86,10 +91,10 @@ public class MergeJoiner extends AbstractMergeJoiner {
         runFileStream = new RunFileStream(ctx, "left", status.branch[LEFT_PARTITION]);
         runFilePointer = new RunFilePointer();
 
-        if (LOGGER.isLoggable(Level.WARNING)) {
-            LOGGER.warning(
-                    "MergeJoiner has started partition " + partition + " with " + memorySize + " frames of memory.");
-        }
+        //        if (LOGGER.isLoggable(Level.WARNING)) {
+        //            LOGGER.warning(
+        //                    "MergeJoiner has started partition " + partition + " with " + memorySize + " frames of memory.");
+        //        }
     }
 
     private boolean addToMemory(ITupleAccessor accessor) throws HyracksDataException {
@@ -198,9 +203,11 @@ public class MergeJoiner extends AbstractMergeJoiner {
         processLeftFrame(writer);
         resultAppender.write(writer, true);
         if (LOGGER.isLoggable(Level.WARNING)) {
-            LOGGER.warning("MergeJoinerStatisticLog," + joinComparisonCount + ",comparisons," + joinResultCount
-                    + ",results," + spillCount + ",spills," + runFileStream.getWriteCount() + ",frames_written,"
-                    + runFileStream.getReadCount() + ",frames_read");
+            long ioCost = runFileStream.getWriteCount() + runFileStream.getReadCount();
+            LOGGER.warning(",MergeJoiner Statistics Log," + partition + ",partition," + memorySize + ",memory,"
+                    + joinResultCount + ",results," + joinComparisonCount + ",CPU," + ioCost + ",IO," + spillCount
+                    + ",spills," + runFileStream.getWriteCount() + ",frames_written," + runFileStream.getReadCount()
+                    + ",frames_read");
         }
     }
 
@@ -254,11 +261,11 @@ public class MergeJoiner extends AbstractMergeJoiner {
     }
 
     private void freezeAndSpill() throws HyracksDataException {
-//        if (LOGGER.isLoggable(Level.WARNING)) {
-//            LOGGER.warning("freeze snapshot: " + frameCounts[RIGHT_PARTITION] + " right, " + frameCounts[LEFT_PARTITION]
-//                    + " left, " + joinComparisonCount + " comparisons, " + joinResultCount + " results, ["
-//                    + bufferManager.getNumTuples() + " tuples memory].");
-//        }
+        //        if (LOGGER.isLoggable(Level.WARNING)) {
+        //            LOGGER.warning("freeze snapshot: " + frameCounts[RIGHT_PARTITION] + " right, " + frameCounts[LEFT_PARTITION]
+        //                    + " left, " + joinComparisonCount + " comparisons, " + joinResultCount + " results, ["
+        //                    + bufferManager.getNumTuples() + " tuples memory].");
+        //        }
 
         // Mark where to start reading
         if (runFileStream.isReading()) {
@@ -295,17 +302,17 @@ public class MergeJoiner extends AbstractMergeJoiner {
     }
 
     private void unfreezeAndContinue(ITupleAccessor accessor) throws HyracksDataException {
-//        if (LOGGER.isLoggable(Level.WARNING)) {
-//            LOGGER.warning("snapshot: " + frameCounts[RIGHT_PARTITION] + " right, " + frameCounts[LEFT_PARTITION]
-//                    + " left, " + joinComparisonCount + " comparisons, " + joinResultCount + " results, ["
-//                    + bufferManager.getNumTuples() + " tuples memory, " + spillCount + " spills, "
-//                    + (runFileStream.getFileCount() - spillFileCount) + " files, "
-//                    + (runFileStream.getWriteCount() - spillWriteCount) + " written, "
-//                    + (runFileStream.getReadCount() - spillReadCount) + " read].");
-//            spillFileCount = runFileStream.getFileCount();
-//            spillReadCount = runFileStream.getReadCount();
-//            spillWriteCount = runFileStream.getWriteCount();
-//        }
+        //        if (LOGGER.isLoggable(Level.WARNING)) {
+        //            LOGGER.warning("snapshot: " + frameCounts[RIGHT_PARTITION] + " right, " + frameCounts[LEFT_PARTITION]
+        //                    + " left, " + joinComparisonCount + " comparisons, " + joinResultCount + " results, ["
+        //                    + bufferManager.getNumTuples() + " tuples memory, " + spillCount + " spills, "
+        //                    + (runFileStream.getFileCount() - spillFileCount) + " files, "
+        //                    + (runFileStream.getWriteCount() - spillWriteCount) + " written, "
+        //                    + (runFileStream.getReadCount() - spillReadCount) + " read].");
+        //            spillFileCount = runFileStream.getFileCount();
+        //            spillReadCount = runFileStream.getReadCount();
+        //            spillWriteCount = runFileStream.getWriteCount();
+        //        }
 
         // Finish writing
         runFileStream.flushRunFile();
