@@ -26,7 +26,7 @@ import org.apache.hyracks.api.exceptions.HyracksDataException;
 
 public interface IMergeJoinCheckerFactory extends Serializable {
 
-    IMergeJoinChecker createMergeJoinChecker(int[] keys0, int[] keys1, int partition, IHyracksTaskContext ctx) throws HyracksDataException;
+    IMergeJoinChecker createMergeJoinChecker(int[] keys0, int[] keys1, IHyracksTaskContext ctx) throws HyracksDataException;
 
     RangePartitioningType getLeftPartitioningType();
 

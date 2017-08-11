@@ -67,13 +67,14 @@ public class IntervalRangePartitionComputerFactoryTest extends TestCase {
     IBinaryRangeComparatorFactory[] BINARY_DESC_COMPARATOR_FACTORIES = new IBinaryRangeComparatorFactory[] {
             IntervalDescRangeBinaryComparatorFactory.INSTANCE };
     /*
-     * The following three intervals (+++) will be tested for these 4 partitions.
+     * The following three intervals (+++) will be tested for these 4 and 16 partitions.
      *
      *    ----------+++++++++++++++++++++++++++----------
      *    -----------+++++++++++++++++++++++++-----------
      *    ------------+++++++++++++++++++++++------------
+     *     4 partitions
      *    -----------|-----------|-----------|-----------
-     *     or 16 partitions.
+     *     16 partitions
      *    --|--|--|--|--|--|--|--|--|--|--|--|--|--|--|--
      */
 
@@ -84,8 +85,8 @@ public class IntervalRangePartitionComputerFactoryTest extends TestCase {
             new AInterval(100, 300, (byte) 16), new AInterval(101, 299, (byte) 16) };
     private final int INTERVAL_LENGTH = Byte.BYTES + Long.BYTES + Long.BYTES;
 
-    //map          { 0l, 25l, 50l, 75l, 100l, 125l, 150l, 175l, 200l, 225l, 250l, 275l, 300l, 325l, 350l, 375l, 400l };
-    //partitions   {    0,   1,   2,   3,    4,    5,    6,    7,    8,    9,    10,   11,   12,   13,   14,  15     };
+    //map    {  0l, 25l, 50l, 75l, 100l, 125l, 150l, 175l, 200l, 225l, 250l, 275l, 300l, 325l, 350l, 375l, 400l };
+    //splits { Min,   0,   1,   2,    3,    4,    5,    6,    7,    8,    9,   10,   11,   12,   13,   14,  Max };
     private final Long[] MAP_POINTS = new Long[] { 0l, 25l, 50l, 75l, 100l, 125l, 150l, 175l, 200l, 225l, 250l, 275l,
             300l, 325l, 350l, 375l, 400l };
 
@@ -204,6 +205,118 @@ public class IntervalRangePartitionComputerFactoryTest extends TestCase {
                 return;
             }
         }
+    }
+
+    @Test
+    public void testFieldRangePartitionAscProject4Partitions() throws HyracksDataException {
+        int[][] results = new int[3][];
+        results[0] = new int[] { 0 };
+        results[1] = new int[] { 1 };
+        results[2] = new int[] { 1 };
+
+        IRangeMap rangeMap = getRangeMap(MAP_POINTS);
+
+        executeFieldRangePartitionTests(INTERVALS, rangeMap, BINARY_ASC_COMPARATOR_FACTORIES,
+                RangePartitioningType.PROJECT, 4, results);
+    }
+
+    @Test
+    public void testFieldRangePartitionDescProject4Partitions() throws HyracksDataException {
+        int[][] results = new int[3][];
+        results[0] = new int[] { 0 };
+        results[1] = new int[] { 1 };
+        results[2] = new int[] { 1 };
+
+        Long[] map = MAP_POINTS.clone();
+        ArrayUtils.reverse(map);
+        IRangeMap rangeMap = getRangeMap(map);
+
+        executeFieldRangePartitionTests(INTERVALS, rangeMap, BINARY_DESC_COMPARATOR_FACTORIES,
+                RangePartitioningType.PROJECT, 4, results);
+    }
+
+    @Test
+    public void testFieldRangePartitionAscProjectEnd4Partitions() throws HyracksDataException {
+        int[][] results = new int[3][];
+        results[0] = new int[] { 3 };
+        results[1] = new int[] { 3 };
+        results[2] = new int[] { 2 };
+
+        IRangeMap rangeMap = getRangeMap(MAP_POINTS);
+
+        executeFieldRangePartitionTests(INTERVALS, rangeMap, BINARY_ASC_COMPARATOR_FACTORIES,
+                RangePartitioningType.PROJECT_END, 4, results);
+    }
+
+    @Test
+    public void testFieldRangePartitionDescProjectEnd4Partitions() throws HyracksDataException {
+        int[][] results = new int[3][];
+        results[0] = new int[] { 3 };
+        results[1] = new int[] { 3 };
+        results[2] = new int[] { 2 };
+
+        Long[] map = MAP_POINTS.clone();
+        ArrayUtils.reverse(map);
+        IRangeMap rangeMap = getRangeMap(map);
+
+        executeFieldRangePartitionTests(INTERVALS, rangeMap, BINARY_DESC_COMPARATOR_FACTORIES,
+                RangePartitioningType.PROJECT_END, 4, results);
+    }
+
+    @Test
+    public void testFieldRangePartitionAscSplit4Partitions() throws HyracksDataException {
+        int[][] results = new int[3][];
+        results[0] = new int[] { 0, 1, 2, 3 };
+        results[1] = new int[] { 1, 2, 3 };
+        results[2] = new int[] { 1, 2 };
+
+        IRangeMap rangeMap = getRangeMap(MAP_POINTS);
+
+        executeFieldRangePartitionTests(INTERVALS, rangeMap, BINARY_ASC_COMPARATOR_FACTORIES,
+                RangePartitioningType.SPLIT, 4, results);
+    }
+
+    @Test
+    public void testFieldRangePartitionDescSplit4Partitions() throws HyracksDataException {
+        int[][] results = new int[3][];
+        results[0] = new int[] { 0, 1, 2, 3 };
+        results[1] = new int[] { 1, 2, 3 };
+        results[2] = new int[] { 1, 2 };
+
+        Long[] map = MAP_POINTS.clone();
+        ArrayUtils.reverse(map);
+        IRangeMap rangeMap = getRangeMap(map);
+
+        executeFieldRangePartitionTests(INTERVALS, rangeMap, BINARY_DESC_COMPARATOR_FACTORIES,
+                RangePartitioningType.SPLIT, 4, results);
+    }
+
+    @Test
+    public void testFieldRangePartitionAscReplicate4Partitions() throws HyracksDataException {
+        int[][] results = new int[3][];
+        results[0] = new int[] { 0, 1, 2, 3 };
+        results[1] = new int[] { 1, 2, 3 };
+        results[2] = new int[] { 1, 2, 3 };
+
+        IRangeMap rangeMap = getRangeMap(MAP_POINTS);
+
+        executeFieldRangePartitionTests(INTERVALS, rangeMap, BINARY_ASC_COMPARATOR_FACTORIES,
+                RangePartitioningType.REPLICATE, 4, results);
+    }
+
+    @Test
+    public void testFieldRangePartitionDescReplicate4Partitions() throws HyracksDataException {
+        int[][] results = new int[3][];
+        results[0] = new int[] { 0, 1, 2, 3 };
+        results[1] = new int[] { 1, 2, 3 };
+        results[2] = new int[] { 1, 2, 3 };
+
+        Long[] map = MAP_POINTS.clone();
+        ArrayUtils.reverse(map);
+        IRangeMap rangeMap = getRangeMap(map);
+
+        executeFieldRangePartitionTests(INTERVALS, rangeMap, BINARY_DESC_COMPARATOR_FACTORIES,
+                RangePartitioningType.REPLICATE, 4, results);
     }
 
     @Test

@@ -91,7 +91,7 @@ public class IntervalIndexJoiner extends AbstractMergeJoiner {
 
         this.point = imjcf.isOrderAsc() ? EndPointIndexItem.START_POINT : EndPointIndexItem.END_POINT;
 
-        this.imjc = imjcf.createMergeJoinChecker(leftKeys, rightKeys, partition, ctx);
+        this.imjc = imjcf.createMergeJoinChecker(leftKeys, rightKeys, ctx);
 
         this.leftKey = leftKeys[0];
         this.rightKey = rightKeys[0];

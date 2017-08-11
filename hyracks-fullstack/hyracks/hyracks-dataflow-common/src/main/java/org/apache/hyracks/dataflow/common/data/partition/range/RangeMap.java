@@ -136,4 +136,30 @@ public class RangeMap implements IRangeMap {
         return 0;
     }
 
+    @Override
+    public int getMaxSlotFromPartition(int partition, int nPartitions) {
+        double rangesPerPart = 1.0;
+        if (getSplitCount() + 1 > nPartitions) {
+            rangesPerPart = ((double) getSplitCount() + 1) / nPartitions;
+        }
+        return (int) Math.ceil((partition + 1) * rangesPerPart) - 1;
+    }
+
+    @Override
+    public int getMinSlotFromPartition(int partition, int nPartitions) {
+        double rangesPerPart = 1.0;
+        if (getSplitCount() + 1 > nPartitions) {
+            rangesPerPart = ((double) getSplitCount() + 1) / nPartitions;
+        }
+        return (int) Math.ceil(partition * rangesPerPart) - 1;
+    }
+
+    @Override
+    public int getPartitionFromSlot(int slot, int nPartitions) {
+        double rangesPerPart = 1.0;
+        if (getSplitCount() + 1 > nPartitions) {
+            rangesPerPart = ((double) getSplitCount() + 1) / nPartitions;
+        }
+        return (int) Math.floor(slot / rangesPerPart);
+    }
 }

@@ -27,6 +27,6 @@ use dataverse CostModel;
 count(
   for $s in dataset S
     for $r in dataset R
-    where /*+ interval-merge-join [0,256,512,768,1025] */ interval-overlapping($s.data, $r.data)
+    where /*+ interval-merge-join [0,257,513,769,1025] */ interval-overlapping($s.data, $r.data)
     return [$r, $s]
 );

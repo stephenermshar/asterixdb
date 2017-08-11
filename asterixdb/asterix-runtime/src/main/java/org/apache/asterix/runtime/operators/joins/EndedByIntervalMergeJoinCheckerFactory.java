@@ -25,7 +25,7 @@ public class EndedByIntervalMergeJoinCheckerFactory extends AbstractIntervalInve
     private static final long serialVersionUID = 1L;
 
     @Override
-    public IIntervalMergeJoinChecker createMergeJoinChecker(int[] keys0, int[] keys1, int partition, IHyracksTaskContext ctx) {
+    public IIntervalMergeJoinChecker createMergeJoinChecker(int[] keys0, int[] keys1, IHyracksTaskContext ctx) {
         return new EndedByIntervalMergeJoinChecker(keys0, keys1);
     }
 

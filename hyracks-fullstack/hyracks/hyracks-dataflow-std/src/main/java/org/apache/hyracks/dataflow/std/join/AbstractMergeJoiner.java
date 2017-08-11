@@ -62,6 +62,7 @@ public abstract class AbstractMergeJoiner implements IMergeJoiner {
     private final int partition;
     private final MergeJoinLocks locks;
     protected long[] frameCounts = { 0, 0 };
+    protected long[] tupleCounts = { 0, 0 };
 
     public AbstractMergeJoiner(IHyracksTaskContext ctx, int partition, MergeStatus status, MergeJoinLocks locks,
             RecordDescriptor leftRd, RecordDescriptor rightRd) throws HyracksDataException {
@@ -133,5 +134,6 @@ public abstract class AbstractMergeJoiner implements IMergeJoiner {
         inputAccessor[branch].reset(inputBuffer[branch].getBuffer());
         inputAccessor[branch].next();
         frameCounts[branch]++;
+        tupleCounts[branch] += inputAccessor[branch].getTupleCount();
     }
 }

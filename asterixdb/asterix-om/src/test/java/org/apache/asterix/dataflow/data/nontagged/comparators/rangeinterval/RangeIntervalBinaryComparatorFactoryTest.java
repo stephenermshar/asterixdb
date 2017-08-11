@@ -44,8 +44,8 @@ public class RangeIntervalBinaryComparatorFactoryTest extends TestCase {
     /*
      * The following points (X) will be tested for this interval (+).
      *
-     * ----X---XXX---X---XXX---X----
      * ---------+++++++++++---------
+     * ----X---XXX---X---XXX---X----
      */
     private final AInterval INTERVAL = new AInterval(10, 20, (byte) 16);
     private final int INTERVAL_OFFSET = 0;

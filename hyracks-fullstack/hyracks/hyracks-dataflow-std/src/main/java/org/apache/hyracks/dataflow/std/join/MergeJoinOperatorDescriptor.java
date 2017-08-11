@@ -206,8 +206,7 @@ public class MergeJoinOperatorDescriptor extends AbstractOperatorDescriptor {
                 throws HyracksDataException {
             locks.setPartitions(nPartitions);
             RecordDescriptor inRecordDesc = recordDescProvider.getInputRecordDescriptor(getActivityId(), 0);
-            final IMergeJoinChecker mjc = mergeJoinCheckerFactory.createMergeJoinChecker(leftKeys, rightKeys, partition,
-                    ctx);
+            final IMergeJoinChecker mjc = mergeJoinCheckerFactory.createMergeJoinChecker(leftKeys, rightKeys, ctx);
             return new RightDataOperator(ctx, partition, inRecordDesc, mjc);
         }
 

@@ -254,7 +254,7 @@ public class OverlappingIntervalPartitionJoinOperatorDescriptor extends Abstract
                             partitionStart, partitionEnd).createPartitioner();
                     ITuplePartitionComputer probeHpc = new OverlappingIntervalPartitionComputerFactory(probeKey, state.k,
                             partitionStart, partitionEnd).createPartitioner();
-                    IIntervalMergeJoinChecker imjc = imjcf.createMergeJoinChecker(leftKeys, rightKeys, partition, ctx);
+                    IIntervalMergeJoinChecker imjc = imjcf.createMergeJoinChecker(leftKeys, rightKeys, ctx);
 
                     state.rightRd = rightRd;
                     state.partitionJoiner = new OverlappingIntervalPartitionJoiner(ctx, memoryForJoin, partition, state.k,

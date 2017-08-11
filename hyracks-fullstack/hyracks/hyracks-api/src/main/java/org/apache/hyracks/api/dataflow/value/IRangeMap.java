@@ -24,6 +24,12 @@ public interface IRangeMap extends Serializable {
 
     public int getSplitCount();
 
+    public int getMinSlotFromPartition(int partition, int nPartitions);
+
+    public int getMaxSlotFromPartition(int partition, int nPartitions);
+
+    public int getPartitionFromSlot(int slot, int nPartitions);
+
     public byte[] getByteArray(int columnIndex, int splitIndex);
 
     public int getStartOffset(int columnIndex, int splitIndex);

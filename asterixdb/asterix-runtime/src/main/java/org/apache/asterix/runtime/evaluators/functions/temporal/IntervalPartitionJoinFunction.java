@@ -80,30 +80,33 @@ public class IntervalPartitionJoinFunction implements IScalarEvaluator {
     private void setPartitionLocalPartition(int rangeId, int k) throws HyracksDataException {
         RangeForwardTaskState rangeState = RangeForwardTaskState.getRangeState(rangeId, ctx);
         IRangeMap rangeMap = rangeState.getRangeMap();
+        int nPartitions = rangeState.getNumberOfPartitions();
 
-        partitionStart = getPartitionStartValue(rangeMap, partitionId);
-        long partitionEnd = getPartitionEndValue(rangeMap, partitionId);
+        partitionStart = getPartitionStartValue(rangeMap, partitionId, nPartitions);
+        long partitionEnd = getPartitionEndValue(rangeMap, partitionId, nPartitions);
         partitionDuration = OverlappingIntervalPartitionUtil.getPartitionDuration(partitionStart, partitionEnd, k);
     }
 
-    private long getPartitionStartValue(IRangeMap rangeMap, int pid) throws HyracksDataException {
+    private long getPartitionStartValue(IRangeMap rangeMap, int pid, int nPartitions) throws HyracksDataException {
         if (pid > rangeMap.getSplitCount()) {
             // RangeMap is smaller than the number of partitions.
             pid = rangeMap.getSplitCount();
         }
-        if (pid == 0) {
+        int slotId = rangeMap.getMinSlotFromPartition(pid, nPartitions);
+        if (slotId <  0) {
             return LongPointable.getLong(rangeMap.getMinByteArray(0), rangeMap.getMinStartOffset(0) + 1);
         } else {
-            return LongPointable.getLong(rangeMap.getByteArray(0, pid - 1), rangeMap.getStartOffset(0, pid - 1) + 1);
+            return LongPointable.getLong(rangeMap.getByteArray(0, slotId), rangeMap.getStartOffset(0,slotId) + 1);
         }
     }
 
-    private long getPartitionEndValue(IRangeMap rangeMap, int pid) throws HyracksDataException {
-        if (pid >= rangeMap.getSplitCount()) {
+    private long getPartitionEndValue(IRangeMap rangeMap, int pid, int nPartitions) throws HyracksDataException {
+        int slotId = rangeMap.getMaxSlotFromPartition(pid, nPartitions);
+        if (slotId >= rangeMap.getSplitCount()) {
             // Last available slot.
             return LongPointable.getLong(rangeMap.getMaxByteArray(0), rangeMap.getMaxStartOffset(0) + 1);
         } else {
-            return LongPointable.getLong(rangeMap.getByteArray(0, pid), rangeMap.getStartOffset(0, pid) + 1);
+            return LongPointable.getLong(rangeMap.getByteArray(0, slotId), rangeMap.getStartOffset(0, slotId) + 1);
         }
     }
 

@@ -64,14 +64,20 @@ public class RangeForwardOperatorDescriptor extends AbstractOperatorDescriptor {
 
     public static class RangeForwardTaskState extends AbstractStateObject {
         private IRangeMap rangeMap;
+        private int nPartitions;
 
-        public RangeForwardTaskState(JobId jobId, RangeId rangeId, IRangeMap rangeMap) {
+        public RangeForwardTaskState(JobId jobId, RangeId rangeId, IRangeMap rangeMap, int nPartitions) {
             super(jobId, rangeId);
             this.rangeMap = rangeMap;
+            this.nPartitions = nPartitions;
         }
 
         public IRangeMap getRangeMap() {
             return rangeMap;
+        }
+
+        public int getNumberOfPartitions() {
+            return nPartitions;
         }
 
         public static RangeForwardTaskState getRangeState(int rangeId, IHyracksTaskContext ctx)
@@ -101,7 +107,7 @@ public class RangeForwardOperatorDescriptor extends AbstractOperatorDescriptor {
                 @Override
                 public void open() throws HyracksDataException {
                     state = new RangeForwardTaskState(ctx.getJobletContext().getJobId(),
-                            new RangeId(rangeId.getId(), ctx), rangeMap);
+                            new RangeId(rangeId.getId(), ctx), rangeMap, nPartitions);
                     ctx.setStateObject(state);
                     writer.open();
                 }

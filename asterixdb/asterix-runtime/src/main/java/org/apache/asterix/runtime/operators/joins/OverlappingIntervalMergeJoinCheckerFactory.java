@@ -36,24 +36,26 @@ public class OverlappingIntervalMergeJoinCheckerFactory extends AbstractInterval
     }
 
     @Override
-    public IIntervalMergeJoinChecker createMergeJoinChecker(int[] keys0, int[] keys1, int partition,
-            IHyracksTaskContext ctx) throws HyracksDataException {
+    public IIntervalMergeJoinChecker createMergeJoinChecker(int[] keys0, int[] keys1, IHyracksTaskContext ctx) throws HyracksDataException {
         int fieldIndex = 0;
         RangeForwardTaskState rangeState = RangeForwardTaskState.getRangeState(rangeId.getId(), ctx);
         IRangeMap rangeMap = rangeState.getRangeMap();
         if (ATypeTag.INT64.serialize() != rangeMap.getTag(0, 0)) {
             throw new HyracksDataException("Invalid range map type for interval merge join checker.");
         }
-        int slot = partition - 1;
+        int nPartitions = rangeState.getNumberOfPartitions();
+        int partition = ctx.getTaskAttemptId().getTaskId().getPartition();
+        int slot = rangeMap.getMinSlotFromPartition(partition, nPartitions);
+
         long partitionStart = 0;
         // All lookups are on typed values.
-        if (partition <= 0) {
+        if (slot < 0) {
             partitionStart = LongPointable.getLong(rangeMap.getMinByteArray(fieldIndex),
                     rangeMap.getMinStartOffset(fieldIndex) + 1);
-        } else if (partition <= rangeMap.getSplitCount()) {
+        } else if (slot <= rangeMap.getSplitCount()) {
             partitionStart = LongPointable.getLong(rangeMap.getByteArray(fieldIndex, slot),
                     rangeMap.getStartOffset(fieldIndex, slot) + 1);
-        } else if (partition > rangeMap.getSplitCount()) {
+        } else if (slot > rangeMap.getSplitCount()) {
             partitionStart = LongPointable.getLong(rangeMap.getMaxByteArray(fieldIndex),
                     rangeMap.getMaxStartOffset(fieldIndex) + 1);
         }
