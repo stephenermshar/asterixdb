@@ -138,6 +138,8 @@ public class DisjointIntervalPartitionJoiner extends AbstractMergeJoiner {
             processInMemoryJoin(writer);
         }
 
+        resultAppender.write(writer, true);
+
         cleanupPartitions(leftRunFileReaders);
         cleanupPartitions(rightRunFileReaders);
         if (LOGGER.isLoggable(Level.WARNING)) {
@@ -149,8 +151,6 @@ public class DisjointIntervalPartitionJoiner extends AbstractMergeJoiner {
     }
 
     private void processInMemoryJoin(IFrameWriter writer) throws HyracksDataException {
-        resultAppender.write(writer, true);
-
         //        int i = 0;
         for (int l = 0; l < leftRunFileReaders.size(); l++) {
             //            printRunFileTuples("spilled " + i++ + " on " + partition, leftRunFileReaders.get(l));
@@ -158,8 +158,6 @@ public class DisjointIntervalPartitionJoiner extends AbstractMergeJoiner {
             leftRunFileReaders.get(l).reset();
             joinInMemroryPartitions(leftRunFileReaders.get(l), l, writer);
         }
-
-        resultAppender.write(writer, true);
     }
 
     private void joinInMemroryPartitions(RunFileReader runFileReader, int leftPid, IFrameWriter writer)
@@ -278,7 +276,6 @@ public class DisjointIntervalPartitionJoiner extends AbstractMergeJoiner {
 
     private void processSpilledJoin(IFrameWriter writer) throws HyracksDataException {
         prepareFrames(numberOfPartitions, rightRunFileReaders);
-        resultAppender.write(writer, true);
 
         for (int offset = 0; offset < rightRunFileReaders.size(); offset += numberOfPartitions) {
             openPartitions(rightRunFileReaders, offset);
@@ -289,8 +286,6 @@ public class DisjointIntervalPartitionJoiner extends AbstractMergeJoiner {
             }
             closePartitions(rightRunFileReaders, offset);
         }
-
-        resultAppender.write(writer, true);
     }
 
     private void openPartitions(List<RunFileReader> partitionRunsReaders, int offset) throws HyracksDataException {

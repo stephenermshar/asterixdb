@@ -16,7 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.asterix.runtime.operators.joins.intervalindex;
+package org.apache.asterix.runtime.operators.joins.intervalforwardsweep;
 
 import java.util.Comparator;
 import java.util.List;
@@ -51,13 +51,13 @@ import org.apache.hyracks.dataflow.std.structures.TuplePointer;
  * The left stream will spill to disk when memory is full.
  * The both right and left use memory to maintain active intervals for the join.
  */
-public class IntervalIndexJoiner extends AbstractMergeJoiner {
+public class IntervalForwardSweepJoiner extends AbstractMergeJoiner {
 
-    private static final Logger LOGGER = Logger.getLogger(IntervalIndexJoiner.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(IntervalForwardSweepJoiner.class.getName());
 
     private final IPartitionedDeletableTupleBufferManager bufferManager;
 
-    private final ActiveSweepManager[] activeManager;
+    private final ForwardSweepActiveManager[] activeManager;
     private final ITuplePointerAccessor[] memoryAccessor;
     private final int[] streamIndex;
     private final RunFileStream[] runFileStream;
@@ -81,15 +81,15 @@ public class IntervalIndexJoiner extends AbstractMergeJoiner {
     private final int partition;
     private final int memorySize;
 
-    public IntervalIndexJoiner(IHyracksTaskContext ctx, int memorySize, int partition, MergeStatus status,
-            MergeJoinLocks locks, Comparator<EndPointIndexItem> endPointComparator,
+    public IntervalForwardSweepJoiner(IHyracksTaskContext ctx, int memorySize, int partition, MergeStatus status,
+            MergeJoinLocks locks, Comparator<EndPointItem> endPointComparator,
             IIntervalMergeJoinCheckerFactory imjcf, int[] leftKeys, int[] rightKeys, RecordDescriptor leftRd,
             RecordDescriptor rightRd) throws HyracksDataException {
         super(ctx, partition, status, locks, leftRd, rightRd);
         this.partition = partition;
         this.memorySize = memorySize;
 
-        this.point = imjcf.isOrderAsc() ? EndPointIndexItem.START_POINT : EndPointIndexItem.END_POINT;
+        this.point = imjcf.isOrderAsc() ? EndPointItem.START_POINT : EndPointItem.END_POINT;
 
         this.imjc = imjcf.createMergeJoinChecker(leftKeys, rightKeys, ctx);
 
@@ -118,10 +118,10 @@ public class IntervalIndexJoiner extends AbstractMergeJoiner {
         memoryAccessor[LEFT_PARTITION] = bufferManager.getTuplePointerAccessor(leftRd);
         memoryAccessor[RIGHT_PARTITION] = bufferManager.getTuplePointerAccessor(rightRd);
 
-        activeManager = new ActiveSweepManager[JOIN_PARTITIONS];
-        activeManager[LEFT_PARTITION] = new ActiveSweepManager(bufferManager, leftKey, LEFT_PARTITION,
+        activeManager = new ForwardSweepActiveManager[JOIN_PARTITIONS];
+        activeManager[LEFT_PARTITION] = new ForwardSweepActiveManager(bufferManager, leftKey, LEFT_PARTITION,
                 endPointComparator);
-        activeManager[RIGHT_PARTITION] = new ActiveSweepManager(bufferManager, rightKey, RIGHT_PARTITION,
+        activeManager[RIGHT_PARTITION] = new ForwardSweepActiveManager(bufferManager, rightKey, RIGHT_PARTITION,
                 endPointComparator);
 
         // Run files for both branches

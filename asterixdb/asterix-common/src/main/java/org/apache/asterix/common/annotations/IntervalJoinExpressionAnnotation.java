@@ -27,6 +27,7 @@ public class IntervalJoinExpressionAnnotation extends AbstractExpressionAnnotati
     private static final String RAW_HINT_STRING = "interval-raw-join";
     private static final String DISJOINT_INTERVAL_PARTITION_HINT_STRING = "disjoint-interval-partition-join";
     private static final String INDEX_HINT_STRING = "interval-index-join";
+    private static final String FORWARD_SWEEP_HINT_STRING = "interval-forward-sweep-join";
     private static final String MERGE_HINT_STRING = "interval-merge-join";
     private static final String OVERLAPPING_INTERVAL_PARTITION_HINT_STRING = "interval-partition-join";
     public static final IntervalJoinExpressionAnnotation INSTANCE = new IntervalJoinExpressionAnnotation();
@@ -76,6 +77,8 @@ public class IntervalJoinExpressionAnnotation extends AbstractExpressionAnnotati
             joinType = DISJOINT_INTERVAL_PARTITION_HINT_STRING;
         } else if (hint.startsWith(INDEX_HINT_STRING)) {
             joinType = INDEX_HINT_STRING;
+        } else if (hint.startsWith(FORWARD_SWEEP_HINT_STRING)) {
+            joinType = FORWARD_SWEEP_HINT_STRING;
         } else if (hint.startsWith(MERGE_HINT_STRING)) {
             joinType = MERGE_HINT_STRING;
         } else if (hint.startsWith(OVERLAPPING_INTERVAL_PARTITION_HINT_STRING)) {
@@ -143,6 +146,13 @@ public class IntervalJoinExpressionAnnotation extends AbstractExpressionAnnotati
         return false;
     }
 
+    public boolean isForwardSweepJoin() {
+        if (joinType.equals(FORWARD_SWEEP_HINT_STRING)) {
+            return true;
+        }
+        return false;
+    }
+
     public boolean isMergeJoin() {
         if (joinType.equals(MERGE_HINT_STRING)) {
             return true;
@@ -159,7 +169,7 @@ public class IntervalJoinExpressionAnnotation extends AbstractExpressionAnnotati
 
     public static boolean isIntervalJoinHint(String hint) {
         return hint.startsWith(RAW_HINT_STRING) || hint.startsWith(DISJOINT_INTERVAL_PARTITION_HINT_STRING)
-                || hint.startsWith(INDEX_HINT_STRING) || hint.startsWith(MERGE_HINT_STRING)
+                || hint.startsWith(INDEX_HINT_STRING)|| hint.startsWith(FORWARD_SWEEP_HINT_STRING) || hint.startsWith(MERGE_HINT_STRING)
                 || hint.startsWith(OVERLAPPING_INTERVAL_PARTITION_HINT_STRING);
     }
 
@@ -170,6 +180,8 @@ public class IntervalJoinExpressionAnnotation extends AbstractExpressionAnnotati
             return DISJOINT_INTERVAL_PARTITION_HINT_STRING.length();
         } else if (hint.startsWith(INDEX_HINT_STRING)) {
             return INDEX_HINT_STRING.length();
+        } else if (hint.startsWith(FORWARD_SWEEP_HINT_STRING)) {
+            return FORWARD_SWEEP_HINT_STRING.length();
         } else if (hint.startsWith(MERGE_HINT_STRING)) {
             return MERGE_HINT_STRING.length();
         } else if (hint.startsWith(OVERLAPPING_INTERVAL_PARTITION_HINT_STRING)) {

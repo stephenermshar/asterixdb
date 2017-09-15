@@ -30,6 +30,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.apache.asterix.algebra.operators.physical.DisjointIntervalPartitionJoinPOperator;
+import org.apache.asterix.algebra.operators.physical.IntervalForwardSweepJoinPOperator;
 import org.apache.asterix.algebra.operators.physical.IntervalIndexJoinPOperator;
 import org.apache.asterix.algebra.operators.physical.OverlappingIntervalPartitionJoinPOperator;
 import org.apache.asterix.common.annotations.IntervalJoinExpressionAnnotation;
@@ -146,6 +147,10 @@ public class JoinUtils {
                 // Endpoint Index.
                 LOGGER.fine("Interval Join - Endpoint Index");
                 setIntervalIndexJoinOp(op, fi, sideLeft, sideRight, ijea, context);
+            } else if (ijea.isForwardSweepJoin()) {
+                // Endpoint Index.
+                LOGGER.fine("Interval Join - Forward Sweep");
+                setIntervalForwardSweepJoinOp(op, fi, sideLeft, sideRight, ijea, context);
             }
         }
     }
@@ -276,6 +281,20 @@ public class JoinUtils {
         op.getInputs().set(branch, aoRef);
 
         context.computeAndSetTypeEnvironmentForOperator(ao);
+    }
+
+    private static void setIntervalForwardSweepJoinOp(AbstractBinaryJoinOperator op, FunctionIdentifier fi,
+            List<LogicalVariable> sideLeft, List<LogicalVariable> sideRight, IntervalJoinExpressionAnnotation ijea,
+            IOptimizationContext context) throws AlgebricksException {
+        RangeId leftRangeId = context.newRangeId();
+        RangeId rightRangeId = context.newRangeId();
+        insertRangeForward(op, LEFT, leftRangeId, ijea.getRangeMap(), context);
+        insertRangeForward(op, RIGHT, rightRangeId, ijea.getRangeMap(), context);
+
+        IIntervalMergeJoinCheckerFactory mjcf = getIntervalMergeJoinCheckerFactory(fi, leftRangeId);
+        op.setPhysicalOperator(new IntervalForwardSweepJoinPOperator(op.getJoinKind(), JoinPartitioningType.BROADCAST,
+                sideLeft, sideRight, context.getPhysicalOptimizationConfig().getMaxFramesForJoin(), mjcf, leftRangeId,
+                rightRangeId, ijea.getRangeMap()));
     }
 
     private static void setIntervalIndexJoinOp(AbstractBinaryJoinOperator op, FunctionIdentifier fi,

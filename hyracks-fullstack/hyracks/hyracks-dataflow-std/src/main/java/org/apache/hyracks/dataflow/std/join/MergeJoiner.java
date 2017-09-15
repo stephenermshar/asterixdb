@@ -202,6 +202,10 @@ public class MergeJoiner extends AbstractMergeJoiner {
         }
         processLeftFrame(writer);
         resultAppender.write(writer, true);
+
+//        System.err.println(",MergeJoiner Statistics Log," + partition + ",partition," + memorySize + ",memory,"
+//                + tupleCounts[LEFT_PARTITION] + ",left tuples," + tupleCounts[RIGHT_PARTITION] + ",right tuples,"
+//                + frameCounts[LEFT_PARTITION] + ",left frames," + frameCounts[RIGHT_PARTITION] + ",right frames");
         if (LOGGER.isLoggable(Level.WARNING)) {
             long ioCost = runFileStream.getWriteCount() + runFileStream.getReadCount();
             LOGGER.warning(",MergeJoiner Statistics Log," + partition + ",partition," + memorySize + ",memory,"
