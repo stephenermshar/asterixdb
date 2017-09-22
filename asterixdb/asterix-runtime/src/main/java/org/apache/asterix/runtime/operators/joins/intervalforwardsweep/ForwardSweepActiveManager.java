@@ -19,88 +19,73 @@
 
 package org.apache.asterix.runtime.operators.joins.intervalforwardsweep;
 
-import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.PriorityQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.apache.asterix.runtime.operators.joins.IntervalJoinUtil;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.dataflow.std.buffermanager.IPartitionedDeletableTupleBufferManager;
 import org.apache.hyracks.dataflow.std.buffermanager.ITupleAccessor;
 import org.apache.hyracks.dataflow.std.structures.TuplePointer;
 
 public class ForwardSweepActiveManager {
-
     private static final Logger LOGGER = Logger.getLogger(ForwardSweepActiveManager.class.getName());
 
     private final int partition;
-    private final int key;
 
     private final IPartitionedDeletableTupleBufferManager bufferManager;
-    private final PriorityQueue<EndPointItem> indexQueue;
-    private EndPointItem item = null;
     private final LinkedList<TuplePointer> active = new LinkedList<>();
 
-    public ForwardSweepActiveManager(IPartitionedDeletableTupleBufferManager bufferManager, int key, int joinBranch,
-            Comparator<EndPointItem> endPointComparator) {
+    public ForwardSweepActiveManager(IPartitionedDeletableTupleBufferManager bufferManager, int joinBranch) {
         this.bufferManager = bufferManager;
-        this.key = key;
         this.partition = joinBranch;
-        indexQueue = new PriorityQueue<>(16, endPointComparator);
     }
 
     public boolean addTuple(ITupleAccessor accessor, TuplePointer tp) throws HyracksDataException {
         if (bufferManager.insertTuple(partition, accessor, accessor.getTupleId(), tp)) {
-            EndPointItem e = new EndPointItem(tp, EndPointItem.END_POINT,
-                    IntervalJoinUtil.getIntervalEnd(accessor, accessor.getTupleId(), key));
-            indexQueue.add(e);
             active.add(tp);
-            item = indexQueue.peek();
             if (LOGGER.isLoggable(Level.FINE)) {
-                LOGGER.fine("Add to memory (partition: " + partition + " index: " + e + ").");
+                LOGGER.fine("Add to memory (partition: " + partition + ").");
             }
             return true;
         }
         return false;
     }
 
-    public void removeTop() throws HyracksDataException {
-        // Remove from active.
-        if (LOGGER.isLoggable(Level.FINE)) {
-            LOGGER.fine("Remove top from memory (partition: " + partition + " index: " + item + ").");
-        }
-        bufferManager.deleteTuple(partition, item.getTuplePointer());
-        active.remove(item.getTuplePointer());
-        indexQueue.remove(item);
-        item = indexQueue.peek();
-    }
-
-    public long getTopPoint() {
-        return item.getPoint();
-    }
-
     public List<TuplePointer> getActiveList() {
         return active;
     }
 
+    public TuplePointer getFirst() {
+        if (isEmpty()) {
+            return active.get(0);
+        }
+        return null;
+    }
+
+    public void remove(int index) throws HyracksDataException {
+        if (active.size() < index) {
+            return;
+        }
+        TuplePointer tp = active.get(index);
+        bufferManager.deleteTuple(partition, tp);
+        active.remove(index);
+    }
+
     public boolean isEmpty() {
-        return indexQueue.isEmpty();
+        return active.isEmpty();
     }
 
     public boolean hasRecords() {
-        return !indexQueue.isEmpty();
+        return !active.isEmpty();
     }
 
     public void clear() throws HyracksDataException {
-        for (TuplePointer leftTp : active) {
-            bufferManager.deleteTuple(partition, leftTp);
+        for (TuplePointer tp : active) {
+            bufferManager.deleteTuple(partition, tp);
         }
-        indexQueue.clear();
         active.clear();
-        item = null;
         bufferManager.clearPartition(partition);
     }
 }

@@ -235,7 +235,7 @@ public class IntervalForwardJoinOperatorDescriptor extends AbstractOperatorDescr
                     } while (state == null);
                     state.rightRd = rightRd;
                     state.indexJoiner = new IntervalForwardSweepJoiner(ctx, memoryForJoin, partition, state.status, locks,
-                            state.endPointComparator, imjcf, leftKeys, rightKeys, state.leftRd, state.rightRd);
+                            imjcf, leftKeys, rightKeys, state.leftRd, state.rightRd);
                     state.status.branch[RIGHT_ACTIVITY_ID].setStageOpen();
                     locks.getLeft(partition).signal();
                 } catch (InterruptedException e) {
