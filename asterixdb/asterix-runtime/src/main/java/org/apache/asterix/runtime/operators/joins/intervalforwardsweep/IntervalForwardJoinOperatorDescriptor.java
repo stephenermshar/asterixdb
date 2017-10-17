@@ -121,9 +121,6 @@ public class IntervalForwardJoinOperatorDescriptor extends AbstractOperatorDescr
                     state = new IntervalForwardSweepJoinTaskState(ctx.getJobletContext().getJobId(),
                             new TaskId(getActivityId(), partition));;
                     state.leftRd = leftRd;
-                    state.point = imjcf.isOrderAsc() ? EndPointItem.START_POINT : EndPointItem.END_POINT;
-                    state.endPointComparator = imjcf.isOrderAsc() ? EndPointItem.EndPointAscComparator
-                            : EndPointItem.EndPointDescComparator;
                     ctx.setStateObject(state);
                     locks.getRight(partition).signal();
 
@@ -234,8 +231,8 @@ public class IntervalForwardJoinOperatorDescriptor extends AbstractOperatorDescr
                         }
                     } while (state == null);
                     state.rightRd = rightRd;
-                    state.indexJoiner = new IntervalForwardSweepJoiner(ctx, memoryForJoin, partition, state.status, locks,
-                            imjcf, leftKeys, rightKeys, state.leftRd, state.rightRd);
+                    state.indexJoiner = new IntervalForwardSweepJoiner(ctx, memoryForJoin, partition, state.status,
+                            locks, imjcf, leftKeys, rightKeys, state.leftRd, state.rightRd);
                     state.status.branch[RIGHT_ACTIVITY_ID].setStageOpen();
                     locks.getLeft(partition).signal();
                 } catch (InterruptedException e) {

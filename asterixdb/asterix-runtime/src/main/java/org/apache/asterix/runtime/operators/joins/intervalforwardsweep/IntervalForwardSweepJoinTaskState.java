@@ -18,15 +18,12 @@
  */
 package org.apache.asterix.runtime.operators.joins.intervalforwardsweep;
 
-import java.util.Comparator;
-
 import org.apache.hyracks.api.dataflow.TaskId;
 import org.apache.hyracks.api.job.JobId;
 import org.apache.hyracks.dataflow.std.join.MergeJoinTaskState;
 
 public class IntervalForwardSweepJoinTaskState extends MergeJoinTaskState {
     protected IntervalForwardSweepJoiner indexJoiner;
-    protected Comparator<EndPointItem> endPointComparator;
     protected byte point;
 
     public IntervalForwardSweepJoinTaskState(JobId jobId, TaskId taskId) {

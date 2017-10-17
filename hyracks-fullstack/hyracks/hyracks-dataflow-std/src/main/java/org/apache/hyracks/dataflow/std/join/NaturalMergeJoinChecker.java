@@ -34,14 +34,21 @@ public class NaturalMergeJoinChecker implements IMergeJoinChecker {
     @Override
     public boolean checkToSaveInMemory(ITupleAccessor accessorLeft, ITupleAccessor accessorRight)
             throws HyracksDataException {
-        int c = comparator.compare(accessorLeft, accessorLeft.getTupleId(), accessorRight, accessorRight.getTupleId());
+        return checkToSaveInMemory(accessorLeft, accessorLeft.getTupleId(), accessorRight, accessorRight.getTupleId());
+    }
+
+    @Override
+    public boolean checkToSaveInMemory(IFrameTupleAccessor accessorLeft, int leftTupleIndex,
+            IFrameTupleAccessor accessorRight, int rightTupleIndex) throws HyracksDataException {
+        int c = comparator.compare(accessorLeft, leftTupleIndex, accessorRight, rightTupleIndex);
         return c == 0;
     }
 
     @Override
     public boolean checkToRemoveInMemory(ITupleAccessor accessorLeft, ITupleAccessor accessorRight)
             throws HyracksDataException {
-        return checkToRemoveInMemory(accessorLeft, accessorLeft.getTupleId(), accessorRight, accessorRight.getTupleId());
+        return checkToRemoveInMemory(accessorLeft, accessorLeft.getTupleId(), accessorRight,
+                accessorRight.getTupleId());
     }
 
     @Override
@@ -76,5 +83,4 @@ public class NaturalMergeJoinChecker implements IMergeJoinChecker {
         }
         return c == 0;
     }
-
 }

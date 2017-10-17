@@ -38,6 +38,9 @@ public interface IMergeJoinChecker extends Serializable {
      */
     boolean checkToSaveInMemory(ITupleAccessor accessorLeft, ITupleAccessor accessorRight) throws HyracksDataException;
 
+    boolean checkToSaveInMemory(IFrameTupleAccessor accessorLeft, int leftTupleIndex, IFrameTupleAccessor accessorRight,
+            int rightTupleIndex) throws HyracksDataException;
+
     /**
      * Check to see if the right tuple should be removed from memory during the merge join.
      * The memory is used to check the right tuple with the remaining left tuples.

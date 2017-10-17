@@ -73,6 +73,11 @@ public class ForwardSweepActiveManager {
         active.remove(index);
     }
 
+    public void remove(TuplePointer tp) throws HyracksDataException {
+        bufferManager.deleteTuple(partition, tp);
+        active.remove(tp);
+    }
+
     public boolean isEmpty() {
         return active.isEmpty();
     }

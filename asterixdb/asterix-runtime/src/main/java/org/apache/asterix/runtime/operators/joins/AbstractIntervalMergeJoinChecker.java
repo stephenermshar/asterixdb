@@ -65,8 +65,14 @@ public abstract class AbstractIntervalMergeJoinChecker implements IIntervalMerge
     @Override
     public boolean checkToSaveInMemory(ITupleAccessor accessorLeft, ITupleAccessor accessorRight)
             throws HyracksDataException {
-        IntervalJoinUtil.getIntervalPointable(accessorLeft, idLeft, tvp, ipLeft);
-        IntervalJoinUtil.getIntervalPointable(accessorRight, idRight, tvp, ipRight);
+        return checkToSaveInMemory(accessorLeft, accessorLeft.getTupleId(), accessorRight, accessorRight.getTupleId());
+    }
+
+    @Override
+    public boolean checkToSaveInMemory(IFrameTupleAccessor accessorLeft, int leftTupleIndex,
+            IFrameTupleAccessor accessorRight, int rightTupleIndex) throws HyracksDataException {
+        IntervalJoinUtil.getIntervalPointable(accessorLeft, leftTupleIndex, idLeft, tvp, ipLeft);
+        IntervalJoinUtil.getIntervalPointable(accessorRight, rightTupleIndex, idRight, tvp, ipRight);
         ipLeft.getEnd(endLeft);
         ipRight.getStart(startRight);
         return ch.compare(ipLeft.getTypeTag(), ipRight.getTypeTag(), endLeft, startRight) > 0;
