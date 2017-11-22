@@ -19,6 +19,7 @@
 
 package org.apache.asterix.runtime.operators.joins.intervalforwardsweep;
 
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.logging.Level;
@@ -28,54 +29,60 @@ import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.dataflow.std.buffermanager.IPartitionedDeletableTupleBufferManager;
 import org.apache.hyracks.dataflow.std.buffermanager.ITupleAccessor;
 import org.apache.hyracks.dataflow.std.structures.TuplePointer;
+import org.apache.hyracks.dataflow.std.structures.TuplePointerPool;
 
 public class ForwardSweepActiveManager {
     private static final Logger LOGGER = Logger.getLogger(ForwardSweepActiveManager.class.getName());
 
     private final int partition;
-
     private final IPartitionedDeletableTupleBufferManager bufferManager;
+
     private final LinkedList<TuplePointer> active = new LinkedList<>();
+    private final TuplePointerPool tpPool = new TuplePointerPool();
 
     public ForwardSweepActiveManager(IPartitionedDeletableTupleBufferManager bufferManager, int joinBranch) {
         this.bufferManager = bufferManager;
         this.partition = joinBranch;
     }
 
-    public boolean addTuple(ITupleAccessor accessor, TuplePointer tp) throws HyracksDataException {
+    public TuplePointer addTuple(ITupleAccessor accessor) throws HyracksDataException {
+        TuplePointer tp = tpPool.takeOne();
         if (bufferManager.insertTuple(partition, accessor, accessor.getTupleId(), tp)) {
             active.add(tp);
             if (LOGGER.isLoggable(Level.FINE)) {
                 LOGGER.fine("Add to memory (partition: " + partition + ").");
             }
-            return true;
+            return tp;
         }
-        return false;
+        return null;
     }
 
+    @Deprecated
     public List<TuplePointer> getActiveList() {
         return active;
     }
 
+    public Iterator<TuplePointer> getIterator() {
+        return active.iterator();
+    }
+
     public TuplePointer getFirst() {
-        if (isEmpty()) {
+        if (!isEmpty()) {
             return active.get(0);
         }
         return null;
     }
 
-    public void remove(int index) throws HyracksDataException {
-        if (active.size() < index) {
-            return;
-        }
-        TuplePointer tp = active.get(index);
+    public void remove(Iterator<TuplePointer> iterator, TuplePointer tp) throws HyracksDataException {
         bufferManager.deleteTuple(partition, tp);
-        active.remove(index);
+        iterator.remove();
+        tpPool.giveBack(tp);
     }
 
     public void remove(TuplePointer tp) throws HyracksDataException {
         bufferManager.deleteTuple(partition, tp);
         active.remove(tp);
+        tpPool.giveBack(tp);
     }
 
     public boolean isEmpty() {
@@ -87,8 +94,10 @@ public class ForwardSweepActiveManager {
     }
 
     public void clear() throws HyracksDataException {
-        for (TuplePointer tp : active) {
+        for (Iterator<TuplePointer> iterator = active.iterator(); iterator.hasNext();) {
+            TuplePointer tp = iterator.next();
             bufferManager.deleteTuple(partition, tp);
+            tpPool.giveBack(tp);
         }
         active.clear();
         bufferManager.clearPartition(partition);

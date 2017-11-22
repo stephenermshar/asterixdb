@@ -18,6 +18,7 @@
  */
 package org.apache.asterix.runtime.operators.joins.intervalforwardsweep;
 
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.logging.Level;
@@ -199,28 +200,39 @@ public class IntervalForwardSweepJoiner extends AbstractMergeJoiner {
         TupleStatus leftTs = loadLeftTuple();
         TupleStatus rightTs = loadRightTuple();
 
-        while (leftTs.isKnown())
-
+        while (leftTs.isLoaded()) {
+            // Ensure a tuple is in memory.
             if (leftTs.isLoaded() && !activeManager[LEFT_PARTITION].hasRecords()) {
-                TuplePointer tp = new TuplePointer();
-                if (!activeManager[LEFT_PARTITION].addTuple(inputAccessor[LEFT_PARTITION], tp)) {
+                TuplePointer tp = activeManager[LEFT_PARTITION].addTuple(inputAccessor[LEFT_PARTITION]);
+                if (tp == null) {
                     // BAD
+                    throw new HyracksDataException("Left partition does not have access to a single page.");
+                }
+                inputAccessor[LEFT_PARTITION].next();
+                leftTs = loadLeftTuple();
+                System.err.println("Active empty, load left: " + tp);
+            }
+            if (rightTs.isLoaded() && !activeManager[RIGHT_PARTITION].hasRecords()) {
+                TuplePointer tp = activeManager[RIGHT_PARTITION].addTuple(inputAccessor[RIGHT_PARTITION]);
+                if (tp == null) {
+                    // BAD
+                    throw new HyracksDataException("Right partition does not have access to a single page.");
+                }
+                inputAccessor[RIGHT_PARTITION].next();
+                rightTs = loadRightTuple();
+                System.err.println("Active empty, load right: " + tp);
+            }
+            if (activeManager[LEFT_PARTITION].hasRecords() && activeManager[RIGHT_PARTITION].hasRecords()) {
+                if (checkToProcessRightTuple()) {
+                    // Right side from stream
+                    processRightTuple(writer);
+                    leftTs = loadLeftTuple();
+                } else {
+                    // Left side from stream
+                    processLeftTuple(writer);
+                    rightTs = loadRightTuple();
                 }
             }
-        if (rightTs.isLoaded() && !activeManager[RIGHT_PARTITION].hasRecords()) {
-            TuplePointer tp = new TuplePointer();
-            if (!activeManager[RIGHT_PARTITION].addTuple(inputAccessor[RIGHT_PARTITION], tp)) {
-                // BAD
-            }
-        }
-        if (checkToProcessRightTuple()) {
-            // Right side from stream
-            processRightTuple(writer);
-            rightTs = loadRightTuple();
-        } else {
-            // Left side from stream
-            processLeftTuple(writer);
-            leftTs = loadLeftTuple();
         }
         //            if (runFileStream[RIGHT_PARTITION].isWriting()) {
         //                // Right side from disk
@@ -264,9 +276,22 @@ public class IntervalForwardSweepJoiner extends AbstractMergeJoiner {
         return status.branch[partition].hasMore() || status.branch[partition].isRunFileReading();
     }
 
+    //    private String printTuple(ITupleAccessor accessor,TuplePointer tp) {
+    //       
+    //        return  IntervalJoinUtil.getIntervalPointable(accessor, tp.getTupleIndex(), leftKey);
+    //
+    //    }
+
     private boolean checkToProcessRightTuple() {
-        long leftStart = IntervalJoinUtil.getIntervalStart(inputAccessor[LEFT_PARTITION], leftKey);
-        long rightStart = IntervalJoinUtil.getIntervalStart(inputAccessor[RIGHT_PARTITION], rightKey);
+        TuplePointer leftTp = activeManager[LEFT_PARTITION].getFirst();
+        memoryAccessor[LEFT_PARTITION].reset(leftTp);
+        long leftStart =
+                IntervalJoinUtil.getIntervalStart(memoryAccessor[LEFT_PARTITION], leftTp.getTupleIndex(), leftKey);
+
+        TuplePointer rightTp = activeManager[RIGHT_PARTITION].getFirst();
+        memoryAccessor[RIGHT_PARTITION].reset(rightTp);
+        long rightStart =
+                IntervalJoinUtil.getIntervalStart(memoryAccessor[RIGHT_PARTITION], rightTp.getTupleIndex(), rightKey);
         if (leftStart < rightStart) {
             // Left stream has next tuple, check if right active must be updated first.
             return activeManager[RIGHT_PARTITION].hasRecords();
@@ -354,52 +379,58 @@ public class IntervalForwardSweepJoiner extends AbstractMergeJoiner {
         // Check tuple with all memory.
         // Purge as processing
         // Added new items from right to memory and check
-        if (activeManager[LEFT_PARTITION].hasRecords()) {
-            TuplePointer searchTp = activeManager[LEFT_PARTITION].getFirst();
-            memoryAccessor[LEFT_PARTITION].reset(searchTp);
+        if (!activeManager[LEFT_PARTITION].hasRecords()) {
+            return;
+        }
+        TuplePointer searchTp = activeManager[LEFT_PARTITION].getFirst();
+        memoryAccessor[LEFT_PARTITION].reset(searchTp);
 
-            // Compare with tuple in memory
-            for (TuplePointer matchTp : activeManager[RIGHT_PARTITION].getActiveList()) {
-                memoryAccessor[RIGHT_PARTITION].reset(matchTp);
+        // Compare with tuple in memory
+        for (Iterator<TuplePointer> iterator = activeManager[RIGHT_PARTITION].getIterator(); iterator.hasNext();) {
+            TuplePointer matchTp = iterator.next();
+            memoryAccessor[RIGHT_PARTITION].reset(matchTp);
+            // Add to result if matched.
+            if (imjc.checkToSaveInResult(memoryAccessor[LEFT_PARTITION], searchTp.getTupleIndex(),
+                    memoryAccessor[RIGHT_PARTITION], matchTp.getTupleIndex(), false)) {
+                addToResult(memoryAccessor[LEFT_PARTITION], searchTp.getTupleIndex(), memoryAccessor[RIGHT_PARTITION],
+                        matchTp.getTupleIndex(), false, writer);
+                System.err.println("Memory Match: " + searchTp + " " + matchTp);
+            }
+            joinComparisonCount++;
+            // Remove if the tuple no long matches.
+            if (imjc.checkToRemoveInMemory(memoryAccessor[LEFT_PARTITION], searchTp.getTupleIndex(),
+                    memoryAccessor[RIGHT_PARTITION], matchTp.getTupleIndex())) {
+                System.err.println("Remove right tuple: " + matchTp);
+                activeManager[RIGHT_PARTITION].remove(iterator, matchTp);
+            }
+        }
+
+        // Add tuples from the stream.
+        while (loadRightTuple().isLoaded()
+                && imjc.checkToSaveInMemory(memoryAccessor[LEFT_PARTITION], searchTp.getTupleIndex(),
+                        inputAccessor[RIGHT_PARTITION], inputAccessor[RIGHT_PARTITION].getTupleId())) {
+            TuplePointer tp = activeManager[RIGHT_PARTITION].addTuple(inputAccessor[RIGHT_PARTITION]);
+            if (tp != null) {
+                memoryAccessor[RIGHT_PARTITION].reset(tp);
+                System.err.println("Stream add: " + tp);
                 // Add to result if matched.
                 if (imjc.checkToSaveInResult(memoryAccessor[LEFT_PARTITION], searchTp.getTupleIndex(),
-                        memoryAccessor[RIGHT_PARTITION], matchTp.getTupleIndex(), false)) {
+                        memoryAccessor[RIGHT_PARTITION], tp.getTupleIndex(), false)) {
                     addToResult(memoryAccessor[LEFT_PARTITION], searchTp.getTupleIndex(),
-                            memoryAccessor[RIGHT_PARTITION], matchTp.getTupleIndex(), false, writer);
+                            memoryAccessor[RIGHT_PARTITION], tp.getTupleIndex(), false, writer);
+                    System.err.println("Stream Match: " + searchTp + " " + tp);
                 }
                 joinComparisonCount++;
-                // Remove if the tuple no long matches.
-                if (imjc.checkToRemoveInMemory(memoryAccessor[LEFT_PARTITION], searchTp.getTupleIndex(),
-                        memoryAccessor[RIGHT_PARTITION], matchTp.getTupleIndex())) {
-                    activeManager[RIGHT_PARTITION].remove(matchTp);
-                }
+            } else {
+                // Spill case
+                freezeAndSpill();
+                break;
             }
-
-            // Add tuples from the stream.
-            while (loadRightTuple().isLoaded()
-                    && imjc.checkToSaveInMemory(memoryAccessor[LEFT_PARTITION], searchTp.getTupleIndex(),
-                            inputAccessor[RIGHT_PARTITION], inputAccessor[RIGHT_PARTITION].getTupleId())) {
-                TuplePointer tp = new TuplePointer();
-                if (activeManager[RIGHT_PARTITION].addTuple(inputAccessor[RIGHT_PARTITION], tp)) {
-                    memoryAccessor[RIGHT_PARTITION].reset(tp);
-                    // Add to result if matched.
-                    if (imjc.checkToSaveInResult(memoryAccessor[LEFT_PARTITION], searchTp.getTupleIndex(),
-                            memoryAccessor[RIGHT_PARTITION], tp.getTupleIndex(), false)) {
-                        addToResult(memoryAccessor[LEFT_PARTITION], searchTp.getTupleIndex(),
-                                memoryAccessor[RIGHT_PARTITION], tp.getTupleIndex(), false, writer);
-                    }
-                    joinComparisonCount++;
-                } else {
-                    // Spill case
-                    freezeAndSpill();
-                    break;
-                }
-                inputAccessor[RIGHT_PARTITION].next();
-            }
-
-            // Remove search tuple
-            activeManager[LEFT_PARTITION].remove(searchTp);
+            inputAccessor[RIGHT_PARTITION].next();
         }
+
+        // Remove search tuple
+        activeManager[LEFT_PARTITION].remove(searchTp);
 
     }
 
@@ -423,52 +454,57 @@ public class IntervalForwardSweepJoiner extends AbstractMergeJoiner {
         // Check tuple with all memory.
         // Purge as processing
         // Added new items from right to memory and check
-        if (activeManager[RIGHT_PARTITION].hasRecords()) {
-            TuplePointer searchTp = activeManager[RIGHT_PARTITION].getFirst();
-            memoryAccessor[RIGHT_PARTITION].reset(searchTp);
+        if (!activeManager[RIGHT_PARTITION].hasRecords()) {
+            return;
+        }
+        TuplePointer searchTp = activeManager[RIGHT_PARTITION].getFirst();
+        memoryAccessor[RIGHT_PARTITION].reset(searchTp);
 
-            // Compare with tuple in memory
-            for (TuplePointer matchTp : activeManager[LEFT_PARTITION].getActiveList()) {
-                memoryAccessor[LEFT_PARTITION].reset(matchTp);
+        // Compare with tuple in memory
+        for (Iterator<TuplePointer> iterator = activeManager[LEFT_PARTITION].getIterator(); iterator.hasNext();) {
+            TuplePointer matchTp = iterator.next();
+            memoryAccessor[LEFT_PARTITION].reset(matchTp);
+            // Add to result if matched.
+            if (imjc.checkToSaveInResult(memoryAccessor[RIGHT_PARTITION], searchTp.getTupleIndex(),
+                    memoryAccessor[LEFT_PARTITION], matchTp.getTupleIndex(), false)) {
+                addToResult(memoryAccessor[RIGHT_PARTITION], searchTp.getTupleIndex(), memoryAccessor[LEFT_PARTITION],
+                        matchTp.getTupleIndex(), false, writer);
+                System.err.println("Memory Match: " + searchTp + " " + matchTp);
+            }
+            joinComparisonCount++;
+            // Remove if the tuple no long matches.
+            if (imjc.checkToRemoveInMemory(memoryAccessor[RIGHT_PARTITION], searchTp.getTupleIndex(),
+                    memoryAccessor[LEFT_PARTITION], matchTp.getTupleIndex())) {
+                activeManager[LEFT_PARTITION].remove(iterator, matchTp);
+                System.err.println("Remove left tuple: " + matchTp);
+            }
+        }
+
+        // Add tuples from the stream.
+        while (loadLeftTuple().isLoaded() && imjc.checkToSaveInMemory(memoryAccessor[RIGHT_PARTITION],
+                searchTp.getTupleIndex(), inputAccessor[LEFT_PARTITION], inputAccessor[LEFT_PARTITION].getTupleId())) {
+            TuplePointer tp = activeManager[LEFT_PARTITION].addTuple(inputAccessor[LEFT_PARTITION]);
+            if (tp != null) {
+                memoryAccessor[LEFT_PARTITION].reset(tp);
+                System.err.println("Stream add: " + tp);
                 // Add to result if matched.
                 if (imjc.checkToSaveInResult(memoryAccessor[RIGHT_PARTITION], searchTp.getTupleIndex(),
-                        memoryAccessor[LEFT_PARTITION], matchTp.getTupleIndex(), false)) {
+                        memoryAccessor[LEFT_PARTITION], tp.getTupleIndex(), false)) {
                     addToResult(memoryAccessor[RIGHT_PARTITION], searchTp.getTupleIndex(),
-                            memoryAccessor[LEFT_PARTITION], matchTp.getTupleIndex(), false, writer);
+                            memoryAccessor[LEFT_PARTITION], tp.getTupleIndex(), false, writer);
+                    System.err.println("Stream Match: " + searchTp + " " + tp);
                 }
                 joinComparisonCount++;
-                // Remove if the tuple no long matches.
-                if (imjc.checkToRemoveInMemory(memoryAccessor[RIGHT_PARTITION], searchTp.getTupleIndex(),
-                        memoryAccessor[LEFT_PARTITION], matchTp.getTupleIndex())) {
-                    activeManager[LEFT_PARTITION].remove(matchTp);
-                }
+            } else {
+                // Spill case
+                freezeAndSpill();
+                break;
             }
-
-            // Add tuples from the stream.
-            while (loadRightTuple().isLoaded()
-                    && imjc.checkToSaveInMemory(memoryAccessor[RIGHT_PARTITION], searchTp.getTupleIndex(),
-                            inputAccessor[LEFT_PARTITION], inputAccessor[LEFT_PARTITION].getTupleId())) {
-                TuplePointer tp = new TuplePointer();
-                if (activeManager[LEFT_PARTITION].addTuple(inputAccessor[LEFT_PARTITION], tp)) {
-                    memoryAccessor[LEFT_PARTITION].reset(tp);
-                    // Add to result if matched.
-                    if (imjc.checkToSaveInResult(memoryAccessor[RIGHT_PARTITION], searchTp.getTupleIndex(),
-                            memoryAccessor[LEFT_PARTITION], tp.getTupleIndex(), false)) {
-                        addToResult(memoryAccessor[RIGHT_PARTITION], searchTp.getTupleIndex(),
-                                memoryAccessor[LEFT_PARTITION], tp.getTupleIndex(), false, writer);
-                    }
-                    joinComparisonCount++;
-                } else {
-                    // Spill case
-                    freezeAndSpill();
-                    break;
-                }
-                inputAccessor[LEFT_PARTITION].next();
-            }
-
-            // Remove search tuple
-            activeManager[RIGHT_PARTITION].remove(searchTp);
+            inputAccessor[LEFT_PARTITION].next();
         }
+
+        // Remove search tuple
+        activeManager[RIGHT_PARTITION].remove(searchTp);
     }
 
     private void processRightMemory(IFrameWriter writer) throws HyracksDataException {

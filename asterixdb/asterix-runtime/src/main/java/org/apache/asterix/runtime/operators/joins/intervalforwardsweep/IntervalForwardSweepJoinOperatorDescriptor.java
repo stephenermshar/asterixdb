@@ -40,7 +40,7 @@ import org.apache.hyracks.dataflow.std.base.AbstractUnaryInputUnaryOutputOperato
 import org.apache.hyracks.dataflow.std.join.MergeBranchStatus.Stage;
 import org.apache.hyracks.dataflow.std.join.MergeJoinLocks;
 
-public class IntervalForwardJoinOperatorDescriptor extends AbstractOperatorDescriptor {
+public class IntervalForwardSweepJoinOperatorDescriptor extends AbstractOperatorDescriptor {
     private static final long serialVersionUID = 1L;
 
     private static final int LEFT_ACTIVITY_ID = 0;
@@ -50,9 +50,9 @@ public class IntervalForwardJoinOperatorDescriptor extends AbstractOperatorDescr
     private final int memoryForJoin;
     private final IIntervalMergeJoinCheckerFactory imjcf;
 
-    private static final Logger LOGGER = Logger.getLogger(IntervalForwardJoinOperatorDescriptor.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(IntervalForwardSweepJoinOperatorDescriptor.class.getName());
 
-    public IntervalForwardJoinOperatorDescriptor(IOperatorDescriptorRegistry spec, int memoryForJoin, int[] leftKeys,
+    public IntervalForwardSweepJoinOperatorDescriptor(IOperatorDescriptorRegistry spec, int memoryForJoin, int[] leftKeys,
             int[] rightKeys, RecordDescriptor recordDescriptor, IIntervalMergeJoinCheckerFactory imjcf) {
         super(spec, 2, 1);
         recordDescriptors[0] = recordDescriptor;
