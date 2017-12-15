@@ -70,6 +70,22 @@ public interface IMergeJoinChecker extends Serializable {
     boolean checkToLoadNextRightTuple(ITupleAccessor accessorLeft, ITupleAccessor accessorRight)
             throws HyracksDataException;
 
+    
+    /**
+     * Check to see if the left tuple should continue checking for matches.
+     * The check is true if the next left tuple is NOT able match with this right tuple.
+     *
+     * @param accessorLeft
+     * @param accessorRight
+     * @return boolean
+     * @throws HyracksDataException
+     */
+    boolean checkIfMoreMatches(ITupleAccessor accessorLeft, ITupleAccessor accessorRight)
+            throws HyracksDataException;
+
+    boolean checkIfMoreMatches(IFrameTupleAccessor accessorLeft, int leftTupleIndex,
+            IFrameTupleAccessor accessorRight, int rightTupleIndex) throws HyracksDataException;
+
     boolean checkToSaveInResult(ITupleAccessor accessorLeft, ITupleAccessor accessorRight) throws HyracksDataException;
 
     boolean checkToSaveInResult(IFrameTupleAccessor accessorLeft, int leftTupleIndex, IFrameTupleAccessor accessorRight,
