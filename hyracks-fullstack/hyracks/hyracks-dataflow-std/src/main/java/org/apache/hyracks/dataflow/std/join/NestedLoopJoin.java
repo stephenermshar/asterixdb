@@ -79,7 +79,8 @@ public class NestedLoopJoin {
         this.innerBuffer = new VSizeFrame(ctx);
         this.appender.reset(outBuffer, true);
         if (memSize < 3) {
-            throw new HyracksDataException("Not enough memory is available for Nested Loop Join");
+            throw new HyracksDataException(
+                    "Not enough memory is available for Nested Loop Join (memory:" + memSize + " < 4)");
         }
         this.outerBufferMngr = new VariableFrameMemoryManager(
                 new VariableFramePool(ctx, ctx.getInitialFrameSize() * (memSize - 2)),

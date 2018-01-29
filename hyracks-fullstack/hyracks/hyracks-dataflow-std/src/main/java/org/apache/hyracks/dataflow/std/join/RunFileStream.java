@@ -23,6 +23,7 @@ import java.util.logging.Logger;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.hyracks.api.comm.IFrame;
+import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.comm.IFrameTupleAppender;
 import org.apache.hyracks.api.comm.VSizeFrame;
 import org.apache.hyracks.api.context.IHyracksTaskContext;
@@ -110,6 +111,10 @@ public class RunFileStream {
 
     public void addToRunFile(ITupleAccessor accessor) throws HyracksDataException {
         int idx = accessor.getTupleId();
+        addToRunFile(accessor, idx);
+    }
+
+    public void addToRunFile(IFrameTupleAccessor accessor, int idx) throws HyracksDataException {
         if (!runFileAppender.append(accessor, idx)) {
             runFileAppender.write(runFileWriter, true);
             writeCount++;

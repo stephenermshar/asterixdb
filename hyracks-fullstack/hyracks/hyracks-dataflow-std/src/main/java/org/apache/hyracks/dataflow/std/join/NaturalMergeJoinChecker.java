@@ -83,4 +83,18 @@ public class NaturalMergeJoinChecker implements IMergeJoinChecker {
         }
         return c == 0;
     }
+
+    @Override
+    public boolean checkIfMoreMatches(ITupleAccessor accessorLeft, ITupleAccessor accessorRight)
+            throws HyracksDataException {
+        // TODO Auto-generated method stub
+        return false;
+    }
+
+    @Override
+    public boolean checkIfMoreMatches(IFrameTupleAccessor accessorLeft, int leftTupleIndex,
+            IFrameTupleAccessor accessorRight, int rightTupleIndex) throws HyracksDataException {
+        // TODO Auto-generated method stub
+        return false;
+    }
 }
