@@ -35,14 +35,19 @@ public class TuplePrinterUtil {
         if (accessor.exists()) {
             printTuple(message, accessor, accessor.getTupleId());
         } else {
+            System.out.flush();
+            System.err.flush();
             System.err.print(String.format("%1$-" + 15 + "s", message) + " --");
             System.err.print("no tuple");
             System.err.println();
+            System.err.flush();
         }
     }
 
     public static void printTuple(String message, IFrameTupleAccessor accessor, int tupleId)
             throws HyracksDataException {
+        System.out.flush();
+        System.err.flush();
         System.err.print(String.format("%1$-" + 15 + "s", message) + " --");
         int fields = accessor.getFieldCount();
         for (int i = 0; i < fields; ++i) {
@@ -54,6 +59,7 @@ public class TuplePrinterUtil {
                     accessor.getFieldLength(tupleId, i), System.err);
         }
         System.err.println();
+        System.err.flush();
     }
 
 }
