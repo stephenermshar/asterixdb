@@ -235,9 +235,9 @@ public class IntervalIndexJoiner extends AbstractMergeJoiner {
         runFileStream[LEFT_PARTITION].close();
         runFileStream[RIGHT_PARTITION].close();
 
+        long ioCost = runFileStream[LEFT_PARTITION].getWriteCount() + runFileStream[LEFT_PARTITION].getReadCount()
+                + runFileStream[RIGHT_PARTITION].getWriteCount() + runFileStream[RIGHT_PARTITION].getReadCount();
         if (LOGGER.isLoggable(Level.WARNING)) {
-            long ioCost = runFileStream[LEFT_PARTITION].getWriteCount() + runFileStream[LEFT_PARTITION].getReadCount()
-                    + runFileStream[RIGHT_PARTITION].getWriteCount() + runFileStream[RIGHT_PARTITION].getReadCount();
             LOGGER.warning(",IntervalIndexJoiner Statistics Log,"+ partition + ",partition," + memorySize
                     + ",memory,"  + joinResultCount + ",results," + joinComparisonCount
                     + ",CPU," + ioCost + ",IO," + leftSpillCount + ",left spills,"
@@ -246,6 +246,13 @@ public class IntervalIndexJoiner extends AbstractMergeJoiner {
                     + runFileStream[RIGHT_PARTITION].getWriteCount() + ",right frames_written,"
                     + runFileStream[RIGHT_PARTITION].getReadCount() + ",right frames_read");
         }
+        System.out.println(",IntervalIndexJoiner Statistics Log,"+ partition + ",partition," + memorySize
+                + ",memory,"  + joinResultCount + ",results," + joinComparisonCount
+                + ",CPU," + ioCost + ",IO," + leftSpillCount + ",left spills,"
+                + runFileStream[LEFT_PARTITION].getWriteCount() + ",left frames_written,"
+                + runFileStream[LEFT_PARTITION].getReadCount() + ",left frames_read," + rightSpillCount + ",right spills,"
+                + runFileStream[RIGHT_PARTITION].getWriteCount() + ",right frames_written,"
+                + runFileStream[RIGHT_PARTITION].getReadCount() + ",right frames_read");
     }
 
     private boolean checkHasMoreProcessing(TupleStatus ts, int partition, int joinPartition) {
