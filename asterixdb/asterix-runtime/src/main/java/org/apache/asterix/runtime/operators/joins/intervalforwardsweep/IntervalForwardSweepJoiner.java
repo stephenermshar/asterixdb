@@ -200,7 +200,7 @@ public class IntervalForwardSweepJoiner extends AbstractMergeJoiner {
         TupleStatus leftTs = loadLeftTuple();
         TupleStatus rightTs = loadRightTuple();
 
-        while (leftTs.isLoaded()) {
+        while (leftTs.isLoaded() && (rightTs.isLoaded() || activeManager[RIGHT_PARTITION].hasRecords())) {
             // Frozen.
             if (runFileStream[LEFT_PARTITION].isWriting()) {
                 processLeftTupleSpill(writer);
@@ -220,8 +220,8 @@ public class IntervalForwardSweepJoiner extends AbstractMergeJoiner {
                     // Should never happen if memory budget is correct.
                     throw new HyracksDataException("Left partition does not have access to a single page of memory.");
                 }
-                //                System.err.println("Active empty, load left: " + tp);
-                //                TuplePrinterUtil.printTuple("    left: ", inputAccessor[LEFT_PARTITION]);
+//                System.err.println("Active empty, load left: " + tp);
+//                TuplePrinterUtil.printTuple("    left: ", inputAccessor[LEFT_PARTITION]);
                 inputAccessor[LEFT_PARTITION].next();
                 leftTs = loadLeftTuple();
             }
@@ -288,7 +288,7 @@ public class IntervalForwardSweepJoiner extends AbstractMergeJoiner {
             }
         }
         // Process in memory tuples
-        processInMemoryJoin(LEFT_PARTITION, RIGHT_PARTITION, false, writer, null);
+        processInMemoryJoin(LEFT_PARTITION, RIGHT_PARTITION, false, writer, empty);
 
         resultAppender.write(writer, true);
 
@@ -317,6 +317,7 @@ public class IntervalForwardSweepJoiner extends AbstractMergeJoiner {
                 + ",right frames_written," + runFileStream[RIGHT_PARTITION].getReadCount() + ",right frames_read,"
                 + runFileStream[LEFT_PARTITION].getTupleCount() + ",left tuple_count,"
                 + runFileStream[RIGHT_PARTITION].getTupleCount() + ",right tuple_count");
+        System.out.println("left=" + frameCounts[0] + ", right=" + frameCounts[1]);
     }
 
     private boolean checkHasMoreProcessing(TupleStatus ts, int partition, int joinPartition) {

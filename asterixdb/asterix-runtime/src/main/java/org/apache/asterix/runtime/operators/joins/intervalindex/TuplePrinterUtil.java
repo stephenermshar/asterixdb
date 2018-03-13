@@ -48,7 +48,7 @@ public class TuplePrinterUtil {
             throws HyracksDataException {
         System.out.flush();
         System.err.flush();
-        System.err.print(String.format("%1$-" + 15 + "s", message) + " --");
+        System.err.print(String.format("%1$-" + 15 + "s", message) + " -- " + accessor.getTupleLength(tupleId) + " --");
         int fields = accessor.getFieldCount();
         for (int i = 0; i < fields; ++i) {
             System.err.print(" " + i + ": ");
