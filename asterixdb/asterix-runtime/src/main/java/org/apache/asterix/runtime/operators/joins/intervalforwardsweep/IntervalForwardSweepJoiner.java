@@ -241,12 +241,12 @@ public class IntervalForwardSweepJoiner extends AbstractMergeJoiner {
                 if (checkToProcessRightTuple()) {
                     // Right side from stream
                     processRightTuple(writer);
-                    leftTs = loadLeftTuple();
                 } else {
                     // Left side from stream
                     processLeftTuple(writer);
-                    rightTs = loadRightTuple();
                 }
+                rightTs = loadRightTuple();
+                leftTs = loadLeftTuple();
             }
         }
         //            if (runFileStream[RIGHT_PARTITION].isWriting()) {
