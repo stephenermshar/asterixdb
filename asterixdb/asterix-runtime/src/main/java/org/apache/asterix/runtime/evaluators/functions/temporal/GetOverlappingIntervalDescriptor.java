@@ -64,7 +64,7 @@ public class GetOverlappingIntervalDescriptor extends AbstractScalarFunctionDyna
             public IScalarEvaluator createScalarEvaluator(final IHyracksTaskContext ctx) throws AlgebricksException {
                 return new IScalarEvaluator() {
 
-                    protected final IntervalLogic il = new IntervalLogic();
+                    protected final IntervalLogicWithPointables il = new IntervalLogicWithPointables();
                     private ArrayBackedValueStorage resultStorage = new ArrayBackedValueStorage();
                     private DataOutput out = resultStorage.getDataOutput();
                     private TaggedValuePointable argPtr0 = (TaggedValuePointable) TaggedValuePointable.FACTORY

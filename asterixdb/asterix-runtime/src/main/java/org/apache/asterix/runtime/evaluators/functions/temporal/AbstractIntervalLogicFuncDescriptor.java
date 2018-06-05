@@ -53,7 +53,7 @@ public abstract class AbstractIntervalLogicFuncDescriptor extends AbstractScalar
 
                 return new IScalarEvaluator() {
 
-                    protected final IntervalLogic il = new IntervalLogic();
+                    protected final IntervalLogicWithPointables il = new IntervalLogicWithPointables();
                     private ArrayBackedValueStorage resultStorage = new ArrayBackedValueStorage();
                     private DataOutput out = resultStorage.getDataOutput();
                     private TaggedValuePointable argPtr0 = (TaggedValuePointable) TaggedValuePointable.FACTORY
@@ -108,7 +108,7 @@ public abstract class AbstractIntervalLogicFuncDescriptor extends AbstractScalar
         };
     }
 
-    protected abstract boolean compareIntervals(IntervalLogic il, AIntervalPointable ip1, AIntervalPointable ip2)
+    protected abstract boolean compareIntervals(IntervalLogicWithPointables il, AIntervalPointable ip1, AIntervalPointable ip2)
             throws HyracksDataException;
 
 }

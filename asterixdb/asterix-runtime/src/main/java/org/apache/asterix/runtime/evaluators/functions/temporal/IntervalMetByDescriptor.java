@@ -43,7 +43,7 @@ public class IntervalMetByDescriptor extends AbstractIntervalLogicFuncDescriptor
     }
 
     @Override
-    protected boolean compareIntervals(IntervalLogic il, AIntervalPointable ip1, AIntervalPointable ip2)
+    protected boolean compareIntervals(IntervalLogicWithPointables il, AIntervalPointable ip1, AIntervalPointable ip2)
             throws HyracksDataException {
         return il.metBy(ip1, ip2);
     }

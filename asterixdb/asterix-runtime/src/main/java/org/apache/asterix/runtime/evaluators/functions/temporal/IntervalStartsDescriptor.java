@@ -43,7 +43,7 @@ public class IntervalStartsDescriptor extends AbstractIntervalLogicFuncDescripto
     }
 
     @Override
-    protected boolean compareIntervals(IntervalLogic il, AIntervalPointable ip1, AIntervalPointable ip2)
+    protected boolean compareIntervals(IntervalLogicWithPointables il, AIntervalPointable ip1, AIntervalPointable ip2)
             throws HyracksDataException {
         return il.starts(ip1, ip2);
     }

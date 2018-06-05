@@ -18,188 +18,144 @@
  */
 package org.apache.asterix.runtime.evaluators.functions.temporal;
 
-import java.io.Serializable;
+public class IntervalLogic {
 
-import org.apache.asterix.om.pointables.nonvisitor.AIntervalPointable;
-import org.apache.asterix.runtime.evaluators.comparisons.ComparisonHelper;
-import org.apache.hyracks.api.exceptions.HyracksDataException;
-import org.apache.hyracks.data.std.api.IPointable;
-import org.apache.hyracks.data.std.primitive.VoidPointable;
-
-public class IntervalLogic implements Serializable {
-
-    private static final long serialVersionUID = 1L;
-    private final ComparisonHelper ch = new ComparisonHelper();
-    private final transient IPointable s1 = VoidPointable.FACTORY.createPointable();
-    private final transient IPointable e1 = VoidPointable.FACTORY.createPointable();
-    private final transient IPointable s2 = VoidPointable.FACTORY.createPointable();
-    private final transient IPointable e2 = VoidPointable.FACTORY.createPointable();
-
-    public boolean validateInterval(AIntervalPointable ip1) throws HyracksDataException {
-        ip1.getStart(s1);
-        ip1.getEnd(e1);
-        return ch.compare(ip1.getTypeTag(), ip1.getTypeTag(), s1, e1) <= 0;
+    public static <T extends Comparable<T>> boolean validateInterval(T s, T e) {
+        return s.compareTo(e) <= 0;
     }
 
     /**
      * Anything from interval 1 is less than anything from interval 2.
      *
-     * @param ip1
-     * @param ip2
+     * @param s1
+     * @param e1
+     * @param s2
+     * @param e2
      * @return boolean
-     * @throws HyracksDataException
-     * @see #after(AIntervalPointable, AIntervalPointable)
+     * @see #after(Comparable, Comparable, Comparable, Comparable)
      */
-    public boolean before(AIntervalPointable ip1, AIntervalPointable ip2) throws HyracksDataException {
-        ip1.getEnd(e1);
-        ip2.getStart(s2);
-        return ch.compare(ip1.getTypeTag(), ip2.getTypeTag(), e1, s2) < 0;
+    public static <T extends Comparable<T>> boolean before(T s1, T e1, T s2, T e2) {
+        return e1.compareTo(s2) < 0;
     }
 
-    public boolean after(AIntervalPointable ip1, AIntervalPointable ip2) throws HyracksDataException {
-        return before(ip2, ip1);
+    public static <T extends Comparable<T>> boolean after(T s1, T e1, T s2, T e2) {
+        return before(s2, e2, s1, e1);
     }
 
     /**
      * The end of interval 1 is the same as the start of interval 2.
      *
-     * @param ip1
-     * @param ip2
+     * @param s1
+     * @param e1
+     * @param s2
+     * @param e2
      * @return boolean
-     * @throws HyracksDataException
-     * @see #metBy(AIntervalPointable, AIntervalPointable)
+     * @see #metBy(Comparable, Comparable, Comparable, Comparable)
      */
-    public boolean meets(AIntervalPointable ip1, AIntervalPointable ip2) throws HyracksDataException {
-        ip1.getEnd(e1);
-        ip2.getStart(s2);
-        return ch.compare(ip1.getTypeTag(), ip2.getTypeTag(), e1, s2) == 0;
+    public static <T extends Comparable<T>> boolean meets(T s1, T e1, T s2, T e2) {
+        return e1.compareTo(s2) == 0;
     }
 
-    public boolean metBy(AIntervalPointable ip1, AIntervalPointable ip2) throws HyracksDataException {
-        return meets(ip2, ip1);
+    public static <T extends Comparable<T>> boolean metBy(T s1, T e1, T s2, T e2) {
+        return meets(s2, e2, s1, e1);
     }
 
     /**
      * Something at the end of interval 1 is contained as the beginning of interval 2.
      *
-     * @param ip1
-     * @param ip2
+     * @param s1
+     * @param e1
+     * @param s2
+     * @param e2
      * @return boolean
-     * @throws HyracksDataException
-     * @see #overlappedBy(AIntervalPointable, AIntervalPointable)
+     * @see #overlappedBy(Comparable, Comparable, Comparable, Comparable)
      */
-    public boolean overlaps(AIntervalPointable ip1, AIntervalPointable ip2) throws HyracksDataException {
-        ip1.getStart(s1);
-        ip1.getEnd(e1);
-        ip2.getStart(s2);
-        ip2.getEnd(e2);
-        return ch.compare(ip1.getTypeTag(), ip2.getTypeTag(), s1, s2) < 0
-                && ch.compare(ip1.getTypeTag(), ip2.getTypeTag(), e1, s2) > 0
-                && ch.compare(ip1.getTypeTag(), ip2.getTypeTag(), e1, e2) < 0;
+    public static <T extends Comparable<T>> boolean overlaps(T s1, T e1, T s2, T e2) {
+        return s1.compareTo(s2) < 0 && e1.compareTo(s2) > 0 && e2.compareTo(e1) > 0;
     }
 
-    public boolean overlappedBy(AIntervalPointable ip1, AIntervalPointable ip2) throws HyracksDataException {
-        return overlaps(ip2, ip1);
+    public static <T extends Comparable<T>> boolean overlappedBy(T s1, T e1, T s2, T e2) {
+        return overlaps(s2, e2, s1, e1);
     }
 
     /**
      * Something is shared by both interval 1 and interval 2.
      *
-     * @param ip1
-     * @param ip2
-     * @throws HyracksDataException
+     * @param s1
+     * @param e1
+     * @param s2
+     * @param e2
      * @return boolean
      */
-    public boolean overlapping(AIntervalPointable ip1, AIntervalPointable ip2) throws HyracksDataException {
-        ip1.getStart(s1);
-        ip1.getEnd(e1);
-        ip2.getStart(s2);
-        ip2.getEnd(e2);
-        return ch.compare(ip1.getTypeTag(), ip2.getTypeTag(), s1, e2) < 0
-                && ch.compare(ip1.getTypeTag(), ip2.getTypeTag(), e1, s2) > 0;
+    public static <T extends Comparable<T>> boolean overlapping(T s1, T e1, T s2, T e2) {
+        return (s2.compareTo(s1) >= 0 && s2.compareTo(e1) < 0) || (e2.compareTo(e1) <= 0 && e2.compareTo(s1) > 0);
     }
 
     /**
      * Anything from interval 1 is contained in the beginning of interval 2.
      *
-     * @param ip1
-     * @param ip2
+     * @param s1
+     * @param e1
+     * @param s2
+     * @param e2
      * @return boolean
-     * @throws HyracksDataException
-     * @see #startedBy(AIntervalPointable, AIntervalPointable)
+     * @see #startedBy(Comparable, Comparable, Comparable, Comparable)
      */
-    public boolean starts(AIntervalPointable ip1, AIntervalPointable ip2) throws HyracksDataException {
-        ip1.getStart(s1);
-        ip1.getEnd(e1);
-        ip2.getStart(s2);
-        ip2.getEnd(e2);
-        return ch.compare(ip1.getTypeTag(), ip2.getTypeTag(), s1, s2) == 0
-                && ch.compare(ip1.getTypeTag(), ip2.getTypeTag(), e1, e2) <= 0;
+    public static <T extends Comparable<T>> boolean starts(T s1, T e1, T s2, T e2) {
+        return s1.compareTo(s2) == 0 && e1.compareTo(e2) <= 0;
     }
 
-    public boolean startedBy(AIntervalPointable ip1, AIntervalPointable ip2) throws HyracksDataException {
-        return starts(ip2, ip1);
+    public static <T extends Comparable<T>> boolean startedBy(T s1, T e1, T s2, T e2) {
+        return starts(s2, e2, s1, e1);
     }
 
     /**
      * Anything from interval 2 is in interval 1.
      *
-     * @param ip1
-     * @param ip2
+     * @param s1
+     * @param e1
+     * @param s2
+     * @param e2
      * @return boolean
-     * @throws HyracksDataException
-     * @see #coveredBy(AIntervalPointable, AIntervalPointable)
+     * @see #startedBy(Comparable, Comparable, Comparable, Comparable)
      */
-    public boolean covers(AIntervalPointable ip1, AIntervalPointable ip2) throws HyracksDataException {
-        ip1.getStart(s1);
-        ip1.getEnd(e1);
-        ip2.getStart(s2);
-        ip2.getEnd(e2);
-        return ch.compare(ip1.getTypeTag(), ip2.getTypeTag(), s1, s2) <= 0
-                && ch.compare(ip1.getTypeTag(), ip2.getTypeTag(), e1, e2) >= 0;
+    public static <T extends Comparable<T>> boolean covers(T s1, T e1, T s2, T e2) {
+        return s1.compareTo(s2) <= 0 && e1.compareTo(e2) >= 0;
     }
 
-    public boolean coveredBy(AIntervalPointable ip1, AIntervalPointable ip2) throws HyracksDataException {
-        return covers(ip2, ip1);
+    public static <T extends Comparable<T>> boolean coveredBy(T s1, T e1, T s2, T e2) {
+        return covers(s2, e2, s1, e1);
     }
 
     /**
      * Anything from interval 1 is from the ending part of interval 2.
      *
-     * @param ip1
-     * @param ip2
+     * @param s1
+     * @param e1
+     * @param s2
+     * @param e2
      * @return boolean
-     * @throws HyracksDataException
-     * @see #endedBy(AIntervalPointable, AIntervalPointable)
+     * @see #endedBy(Comparable, Comparable, Comparable, Comparable)
      */
-    public boolean ends(AIntervalPointable ip1, AIntervalPointable ip2) throws HyracksDataException {
-        ip1.getStart(s1);
-        ip1.getEnd(e1);
-        ip2.getStart(s2);
-        ip2.getEnd(e2);
-        return ch.compare(ip1.getTypeTag(), ip2.getTypeTag(), s1, s2) >= 0
-                && ch.compare(ip1.getTypeTag(), ip2.getTypeTag(), e1, e2) == 0;
+    public static <T extends Comparable<T>> boolean ends(T s1, T e1, T s2, T e2) {
+        return s1.compareTo(s2) >= 0 && e1.compareTo(e2) == 0;
     }
 
-    public boolean endedBy(AIntervalPointable ip1, AIntervalPointable ip2) throws HyracksDataException {
-        return ends(ip2, ip1);
+    public static <T extends Comparable<T>> boolean endedBy(T s1, T e1, T s2, T e2) {
+        return ends(s2, e2, s1, e1);
     }
 
     /**
      * Intervals with the same start and end time.
      *
-     * @param ip1
-     * @param ip2
+     * @param s1
+     * @param e1
+     * @param s2
+     * @param e2
      * @return boolean
-     * @throws HyracksDataException
-     */
-    public boolean same(AIntervalPointable ip1, AIntervalPointable ip2) throws HyracksDataException {
-        ip1.getStart(s1);
-        ip1.getEnd(e1);
-        ip2.getStart(s2);
-        ip2.getEnd(e2);
-        return ch.compare(ip1.getTypeTag(), ip2.getTypeTag(), s1, s2) == 0
-                && ch.compare(ip1.getTypeTag(), ip2.getTypeTag(), e1, e2) == 0;
+    */
+    public static <T extends Comparable<T>> boolean equals(T s1, T e1, T s2, T e2) {
+        return s1.compareTo(s1) == 0 && e1.compareTo(e2) == 0;
     }
 
 }

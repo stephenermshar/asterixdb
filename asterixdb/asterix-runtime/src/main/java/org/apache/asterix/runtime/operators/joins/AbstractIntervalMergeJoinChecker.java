@@ -21,6 +21,7 @@ package org.apache.asterix.runtime.operators.joins;
 import org.apache.asterix.om.pointables.nonvisitor.AIntervalPointable;
 import org.apache.asterix.runtime.evaluators.comparisons.ComparisonHelper;
 import org.apache.asterix.runtime.evaluators.functions.temporal.IntervalLogic;
+import org.apache.asterix.runtime.evaluators.functions.temporal.IntervalLogicWithPointables;
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.data.std.api.IPointable;
@@ -35,7 +36,7 @@ public abstract class AbstractIntervalMergeJoinChecker implements IIntervalMerge
     protected final int idLeft;
     protected final int idRight;
 
-    protected final IntervalLogic il = new IntervalLogic();
+    protected final IntervalLogicWithPointables il = new IntervalLogicWithPointables();
 
     protected final TaggedValuePointable tvp = (TaggedValuePointable) TaggedValuePointable.FACTORY.createPointable();
     protected final AIntervalPointable ipLeft = (AIntervalPointable) AIntervalPointable.FACTORY.createPointable();
@@ -100,11 +101,17 @@ public abstract class AbstractIntervalMergeJoinChecker implements IIntervalMerge
     @Override
     public boolean checkToSaveInMemory(IFrameTupleAccessor accessorLeft, int leftTupleIndex,
             IFrameTupleAccessor accessorRight, int rightTupleIndex) throws HyracksDataException {
-        IntervalJoinUtil.getIntervalPointable(accessorLeft, leftTupleIndex, idLeft, tvp, ipLeft);
-        IntervalJoinUtil.getIntervalPointable(accessorRight, rightTupleIndex, idRight, tvp, ipRight);
-        ipLeft.getEnd(endLeft);
-        ipRight.getStart(startRight);
-        return ch.compare(ipLeft.getTypeTag(), ipRight.getTypeTag(), endLeft, startRight) > 0;
+//        IntervalJoinUtil.getIntervalPointable(accessorLeft, leftTupleIndex, idLeft, tvp, ipLeft);
+//        IntervalJoinUtil.getIntervalPointable(accessorRight, rightTupleIndex, idRight, tvp, ipRight);
+//        ipLeft.getEnd(endLeft);
+//        ipRight.getStart(startRight);
+//        return ch.compare(ipLeft.getTypeTag(), ipRight.getTypeTag(), endLeft, startRight) > 0;
+        
+        long start0 = IntervalJoinUtil.getIntervalStart(accessorLeft, leftTupleIndex, idLeft);
+        long start1 = IntervalJoinUtil.getIntervalStart(accessorRight, rightTupleIndex, idRight);
+        long end0 = IntervalJoinUtil.getIntervalEnd(accessorLeft, leftTupleIndex, idLeft);
+        long end1 = IntervalJoinUtil.getIntervalEnd(accessorRight, rightTupleIndex, idRight);
+        return (end0 > start1);
     }
 
     /**
@@ -126,11 +133,18 @@ public abstract class AbstractIntervalMergeJoinChecker implements IIntervalMerge
     @Override
     public boolean checkToRemoveInMemory(IFrameTupleAccessor accessorLeft, int leftTupleIndex,
             IFrameTupleAccessor accessorRight, int rightTupleIndex) throws HyracksDataException {
-        IntervalJoinUtil.getIntervalPointable(accessorLeft, leftTupleIndex, idLeft, tvp, ipLeft);
-        IntervalJoinUtil.getIntervalPointable(accessorRight, rightTupleIndex, idRight, tvp, ipRight);
-        ipLeft.getStart(startLeft);
-        ipRight.getEnd(endRight);
-        return !(ch.compare(ipLeft.getTypeTag(), ipRight.getTypeTag(), startLeft, endRight) < 0);
+//        IntervalJoinUtil.getIntervalPointable(accessorLeft, leftTupleIndex, idLeft, tvp, ipLeft);
+//        IntervalJoinUtil.getIntervalPointable(accessorRight, rightTupleIndex, idRight, tvp, ipRight);
+//        ipLeft.getStart(startLeft);
+//        ipRight.getEnd(endRight);
+//        return !(ch.compare(ipLeft.getTypeTag(), ipRight.getTypeTag(), startLeft, endRight) < 0);
+        
+        long start0 = IntervalJoinUtil.getIntervalStart(accessorLeft, leftTupleIndex, idLeft);
+        long start1 = IntervalJoinUtil.getIntervalStart(accessorRight, rightTupleIndex, idRight);
+        long end0 = IntervalJoinUtil.getIntervalEnd(accessorLeft, leftTupleIndex, idLeft);
+        long end1 = IntervalJoinUtil.getIntervalEnd(accessorRight, rightTupleIndex, idRight);
+        return !(start0 < end1);
+
     }
 
     /**
@@ -139,11 +153,18 @@ public abstract class AbstractIntervalMergeJoinChecker implements IIntervalMerge
     @Override
     public boolean checkIfMoreMatches(IFrameTupleAccessor accessorLeft, int leftTupleIndex,
             IFrameTupleAccessor accessorRight, int rightTupleIndex) throws HyracksDataException {
-        IntervalJoinUtil.getIntervalPointable(accessorLeft, leftTupleIndex, idLeft, tvp, ipLeft);
-        IntervalJoinUtil.getIntervalPointable(accessorRight, rightTupleIndex, idRight, tvp, ipRight);
-        ipLeft.getEnd(endLeft);
-        ipRight.getStart(startRight);
-        return !(ch.compare(ipLeft.getTypeTag(), ipRight.getTypeTag(), endLeft, startRight) < 0);
+//        IntervalJoinUtil.getIntervalPointable(accessorLeft, leftTupleIndex, idLeft, tvp, ipLeft);
+//        IntervalJoinUtil.getIntervalPointable(accessorRight, rightTupleIndex, idRight, tvp, ipRight);
+//        ipLeft.getEnd(endLeft);
+//        ipRight.getStart(startRight);
+//        return !(ch.compare(ipLeft.getTypeTag(), ipRight.getTypeTag(), endLeft, startRight) < 0);
+        
+        
+        long start0 = IntervalJoinUtil.getIntervalStart(accessorLeft, leftTupleIndex, idLeft);
+        long start1 = IntervalJoinUtil.getIntervalStart(accessorRight, rightTupleIndex, idRight);
+        long end0 = IntervalJoinUtil.getIntervalEnd(accessorLeft, leftTupleIndex, idLeft);
+        long end1 = IntervalJoinUtil.getIntervalEnd(accessorRight, rightTupleIndex, idRight);
+        return !(end0 < start1);
     }
 
     @Override

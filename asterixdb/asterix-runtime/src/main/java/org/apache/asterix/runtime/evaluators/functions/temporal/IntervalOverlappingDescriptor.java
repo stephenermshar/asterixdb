@@ -42,7 +42,7 @@ public class IntervalOverlappingDescriptor extends AbstractIntervalLogicFuncDesc
     }
 
     @Override
-    protected boolean compareIntervals(IntervalLogic il, AIntervalPointable ip1, AIntervalPointable ip2)
+    protected boolean compareIntervals(IntervalLogicWithPointables il, AIntervalPointable ip1, AIntervalPointable ip2)
             throws HyracksDataException {
         return il.overlapping(ip1, ip2);
     }

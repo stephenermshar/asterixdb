@@ -26,7 +26,7 @@ import org.apache.asterix.common.exceptions.AsterixException;
  * which partitions have intervals that meet the given Allen's relation.
  *
  * @author prestonc
- * @see IntervalLogic
+ * @see IntervalLogicWithPointables
  */
 public class IntervalPartitionLogic {
 
