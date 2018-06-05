@@ -59,7 +59,23 @@ public class OverlappingIntervalMergeJoinChecker extends AbstractIntervalMergeJo
         }
         long end0 = IntervalJoinUtil.getIntervalEnd(accessorLeft, leftTupleIndex, idLeft);
         long end1 = IntervalJoinUtil.getIntervalEnd(accessorRight, rightTupleIndex, idRight);
-        return IntervalLogic.overlapping(start0, end0, start1, end1);
+        if (reversed) {
+            return IntervalLogic.overlapping(start0, end0, start1, end1);
+        } else {
+            return IntervalLogic.overlapping(start1, end1, start0, end0);
+        }
+    }
+
+    public boolean checkToSaveInResult(long start0, long end0, long start1, long end1, boolean reversed) {
+        if (start0 < partitionStart && start1 < partitionStart) {
+            // Both tuples will match in a different partition.
+            return false;
+        }
+        if (reversed) {
+            return IntervalLogic.overlapping(start0, end0, start1, end1);
+        } else {
+            return IntervalLogic.overlapping(start1, end1, start0, end0);
+        }
     }
 
     @Override

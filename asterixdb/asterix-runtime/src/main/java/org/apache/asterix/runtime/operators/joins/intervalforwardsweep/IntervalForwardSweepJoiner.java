@@ -109,9 +109,9 @@ public class IntervalForwardSweepJoiner extends AbstractMergeJoiner {
         //        bufferManager = new VPartitionDeletableTupleBufferManager(ctx,
         //                VPartitionDeletableTupleBufferManager.NO_CONSTRAIN, JOIN_PARTITIONS,
         //                (memorySize - 4) * ctx.getInitialFrameSize(), recordDescriptors);
-        bufferManager = new VPartitionDeletableTupleBufferManager(ctx,
-                VPartitionDeletableTupleBufferManager.NO_CONSTRAIN, JOIN_PARTITIONS,
-                memorySize * ctx.getInitialFrameSize(), recordDescriptors);
+        bufferManager =
+                new VPartitionDeletableTupleBufferManager(ctx, VPartitionDeletableTupleBufferManager.NO_CONSTRAIN,
+                        JOIN_PARTITIONS, memorySize * ctx.getInitialFrameSize(), recordDescriptors);
         memoryAccessor = new ITuplePointerAccessor[JOIN_PARTITIONS];
         memoryAccessor[LEFT_PARTITION] = bufferManager.getTuplePointerAccessor(leftRd);
         memoryAccessor[RIGHT_PARTITION] = bufferManager.getTuplePointerAccessor(rightRd);
@@ -220,8 +220,8 @@ public class IntervalForwardSweepJoiner extends AbstractMergeJoiner {
                     // Should never happen if memory budget is correct.
                     throw new HyracksDataException("Left partition does not have access to a single page of memory.");
                 }
-//                System.err.println("Active empty, load left: " + tp);
-//                TuplePrinterUtil.printTuple("    left: ", inputAccessor[LEFT_PARTITION]);
+                //                System.err.println("Active empty, load left: " + tp);
+                //                TuplePrinterUtil.printTuple("    left: ", inputAccessor[LEFT_PARTITION]);
                 inputAccessor[LEFT_PARTITION].next();
                 leftTs = loadLeftTuple();
             }
@@ -338,13 +338,13 @@ public class IntervalForwardSweepJoiner extends AbstractMergeJoiner {
     private boolean checkToProcessRightTuple() {
         TuplePointer leftTp = activeManager[LEFT_PARTITION].getFirst();
         memoryAccessor[LEFT_PARTITION].reset(leftTp);
-        long leftStart = IntervalJoinUtil.getIntervalStart(memoryAccessor[LEFT_PARTITION], leftTp.getTupleIndex(),
-                leftKey);
+        long leftStart =
+                IntervalJoinUtil.getIntervalStart(memoryAccessor[LEFT_PARTITION], leftTp.getTupleIndex(), leftKey);
 
         TuplePointer rightTp = activeManager[RIGHT_PARTITION].getFirst();
         memoryAccessor[RIGHT_PARTITION].reset(rightTp);
-        long rightStart = IntervalJoinUtil.getIntervalStart(memoryAccessor[RIGHT_PARTITION], rightTp.getTupleIndex(),
-                rightKey);
+        long rightStart =
+                IntervalJoinUtil.getIntervalStart(memoryAccessor[RIGHT_PARTITION], rightTp.getTupleIndex(), rightKey);
         if (leftStart < rightStart) {
             // Left stream has next tuple, check if right active must be updated first.
             return activeManager[RIGHT_PARTITION].hasRecords();
@@ -417,8 +417,8 @@ public class IntervalForwardSweepJoiner extends AbstractMergeJoiner {
 
         TuplePointer tp = activeManager[RIGHT_PARTITION].getFirst();
         memoryAccessor[RIGHT_PARTITION].reset(tp);
-        long rightStart = IntervalJoinUtil.getIntervalStart(memoryAccessor[RIGHT_PARTITION], tp.getTupleIndex(),
-                rightKey);
+        long rightStart =
+                IntervalJoinUtil.getIntervalStart(memoryAccessor[RIGHT_PARTITION], tp.getTupleIndex(), rightKey);
         return leftStart <= rightStart;
     }
 
@@ -433,8 +433,8 @@ public class IntervalForwardSweepJoiner extends AbstractMergeJoiner {
         TuplePointer searchTp = activeManager[LEFT_PARTITION].getFirst();
         memoryAccessor[LEFT_PARTITION].reset(searchTp);
 
-        long searchGroupEnd = IntervalJoinUtil.getIntervalEnd(memoryAccessor[LEFT_PARTITION], searchTp.getTupleIndex(),
-                leftKey);
+        long searchGroupEnd =
+                IntervalJoinUtil.getIntervalEnd(memoryAccessor[LEFT_PARTITION], searchTp.getTupleIndex(), leftKey);
         TuplePointer searchEndTp = searchTp;
 
         //        System.err.println("Stream left: ");
@@ -448,16 +448,16 @@ public class IntervalForwardSweepJoiner extends AbstractMergeJoiner {
                 break;
             }
             memoryAccessor[LEFT_PARTITION].reset(tp);
-//            System.err.println("Added to left search group: " + tp);
-//            TuplePrinterUtil.printTuple("    search: ", memoryAccessor[LEFT_PARTITION], tp.getTupleIndex());
+            //            System.err.println("Added to left search group: " + tp);
+            //            TuplePrinterUtil.printTuple("    search: ", memoryAccessor[LEFT_PARTITION], tp.getTupleIndex());
             processingGroup.add(tp);
             inputAccessor[LEFT_PARTITION].next();
             leftTs = loadLeftTuple();
 
             if (searchGroupEnd > IntervalJoinUtil.getIntervalEnd(memoryAccessor[LEFT_PARTITION], tp.getTupleIndex(),
                     leftKey)) {
-                searchGroupEnd = IntervalJoinUtil.getIntervalEnd(memoryAccessor[LEFT_PARTITION], tp.getTupleIndex(),
-                        leftKey);
+                searchGroupEnd =
+                        IntervalJoinUtil.getIntervalEnd(memoryAccessor[LEFT_PARTITION], tp.getTupleIndex(), leftKey);
                 searchEndTp = tp;
             }
         }
@@ -466,15 +466,22 @@ public class IntervalForwardSweepJoiner extends AbstractMergeJoiner {
         for (Iterator<TuplePointer> iterator = activeManager[RIGHT_PARTITION].getIterator(); iterator.hasNext();) {
             TuplePointer matchTp = iterator.next();
             memoryAccessor[RIGHT_PARTITION].reset(matchTp);
+            long startOuter = IntervalJoinUtil.getIntervalStart(memoryAccessor[RIGHT_PARTITION],
+                    matchTp.getTupleIndex(), rightKey);
+            long endOuter =
+                    IntervalJoinUtil.getIntervalEnd(memoryAccessor[RIGHT_PARTITION], matchTp.getTupleIndex(), rightKey);
 
             // Search group.
             for (Iterator<TuplePointer> groupIterator = processingGroup.iterator(); groupIterator.hasNext();) {
                 TuplePointer groupTp = groupIterator.next();
                 memoryAccessor[LEFT_PARTITION].reset(groupTp);
+                long startGroup = IntervalJoinUtil.getIntervalStart(memoryAccessor[LEFT_PARTITION],
+                        groupTp.getTupleIndex(), leftKey);
+                long endGroup = IntervalJoinUtil.getIntervalEnd(memoryAccessor[LEFT_PARTITION], groupTp.getTupleIndex(),
+                        leftKey);
 
                 // Add to result if matched.
-                if (imjc.checkToSaveInResult(memoryAccessor[LEFT_PARTITION], groupTp.getTupleIndex(),
-                        memoryAccessor[RIGHT_PARTITION], matchTp.getTupleIndex(), false)) {
+                if (imjc.checkToSaveInResult(startGroup, endGroup, startOuter, endOuter, false)) {
                     addToResult(memoryAccessor[LEFT_PARTITION], groupTp.getTupleIndex(),
                             memoryAccessor[RIGHT_PARTITION], matchTp.getTupleIndex(), false, writer);
                     //                System.err.println("Memory Match: " + searchTp + " " + matchTp);
@@ -502,6 +509,10 @@ public class IntervalForwardSweepJoiner extends AbstractMergeJoiner {
             TuplePointer tp = activeManager[RIGHT_PARTITION].addTuple(inputAccessor[RIGHT_PARTITION]);
             if (tp != null) {
                 memoryAccessor[RIGHT_PARTITION].reset(tp);
+                long startOuter = IntervalJoinUtil.getIntervalStart(memoryAccessor[RIGHT_PARTITION], tp.getTupleIndex(),
+                        rightKey);
+                long endOuter =
+                        IntervalJoinUtil.getIntervalEnd(memoryAccessor[RIGHT_PARTITION], tp.getTupleIndex(), rightKey);
                 //                System.err.println("Stream add: " + tp);
                 //                TuplePrinterUtil.printTuple("    right: ", memoryAccessor[RIGHT_PARTITION], tp.getTupleIndex());
 
@@ -509,10 +520,13 @@ public class IntervalForwardSweepJoiner extends AbstractMergeJoiner {
                 for (Iterator<TuplePointer> groupIterator = processingGroup.iterator(); groupIterator.hasNext();) {
                     TuplePointer groupTp = groupIterator.next();
                     memoryAccessor[LEFT_PARTITION].reset(groupTp);
+                    long startGroup = IntervalJoinUtil.getIntervalStart(memoryAccessor[LEFT_PARTITION],
+                            groupTp.getTupleIndex(), leftKey);
+                    long endGroup = IntervalJoinUtil.getIntervalEnd(memoryAccessor[LEFT_PARTITION],
+                            groupTp.getTupleIndex(), leftKey);
 
                     // Add to result if matched.
-                    if (imjc.checkToSaveInResult(memoryAccessor[LEFT_PARTITION], groupTp.getTupleIndex(),
-                            memoryAccessor[RIGHT_PARTITION], tp.getTupleIndex(), false)) {
+                    if (imjc.checkToSaveInResult(startGroup, endGroup, startOuter, endOuter, false)) {
                         addToResult(memoryAccessor[LEFT_PARTITION], groupTp.getTupleIndex(),
                                 memoryAccessor[RIGHT_PARTITION], tp.getTupleIndex(), false, writer);
                         //                    System.err.println("Stream Match: " + searchTp + " " + tp);
@@ -548,11 +562,9 @@ public class IntervalForwardSweepJoiner extends AbstractMergeJoiner {
 
         TuplePointer tp = activeManager[LEFT_PARTITION].getFirst();
         memoryAccessor[LEFT_PARTITION].reset(tp);
-        long leftStart = IntervalJoinUtil.getIntervalStart(memoryAccessor[LEFT_PARTITION], tp.getTupleIndex(),
-                leftKey);
+        long leftStart = IntervalJoinUtil.getIntervalStart(memoryAccessor[LEFT_PARTITION], tp.getTupleIndex(), leftKey);
         return rightStart <= leftStart;
     }
-
 
     private void processRightTuple(IFrameWriter writer) throws HyracksDataException {
         // Check tuple with all memory.
@@ -565,8 +577,8 @@ public class IntervalForwardSweepJoiner extends AbstractMergeJoiner {
         TuplePointer searchTp = activeManager[RIGHT_PARTITION].getFirst();
         memoryAccessor[RIGHT_PARTITION].reset(searchTp);
 
-        long searchGroupEnd = IntervalJoinUtil.getIntervalEnd(memoryAccessor[LEFT_PARTITION], searchTp.getTupleIndex(),
-                leftKey);
+        long searchGroupEnd =
+                IntervalJoinUtil.getIntervalEnd(memoryAccessor[LEFT_PARTITION], searchTp.getTupleIndex(), leftKey);
         TuplePointer searchEndTp = searchTp;
         //        System.err.println("Stream right: ");
         //        TuplePrinterUtil.printTuple("    rigth: ", memoryAccessor[RIGHT_PARTITION], searchTp.getTupleIndex());
@@ -579,16 +591,16 @@ public class IntervalForwardSweepJoiner extends AbstractMergeJoiner {
                 break;
             }
             memoryAccessor[RIGHT_PARTITION].reset(tp);
-//            System.err.println("Added to right search group: " + tp);
-//            TuplePrinterUtil.printTuple("    search: ", memoryAccessor[RIGHT_PARTITION], tp.getTupleIndex());
+            //            System.err.println("Added to right search group: " + tp);
+            //            TuplePrinterUtil.printTuple("    search: ", memoryAccessor[RIGHT_PARTITION], tp.getTupleIndex());
             processingGroup.add(tp);
             inputAccessor[RIGHT_PARTITION].next();
             rightTs = loadRightTuple();
 
             if (searchGroupEnd > IntervalJoinUtil.getIntervalEnd(memoryAccessor[RIGHT_PARTITION], tp.getTupleIndex(),
                     leftKey)) {
-                searchGroupEnd = IntervalJoinUtil.getIntervalEnd(memoryAccessor[RIGHT_PARTITION], tp.getTupleIndex(),
-                        leftKey);
+                searchGroupEnd =
+                        IntervalJoinUtil.getIntervalEnd(memoryAccessor[RIGHT_PARTITION], tp.getTupleIndex(), leftKey);
                 searchEndTp = tp;
             }
         }
@@ -597,17 +609,25 @@ public class IntervalForwardSweepJoiner extends AbstractMergeJoiner {
         for (Iterator<TuplePointer> iterator = activeManager[LEFT_PARTITION].getIterator(); iterator.hasNext();) {
             TuplePointer matchTp = iterator.next();
             memoryAccessor[LEFT_PARTITION].reset(matchTp);
+            long startOuter =
+                    IntervalJoinUtil.getIntervalStart(memoryAccessor[LEFT_PARTITION], matchTp.getTupleIndex(), leftKey);
+            long endOuter =
+                    IntervalJoinUtil.getIntervalEnd(memoryAccessor[LEFT_PARTITION], matchTp.getTupleIndex(), leftKey);
 
             // Search group.
             for (Iterator<TuplePointer> groupIterator = processingGroup.iterator(); groupIterator.hasNext();) {
                 TuplePointer groupTp = groupIterator.next();
                 memoryAccessor[RIGHT_PARTITION].reset(groupTp);
 
+                long startGroup = IntervalJoinUtil.getIntervalStart(memoryAccessor[RIGHT_PARTITION],
+                        groupTp.getTupleIndex(), rightKey);
+                long endGroup = IntervalJoinUtil.getIntervalEnd(memoryAccessor[RIGHT_PARTITION],
+                        groupTp.getTupleIndex(), rightKey);
+
                 // Add to result if matched.
-                if (imjc.checkToSaveInResult(memoryAccessor[RIGHT_PARTITION], groupTp.getTupleIndex(),
-                        memoryAccessor[LEFT_PARTITION], matchTp.getTupleIndex(), false)) {
-                    addToResult(memoryAccessor[RIGHT_PARTITION], groupTp.getTupleIndex(), memoryAccessor[LEFT_PARTITION],
-                            matchTp.getTupleIndex(), true, writer);
+                if (imjc.checkToSaveInResult(startGroup, endGroup, startOuter, endOuter, true)) {
+                    addToResult(memoryAccessor[RIGHT_PARTITION], groupTp.getTupleIndex(),
+                            memoryAccessor[LEFT_PARTITION], matchTp.getTupleIndex(), true, writer);
                     //                System.err.println("Memory Match: " + searchTp + " " + matchTp);
                     //                TuplePrinterUtil.printTuple("    right: ", memoryAccessor[RIGHT_PARTITION], searchTp.getTupleIndex());
                     //                TuplePrinterUtil.printTuple("    left: ", memoryAccessor[LEFT_PARTITION], matchTp.getTupleIndex());
@@ -632,6 +652,10 @@ public class IntervalForwardSweepJoiner extends AbstractMergeJoiner {
             TuplePointer tp = activeManager[LEFT_PARTITION].addTuple(inputAccessor[LEFT_PARTITION]);
             if (tp != null) {
                 memoryAccessor[LEFT_PARTITION].reset(tp);
+                long startOuter =
+                        IntervalJoinUtil.getIntervalStart(memoryAccessor[LEFT_PARTITION], tp.getTupleIndex(), leftKey);
+                long endOuter =
+                        IntervalJoinUtil.getIntervalEnd(memoryAccessor[LEFT_PARTITION], tp.getTupleIndex(), leftKey);
                 //                System.err.println("Stream add: " + tp);
                 //                TuplePrinterUtil.printTuple("    left: ", memoryAccessor[LEFT_PARTITION], tp.getTupleIndex());
 
@@ -640,9 +664,13 @@ public class IntervalForwardSweepJoiner extends AbstractMergeJoiner {
                     TuplePointer groupTp = groupIterator.next();
                     memoryAccessor[RIGHT_PARTITION].reset(groupTp);
 
+                    long startGroup = IntervalJoinUtil.getIntervalStart(memoryAccessor[RIGHT_PARTITION],
+                            groupTp.getTupleIndex(), rightKey);
+                    long endGroup = IntervalJoinUtil.getIntervalEnd(memoryAccessor[RIGHT_PARTITION],
+                            groupTp.getTupleIndex(), rightKey);
+
                     // Add to result if matched.
-                    if (imjc.checkToSaveInResult(memoryAccessor[RIGHT_PARTITION], groupTp.getTupleIndex(),
-                            memoryAccessor[LEFT_PARTITION], tp.getTupleIndex(), false)) {
+                    if (imjc.checkToSaveInResult(startGroup, endGroup, startOuter, endOuter, true)) {
                         addToResult(memoryAccessor[RIGHT_PARTITION], groupTp.getTupleIndex(),
                                 memoryAccessor[LEFT_PARTITION], tp.getTupleIndex(), true, writer);
                         //                    System.err.println("Stream Match: " + searchTp + " " + tp);
@@ -674,8 +702,8 @@ public class IntervalForwardSweepJoiner extends AbstractMergeJoiner {
         }
     }
 
-    private void processInMemoryJoin(int outer, int inner, boolean reversed, IFrameWriter writer, LinkedList<TuplePointer> searchGroup)
-            throws HyracksDataException {
+    private void processInMemoryJoin(int outer, int inner, boolean reversed, IFrameWriter writer,
+            LinkedList<TuplePointer> searchGroup) throws HyracksDataException {
         // Compare with tuple in memory
         for (Iterator<TuplePointer> outerIterator = activeManager[outer].getIterator(); outerIterator.hasNext();) {
             TuplePointer outerTp = outerIterator.next();
@@ -700,7 +728,7 @@ public class IntervalForwardSweepJoiner extends AbstractMergeJoiner {
             //            TuplePrinterUtil.printTuple("Outer", accessor, tupleId);
             //            TuplePrinterUtil.printTuple("Inner", memoryAccessor[inner], innerTp.getTupleIndex());
             // Add to result if matched.
-            if (imjc.checkToSaveInResult(accessor, tupleId, memoryAccessor[inner], innerTp.getTupleIndex(), false)) {
+            if (imjc.checkToSaveInResult(accessor, tupleId, memoryAccessor[inner], innerTp.getTupleIndex(), reversed)) {
                 addToResult(accessor, tupleId, memoryAccessor[inner], innerTp.getTupleIndex(), reversed, writer);
                 //                System.err.println("Memory Match: " + tupleId + " " + innerTp);
                 //                TuplePrinterUtil.printTuple("    ...: ", accessor, tupleId);
@@ -720,7 +748,8 @@ public class IntervalForwardSweepJoiner extends AbstractMergeJoiner {
         }
     }
 
-    private void freezeAndClearMemory(IFrameWriter writer, LinkedList<TuplePointer> searchGroup) throws HyracksDataException {
+    private void freezeAndClearMemory(IFrameWriter writer, LinkedList<TuplePointer> searchGroup)
+            throws HyracksDataException {
         //        if (LOGGER.isLoggable(Level.FINEST)) {
         //            LOGGER.finest("freeze snapshot: " + frameCounts[RIGHT_PARTITION] + " right, " + frameCounts[LEFT_PARTITION]
         //                    + " left, left[" + bufferManager.getNumTuples(LEFT_PARTITION) + " memory]. right["
@@ -728,11 +757,11 @@ public class IntervalForwardSweepJoiner extends AbstractMergeJoiner {
         //        }
         //        LOGGER.warning("disk IO: right, " + runFileStream[RIGHT_PARTITION].getReadCount() + " left, "
         //                + runFileStream[LEFT_PARTITION].getReadCount());
-//        System.out.println("freeze snapshot: " + frameCounts[RIGHT_PARTITION] + " right, " + frameCounts[LEFT_PARTITION]
-//                + " left, left[" + bufferManager.getNumTuples(LEFT_PARTITION) + " memory]. right["
-//                + bufferManager.getNumTuples(RIGHT_PARTITION) + " memory].");
-//        System.out.println("disk IO: right, " + runFileStream[RIGHT_PARTITION].getReadCount() + " left, "
-//                + runFileStream[LEFT_PARTITION].getReadCount());
+        //        System.out.println("freeze snapshot: " + frameCounts[RIGHT_PARTITION] + " right, " + frameCounts[LEFT_PARTITION]
+        //                + " left, left[" + bufferManager.getNumTuples(LEFT_PARTITION) + " memory]. right["
+        //                + bufferManager.getNumTuples(RIGHT_PARTITION) + " memory].");
+        //        System.out.println("disk IO: right, " + runFileStream[RIGHT_PARTITION].getReadCount() + " left, "
+        //                + runFileStream[LEFT_PARTITION].getReadCount());
         int freezePartition;
         if (bufferManager.getNumTuples(LEFT_PARTITION) > bufferManager.getNumTuples(RIGHT_PARTITION)) {
             freezePartition = RIGHT_PARTITION;
@@ -745,7 +774,8 @@ public class IntervalForwardSweepJoiner extends AbstractMergeJoiner {
         }
     }
 
-    private void freezeAndStartSpill(IFrameWriter writer, LinkedList<TuplePointer> searchGroup) throws HyracksDataException {
+    private void freezeAndStartSpill(IFrameWriter writer, LinkedList<TuplePointer> searchGroup)
+            throws HyracksDataException {
         int freezePartition;
         if (bufferManager.getNumTuples(LEFT_PARTITION) > bufferManager.getNumTuples(RIGHT_PARTITION)) {
             freezePartition = RIGHT_PARTITION;
@@ -834,11 +864,11 @@ public class IntervalForwardSweepJoiner extends AbstractMergeJoiner {
         runFileStream[frozenPartition].flushRunFile();
 
         // Clear memory
-//        System.out.println("after freeze memory left[" + bufferManager.getNumTuples(LEFT_PARTITION) + " memory]. right["
-//                + bufferManager.getNumTuples(RIGHT_PARTITION) + " memory].");
+        //        System.out.println("after freeze memory left[" + bufferManager.getNumTuples(LEFT_PARTITION) + " memory]. right["
+        //                + bufferManager.getNumTuples(RIGHT_PARTITION) + " memory].");
         flushMemory(flushPartition);
-//        System.out.println("after clear memory left[" + bufferManager.getNumTuples(LEFT_PARTITION) + " memory]. right["
-//                + bufferManager.getNumTuples(RIGHT_PARTITION) + " memory].");
+        //        System.out.println("after clear memory left[" + bufferManager.getNumTuples(LEFT_PARTITION) + " memory]. right["
+        //                + bufferManager.getNumTuples(RIGHT_PARTITION) + " memory].");
         if ((LEFT_PARTITION == frozenPartition && !runFileStream[LEFT_PARTITION].isReading())
                 || (RIGHT_PARTITION == frozenPartition && !runFileStream[RIGHT_PARTITION].isReading())) {
             streamIndex[frozenPartition] = accessor.getTupleId();

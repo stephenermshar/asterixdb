@@ -180,6 +180,13 @@ public abstract class AbstractIntervalMergeJoinChecker implements IIntervalMerge
         return compareInterval(ipLeft, ipRight);
     }
 
+
+    @Override
+    public boolean checkToSaveInResult(long s1, long e1, long s2, long e2, boolean reversed) {
+        // TODO Auto-generated method stub
+        return false;
+    }
+
     @Override
     public abstract boolean compareInterval(AIntervalPointable ipLeft, AIntervalPointable ipRight)
             throws HyracksDataException;
