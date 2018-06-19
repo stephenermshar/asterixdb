@@ -38,6 +38,9 @@ public class TupleAccessor extends FrameTupleAccessor implements ITupleAccessor 
         reset(buffer, 0, buffer.limit());
         tupleId = INITIALIZED;
     }
+    public void reset(TuplePointer tp) {
+        throw new IllegalAccessError("Should never call this reset");
+    }
 
     @Override
     public int getTupleStartOffset() {

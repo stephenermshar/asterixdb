@@ -17,7 +17,18 @@
  ! specific language governing permissions and limitations
  ! under the License.
  !-->
+<!DOCTYPE test-suite [
+
+             <!ENTITY APIQueries SYSTEM "queries/api/APIQueries.xml">
+             <!ENTITY ComparisonQueries SYSTEM "queries/comparison/ComparisonQueries.xml">
+             <!ENTITY DeepEqualQueries SYSTEM "queries/comparison/deep_equal/DeepEqualQueries.xml">
+             <!ENTITY APIQueries SYSTEM "queries/api/APIQueries.xml">
+             <!ENTITY RecordsQueries SYSTEM "queries/records/RecordsQueries.xml">
+             <!ENTITY TemporalQueries SYSTEM "queries/temporal/TemporalQueries.xml">
+
+             ]>
 <test-suite xmlns="urn:xml.testframework.asterix.apache.org" ResultOffsetPath="results" QueryOffsetPath="queries">
   <test-group name="failed">
+        &TemporalQueries;
   </test-group>
 </test-suite>

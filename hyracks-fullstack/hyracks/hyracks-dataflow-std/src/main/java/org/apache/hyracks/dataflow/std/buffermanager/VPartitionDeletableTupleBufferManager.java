@@ -213,6 +213,14 @@ public class VPartitionDeletableTupleBufferManager extends VPartitionTupleBuffer
             }
 
             @Override
+            void resetInnerAccessor(TuplePointer tuplePointer) {
+                resetInnerAccessor(tuplePointer.getFrameIndex());
+//                partitionArray[parsePartitionId(tuplePointer.getFrameIndex())]
+//                        .getFrame(parseFrameIdInPartition(tuplePointer.getFrameIndex()), tempInfo);
+//                innerAccessor.reset(tempInfo.getBuffer());
+            }
+
+            @Override
             void resetInnerAccessor(int frameIndex) {
                 partitionArray[parsePartitionId(frameIndex)].getFrame(parseFrameIdInPartition(frameIndex), tempInfo);
                 innerAccessor.reset(tempInfo.getBuffer());
@@ -275,6 +283,7 @@ public class VPartitionDeletableTupleBufferManager extends VPartitionTupleBuffer
                 }
                 return UNSET;
             }
+
 
         };
     }

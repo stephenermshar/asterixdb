@@ -58,7 +58,7 @@ public class IntervalForwardSweepJoiner extends AbstractMergeJoiner {
     private final IPartitionedDeletableTupleBufferManager bufferManager;
 
     private final ForwardSweepActiveManager[] activeManager;
-    private final ITuplePointerAccessor[] memoryAccessor;
+    private final ITupleAccessor[] memoryAccessor;
     private final int[] streamIndex;
     private final RunFileStream[] runFileStream;
     private final RunFilePointer[] runFilePointer;
@@ -112,9 +112,9 @@ public class IntervalForwardSweepJoiner extends AbstractMergeJoiner {
         bufferManager =
                 new VPartitionDeletableTupleBufferManager(ctx, VPartitionDeletableTupleBufferManager.NO_CONSTRAIN,
                         JOIN_PARTITIONS, memorySize * ctx.getInitialFrameSize(), recordDescriptors);
-        memoryAccessor = new ITuplePointerAccessor[JOIN_PARTITIONS];
-        memoryAccessor[LEFT_PARTITION] = bufferManager.getTuplePointerAccessor(leftRd);
-        memoryAccessor[RIGHT_PARTITION] = bufferManager.getTuplePointerAccessor(rightRd);
+        memoryAccessor = new ITupleAccessor[JOIN_PARTITIONS];
+        memoryAccessor[LEFT_PARTITION] = bufferManager.getTupleAccessor(leftRd);
+        memoryAccessor[RIGHT_PARTITION] = bufferManager.getTupleAccessor(rightRd);
 
         activeManager = new ForwardSweepActiveManager[JOIN_PARTITIONS];
         activeManager[LEFT_PARTITION] = new ForwardSweepActiveManager(bufferManager, LEFT_PARTITION);
@@ -715,7 +715,7 @@ public class IntervalForwardSweepJoiner extends AbstractMergeJoiner {
         }
     }
 
-    private void processTupleJoin(IFrameTupleAccessor accessor, int tupleId, int inner, boolean reversed,
+    private void processTupleJoin(ITupleAccessor accessor, int tupleId, int inner, boolean reversed,
             IFrameWriter writer, LinkedList<TuplePointer> searchGroup) throws HyracksDataException {
         // Compare with tuple in memory
         for (Iterator<TuplePointer> innerIterator = activeManager[inner].getIterator(); innerIterator.hasNext();) {

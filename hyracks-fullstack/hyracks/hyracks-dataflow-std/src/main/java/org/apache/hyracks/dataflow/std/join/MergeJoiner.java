@@ -51,7 +51,7 @@ public class MergeJoiner extends AbstractMergeJoiner {
 
     private final IDeallocatableFramePool framePool;
     private final IDeletableTupleBufferManager bufferManager;
-    private final ITuplePointerAccessor memoryAccessor;
+    private final ITupleAccessor memoryAccessor;
     private final LinkedList<TuplePointer> memoryBuffer = new LinkedList<>();
 
     private int leftStreamIndex;
@@ -84,7 +84,7 @@ public class MergeJoiner extends AbstractMergeJoiner {
         }
         framePool = new DeallocatableFramePool(ctx, (memorySize) * ctx.getInitialFrameSize());
         bufferManager = new VariableDeletableTupleMemoryManager(framePool, rightRd);
-        memoryAccessor = bufferManager.createTuplePointerAccessor();
+        memoryAccessor = bufferManager.createTupleAccessor();
 
         // Run File and frame cache (left buffer)
         leftStreamIndex = TupleAccessor.UNSET;

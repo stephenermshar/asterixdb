@@ -35,6 +35,7 @@ public abstract class AbstractTupleAccessor implements ITupleAccessor {
     abstract IFrameTupleAccessor getInnerAccessor();
 
     abstract void resetInnerAccessor(int frameId);
+    abstract void resetInnerAccessor(TuplePointer tp);
 
     abstract int getFrameCount();
 
@@ -113,6 +114,12 @@ public abstract class AbstractTupleAccessor implements ITupleAccessor {
         return getInnerAccessor().getTupleCount();
     }
 
+    @Override
+    public void reset(TuplePointer tuplePointer) {
+        resetInnerAccessor(tuplePointer.getFrameIndex());
+    }
+
+    
     @Override
     public void reset(ByteBuffer buffer) {
         throw new IllegalAccessError("Should never call this reset");

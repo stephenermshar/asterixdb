@@ -45,7 +45,9 @@ public interface ITupleAccessor extends IFrameTupleAccessor {
     int getFieldEndOffset(int fieldId);
 
     int getFieldStartOffset(int fieldId);
-
+    
+    void reset(TuplePointer tuplePointer);
+    
     @Override
     void reset(ByteBuffer buffer);
 

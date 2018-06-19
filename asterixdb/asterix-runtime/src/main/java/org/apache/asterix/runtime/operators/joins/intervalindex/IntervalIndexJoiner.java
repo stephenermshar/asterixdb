@@ -58,7 +58,7 @@ public class IntervalIndexJoiner extends AbstractMergeJoiner {
     private final IPartitionedDeletableTupleBufferManager bufferManager;
 
     private final ActiveSweepManager[] activeManager;
-    private final ITuplePointerAccessor[] memoryAccessor;
+    private final ITupleAccessor[] memoryAccessor;
     private final int[] streamIndex;
     private final RunFileStream[] runFileStream;
     private final RunFilePointer[] runFilePointer;
@@ -114,9 +114,9 @@ public class IntervalIndexJoiner extends AbstractMergeJoiner {
         bufferManager = new VPartitionDeletableTupleBufferManager(ctx,
                 VPartitionDeletableTupleBufferManager.NO_CONSTRAIN, JOIN_PARTITIONS,
                 memorySize * ctx.getInitialFrameSize(), recordDescriptors);
-        memoryAccessor = new ITuplePointerAccessor[JOIN_PARTITIONS];
-        memoryAccessor[LEFT_PARTITION] = bufferManager.getTuplePointerAccessor(leftRd);
-        memoryAccessor[RIGHT_PARTITION] = bufferManager.getTuplePointerAccessor(rightRd);
+        memoryAccessor = new ITupleAccessor[JOIN_PARTITIONS];
+        memoryAccessor[LEFT_PARTITION] = bufferManager.getTupleAccessor(leftRd);
+        memoryAccessor[RIGHT_PARTITION] = bufferManager.getTupleAccessor(rightRd);
 
         activeManager = new ActiveSweepManager[JOIN_PARTITIONS];
         activeManager[LEFT_PARTITION] = new ActiveSweepManager(bufferManager, leftKey, LEFT_PARTITION,
@@ -437,7 +437,7 @@ public class IntervalIndexJoiner extends AbstractMergeJoiner {
     //        buffer.clear();
     //    }
 
-    private void processTupleJoin(List<TuplePointer> outer, ITuplePointerAccessor outerAccessor,
+    private void processTupleJoin(List<TuplePointer> outer, ITupleAccessor outerAccessor,
             ITupleAccessor tupleAccessor, boolean reversed, IFrameWriter writer) throws HyracksDataException {
         for (TuplePointer outerTp : outer) {
             outerAccessor.reset(outerTp);

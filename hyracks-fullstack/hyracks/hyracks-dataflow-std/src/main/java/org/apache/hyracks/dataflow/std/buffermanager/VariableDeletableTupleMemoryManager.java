@@ -195,6 +195,10 @@ public class VariableDeletableTupleMemoryManager implements IDeletableTupleBuffe
                 return bufferAccessor;
             }
 
+            void resetInnerAccessor(TuplePointer tuplePointer) {
+                bufferAccessor.reset(frames.get(tuplePointer.getFrameIndex()));
+            }
+
             @Override
             void resetInnerAccessor(int frameIndex) {
                 bufferAccessor.reset(frames.get(frameIndex));
