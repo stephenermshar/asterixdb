@@ -40,31 +40,25 @@ public class IntervalJoinUtil {
 
     public static void getIntervalPointable(IFrameTupleAccessor accessor, int tupleId, int fieldId,
             TaggedValuePointable tvp, AIntervalPointable ip) {
-        int start = accessor.getTupleStartOffset(tupleId) + accessor.getFieldSlotsLength()
-                + accessor.getFieldStartOffset(tupleId, fieldId);
+        int start = getIntervalOffset(accessor, tupleId, fieldId);
         int length = accessor.getFieldLength(tupleId, fieldId);
         ip.set(accessor.getBuffer().array(), start + 1, length - 1);
-        //        tvp.set(accessor.getBuffer().array(), start, length);
-        //        tvp.getValue(ip);
     }
 
-    public static long getIntervalOffset(IFrameTupleAccessor accessor, int tupleId, int fieldId) {
+    public static int getIntervalOffset(IFrameTupleAccessor accessor, int tupleId, int fieldId) {
         int start = accessor.getTupleStartOffset(tupleId) + accessor.getFieldSlotsLength()
                 + accessor.getFieldStartOffset(tupleId, fieldId) + 1;
         return start;
     }
 
     public static long getIntervalStart(IFrameTupleAccessor accessor, int tupleId, int fieldId) {
-        int length = accessor.getTupleLength(tupleId);
-        int start = accessor.getTupleStartOffset(tupleId) + accessor.getFieldSlotsLength()
-                + accessor.getFieldStartOffset(tupleId, fieldId) + 1;
+        int start = getIntervalOffset(accessor, tupleId, fieldId);
         long intervalStart = AIntervalSerializerDeserializer.getIntervalStart(accessor.getBuffer().array(), start);
         return intervalStart;
     }
 
     public static long getIntervalEnd(IFrameTupleAccessor accessor, int tupleId, int fieldId) {
-        int start = accessor.getTupleStartOffset(tupleId) + accessor.getFieldSlotsLength()
-                + accessor.getFieldStartOffset(tupleId, fieldId) + 1;
+        int start = getIntervalOffset(accessor, tupleId, fieldId);
         long intervalEnd = AIntervalSerializerDeserializer.getIntervalEnd(accessor.getBuffer().array(), start);
         return intervalEnd;
     }
