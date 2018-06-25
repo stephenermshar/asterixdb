@@ -20,6 +20,7 @@ package org.apache.asterix.runtime.operators.joins;
 
 import org.apache.asterix.om.pointables.nonvisitor.AIntervalPointable;
 import org.apache.asterix.runtime.evaluators.functions.temporal.IntervalLogic;
+import org.apache.asterix.runtime.evaluators.functions.temporal.IntervalLogicWithLong;
 import org.apache.asterix.runtime.evaluators.functions.temporal.IntervalPartitionLogic;
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
@@ -71,11 +72,7 @@ public class OverlappingIntervalMergeJoinChecker extends AbstractIntervalMergeJo
             // Both tuples will match in a different partition.
             return false;
         }
-        if (reversed) {
-            return IntervalLogic.overlapping(start0, end0, start1, end1);
-        } else {
-            return IntervalLogic.overlapping(start1, end1, start0, end0);
-        }
+        return super.checkToSaveInResult(start0, end0, start1, end1, reversed);
     }
 
     @Override
@@ -86,6 +83,11 @@ public class OverlappingIntervalMergeJoinChecker extends AbstractIntervalMergeJo
     @Override
     public boolean compareIntervalPartition(int s1, int e1, int s2, int e2) {
         return IntervalPartitionLogic.overlapping(s1, e1, s2, e2);
+    }
+
+    @Override
+    public boolean compareInterval(long start0, long end0, long start1, long end1) {
+        return IntervalLogicWithLong.overlapping(start1, end1, start0, end0);
     }
 
 }

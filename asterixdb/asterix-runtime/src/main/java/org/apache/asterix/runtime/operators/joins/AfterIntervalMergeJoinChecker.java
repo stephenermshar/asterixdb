@@ -19,6 +19,7 @@
 package org.apache.asterix.runtime.operators.joins;
 
 import org.apache.asterix.om.pointables.nonvisitor.AIntervalPointable;
+import org.apache.asterix.runtime.evaluators.functions.temporal.IntervalLogicWithLong;
 import org.apache.asterix.runtime.evaluators.functions.temporal.IntervalPartitionLogic;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.dataflow.std.buffermanager.ITupleAccessor;
@@ -59,6 +60,12 @@ public class AfterIntervalMergeJoinChecker extends AbstractIntervalMergeJoinChec
     @Override
     public boolean compareIntervalPartition(int s1, int e1, int s2, int e2) {
         return IntervalPartitionLogic.after(s1, e1, s2, e2);
+    }
+
+    @Override
+    public boolean compareInterval(long start0, long end0, long start1, long end1) {
+        return IntervalLogicWithLong.after(start0, end0, start1, end1);
+
     }
 
 }
