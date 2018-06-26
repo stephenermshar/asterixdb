@@ -23,7 +23,6 @@ import java.util.logging.Logger;
 
 import org.apache.asterix.runtime.operators.joins.IIntervalMergeJoinCheckerFactory;
 import org.apache.asterix.runtime.operators.joins.intervalforwardsweep.IntervalForwardSweepJoinOperatorDescriptor;
-import org.apache.asterix.runtime.operators.joins.intervalindex.IntervalIndexJoinOperatorDescriptor;
 import org.apache.hyracks.algebricks.core.algebra.base.LogicalVariable;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.AbstractBinaryJoinOperator.JoinKind;
 import org.apache.hyracks.api.dataflow.IOperatorDescriptor;
@@ -46,7 +45,7 @@ public class IntervalForwardSweepJoinPOperator extends AbstractIntervalJoinPOper
                 rangeMapHint);
         this.memSizeInFrames = memSizeInFrames;
 
-        LOGGER.fine("IntervalIndexJoinPOperator constructed with: JoinKind=" + kind + ", JoinPartitioningType="
+        LOGGER.fine("IntervalForwardSweepJoinPOperator constructed with: JoinKind=" + kind + ", JoinPartitioningType="
                 + partitioningType + ", List<LogicalVariable>=" + sideLeftOfEqualities + ", List<LogicalVariable>="
                 + sideRightOfEqualities + ", int memSizeInFrames=" + memSizeInFrames
                 + ", IMergeJoinCheckerFactory mjcf=" + mjcf + ", RangeId leftRangeId=" + leftRangeId
@@ -55,7 +54,7 @@ public class IntervalForwardSweepJoinPOperator extends AbstractIntervalJoinPOper
 
     @Override
     public String getIntervalJoin() {
-        return "INTERVAL_INDEX_JOIN";
+        return "INTERVAL_FORWARD_SWEEP_JOIN";
     }
 
     @Override

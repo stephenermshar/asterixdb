@@ -44,3 +44,7 @@ dist
 *.swp
 .m2*
 ß
+
+asterixdb/asterix-app/data/infectious/
+
+asterixdb/asterix-app/data/webkit/
