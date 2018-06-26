@@ -49,6 +49,7 @@ class IntervalSideTuple {
     int fieldId;
     ITupleAccessor accessor;
     int tupleIndex;
+    int frameIndex = -1;
 
     // Join details
     final IIntervalMergeJoinChecker imjc;
@@ -64,7 +65,10 @@ class IntervalSideTuple {
     }
 
     public void setTuple(TuplePointer tp) {
-        accessor.reset(tp);
+        if (frameIndex != tp.getFrameIndex()) {
+            accessor.reset(tp);
+            frameIndex = tp.getFrameIndex();
+        }
         tupleIndex = tp.getTupleIndex();
         int offset = IntervalJoinUtil.getIntervalOffset(accessor, tupleIndex, fieldId);
         start = AIntervalSerializerDeserializer.getIntervalStart(accessor.getBuffer().array(), offset);
@@ -513,13 +517,12 @@ public class IntervalForwardSweepJoiner extends AbstractMergeJoiner {
 
         searchEndTp = buildGroupForLeft(searchTp, searchEndTp);
 
-        
         if (processingGroup.size() == 1) {
             processSingleWithMemory(RIGHT_PARTITION, LEFT_PARTITION, searchTp, writer);
         } else {
             processGroupWithMemory(RIGHT_PARTITION, LEFT_PARTITION, searchTp, writer);
         }
- 
+
         if (!processGroupWithStream(RIGHT_PARTITION, LEFT_PARTITION, searchEndTp, writer)) {
             return;
         }
@@ -551,7 +554,7 @@ public class IntervalForwardSweepJoiner extends AbstractMergeJoiner {
         } else {
             processGroupWithMemory(LEFT_PARTITION, RIGHT_PARTITION, searchTp, writer);
         }
-        
+
         // Add tuples from the stream.
         if (!processGroupWithStream(LEFT_PARTITION, RIGHT_PARTITION, searchEndTp, writer)) {
             return;
@@ -711,8 +714,7 @@ public class IntervalForwardSweepJoiner extends AbstractMergeJoiner {
 
     private TuplePointer buildGroupForRight(TuplePointer searchTp, TuplePointer searchEndTp)
             throws HyracksDataException {
-        TuplePointer tpRight = activeManager[LEFT_PARTITION].getFirst();
-        memoryTuple[LEFT_PARTITION].setTuple(tpRight);
+        memoryTuple[LEFT_PARTITION].setTuple(activeManager[LEFT_PARTITION].getFirst());
 
         memoryTuple[RIGHT_PARTITION].setTuple(searchTp);
         long searchGroupEnd = memoryTuple[RIGHT_PARTITION].getEnd();
