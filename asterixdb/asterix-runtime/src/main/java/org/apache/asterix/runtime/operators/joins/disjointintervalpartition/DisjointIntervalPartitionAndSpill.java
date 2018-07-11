@@ -95,7 +95,6 @@ public class DisjointIntervalPartitionAndSpill {
         spillPolicy = new PreferToSpillFullyOccupiedFramePolicy(bufferManager, spilledStatus,
                 ctx.getInitialFrameSize());
         spilledStatus.clear();
-
     }
 
     public void resetForNewDataset(RecordDescriptor rd, DisjointIntervalPartitionComputer dipc, String runFilePrefix,
@@ -149,7 +148,7 @@ public class DisjointIntervalPartitionAndSpill {
         if (!spillAppender.append(fta, tupleId)) {
             spillAppender.flush(spillWriter);
             if (!spillAppender.append(fta, tupleId)) {
-                throw new HyracksDataException("Can not append tupe to spill file.");
+                throw new HyracksDataException("Can not append tuple to spill file.");
             }
             spillWriteCount++;
         }

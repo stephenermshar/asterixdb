@@ -185,7 +185,7 @@ public class IntervalMergeJoinOperatorDescriptor extends AbstractOperatorDescrip
                 } finally {
                     locks.getLock(partition).unlock();
                 }
-//                System.err.println("Left next calls: " + count);
+                //                System.err.println("Left next calls: " + count);
             }
         }
     }
@@ -208,7 +208,8 @@ public class IntervalMergeJoinOperatorDescriptor extends AbstractOperatorDescrip
                 throws HyracksDataException {
             locks.setPartitions(nPartitions);
             RecordDescriptor inRecordDesc = recordDescProvider.getInputRecordDescriptor(getActivityId(), 0);
-            final IIntervalMergeJoinChecker mjc = mergeJoinCheckerFactory.createMergeJoinChecker(leftKeys, rightKeys, ctx);
+            final IIntervalMergeJoinChecker mjc =
+                    mergeJoinCheckerFactory.createMergeJoinChecker(leftKeys, rightKeys, ctx);
             return new RightDataOperator(ctx, partition, inRecordDesc, mjc);
         }
 
@@ -243,7 +244,7 @@ public class IntervalMergeJoinOperatorDescriptor extends AbstractOperatorDescrip
                     } while (state == null);
                     state.rightRd = rightRd;
                     state.joiner = new IntervalMergeJoiner(ctx, memoryForJoin, partition, state.status, locks, mjc,
-                            state.leftRd, state.rightRd);
+                            leftKeys, rightKeys, state.leftRd, state.rightRd);
                     state.status.branch[RIGHT_ACTIVITY_ID].setStageOpen();
                     locks.getLeft(partition).signal();
                 } catch (InterruptedException e) {
@@ -297,7 +298,7 @@ public class IntervalMergeJoinOperatorDescriptor extends AbstractOperatorDescrip
                 } finally {
                     locks.getLock(partition).unlock();
                 }
-//                System.err.println("Right next calls: " + count);
+                //                System.err.println("Right next calls: " + count);
             }
         }
     }

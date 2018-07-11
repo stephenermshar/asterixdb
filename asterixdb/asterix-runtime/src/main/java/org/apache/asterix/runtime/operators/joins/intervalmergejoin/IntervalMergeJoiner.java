@@ -22,7 +22,9 @@ import java.util.LinkedList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.apache.asterix.dataflow.data.nontagged.serde.AIntervalSerializerDeserializer;
 import org.apache.asterix.runtime.operators.joins.IIntervalMergeJoinChecker;
+import org.apache.asterix.runtime.operators.joins.IntervalJoinUtil;
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.comm.IFrameWriter;
 import org.apache.hyracks.api.context.IHyracksTaskContext;
@@ -38,6 +40,78 @@ import org.apache.hyracks.dataflow.std.buffermanager.VariableDeletableTupleMemor
 import org.apache.hyracks.dataflow.std.join.RunFileStream;
 import org.apache.hyracks.dataflow.std.structures.RunFilePointer;
 import org.apache.hyracks.dataflow.std.structures.TuplePointer;
+
+class IntervalSideTuple {
+    // Tuple access
+    int fieldId;
+    ITupleAccessor accessor;
+    int tupleIndex;
+    int frameIndex = -1;
+
+    // Join details
+    final IIntervalMergeJoinChecker imjc;
+
+    // Interval details
+    long start;
+    long end;
+
+    public IntervalSideTuple(IIntervalMergeJoinChecker imjc, ITupleAccessor accessor, int fieldId) {
+        this.imjc = imjc;
+        this.accessor = accessor;
+        this.fieldId = fieldId;
+    }
+
+    public void setTuple(TuplePointer tp) {
+        if (frameIndex != tp.getFrameIndex()) {
+            accessor.reset(tp);
+            frameIndex = tp.getFrameIndex();
+        }
+        tupleIndex = tp.getTupleIndex();
+        int offset = IntervalJoinUtil.getIntervalOffset(accessor, tupleIndex, fieldId);
+        start = AIntervalSerializerDeserializer.getIntervalStart(accessor.getBuffer().array(), offset);
+        end = AIntervalSerializerDeserializer.getIntervalEnd(accessor.getBuffer().array(), offset);
+    }
+
+    public void loadTuple() {
+        tupleIndex = accessor.getTupleId();
+        int offset = IntervalJoinUtil.getIntervalOffset(accessor, tupleIndex, fieldId);
+        start = AIntervalSerializerDeserializer.getIntervalStart(accessor.getBuffer().array(), offset);
+        end = AIntervalSerializerDeserializer.getIntervalEnd(accessor.getBuffer().array(), offset);
+    }
+
+    public int getTupleIndex() {
+        return tupleIndex;
+    }
+
+    public ITupleAccessor getAccessor() {
+        return accessor;
+    }
+
+    public long getStart() {
+        return start;
+    }
+
+    public long getEnd() {
+        return end;
+    }
+
+    public boolean compareJoin(IntervalSideTuple ist) {
+        return imjc.checkToSaveInResult(start, end, ist.start, ist.end, true);
+    }
+
+    public boolean addToMemory(IntervalSideTuple ist) {
+        return imjc.checkToSaveInMemory(start, end, ist.start, ist.end, true);
+    }
+
+    public boolean removeFromMemory(IntervalSideTuple ist) {
+        return imjc.checkToRemoveFromMemory(start, end, ist.start, ist.end, true);
+    }
+
+    public boolean startsBefore(IntervalSideTuple ist) {
+        return start <= ist.start;
+    }
+
+}
 
 /**
  * Merge Joiner takes two sorted streams of input and joins.
@@ -59,6 +133,9 @@ public class IntervalMergeJoiner extends AbstractIntervalMergeJoiner {
     private final RunFileStream runFileStream;
     private final RunFilePointer runFilePointer;
 
+    private IntervalSideTuple memoryTuple;
+    private IntervalSideTuple[] inputTuple;
+
     private final IIntervalMergeJoinChecker mjc;
 
     private long joinComparisonCount = 0;
@@ -71,8 +148,9 @@ public class IntervalMergeJoiner extends AbstractIntervalMergeJoiner {
     private final int partition;
     private final int memorySize;
 
-    public IntervalMergeJoiner(IHyracksTaskContext ctx, int memorySize, int partition, IntervalMergeStatus status, IntervalMergeJoinLocks locks,
-            IIntervalMergeJoinChecker mjc, RecordDescriptor leftRd, RecordDescriptor rightRd) throws HyracksDataException {
+    public IntervalMergeJoiner(IHyracksTaskContext ctx, int memorySize, int partition, IntervalMergeStatus status,
+            IntervalMergeJoinLocks locks, IIntervalMergeJoinChecker mjc, int[] leftKeys, int[] rightKeys,
+            RecordDescriptor leftRd, RecordDescriptor rightRd) throws HyracksDataException {
         super(ctx, partition, status, locks, leftRd, rightRd);
         this.mjc = mjc;
         this.partition = partition;
@@ -92,6 +170,11 @@ public class IntervalMergeJoiner extends AbstractIntervalMergeJoiner {
         runFileStream = new RunFileStream(ctx, "left", status.branch[LEFT_PARTITION]);
         runFilePointer = new RunFilePointer();
 
+        memoryTuple = new IntervalSideTuple(mjc, memoryAccessor, rightKeys[0]);
+
+        inputTuple = new IntervalSideTuple[JOIN_PARTITIONS];
+        inputTuple[LEFT_PARTITION] = new IntervalSideTuple(mjc, inputAccessor[LEFT_PARTITION], leftKeys[0]);
+        inputTuple[RIGHT_PARTITION] = new IntervalSideTuple(mjc, inputAccessor[RIGHT_PARTITION], rightKeys[0]);
         //        if (LOGGER.isLoggable(Level.WARNING)) {
         //            LOGGER.warning(
         //                    "MergeJoiner has started partition " + partition + " with " + memorySize + " frames of memory.");
@@ -204,9 +287,9 @@ public class IntervalMergeJoiner extends AbstractIntervalMergeJoiner {
         processLeftFrame(writer);
         resultAppender.write(writer, true);
 
-//        System.err.println(",MergeJoiner Statistics Log," + partition + ",partition," + memorySize + ",memory,"
-//                + tupleCounts[LEFT_PARTITION] + ",left tuples," + tupleCounts[RIGHT_PARTITION] + ",right tuples,"
-//                + frameCounts[LEFT_PARTITION] + ",left frames," + frameCounts[RIGHT_PARTITION] + ",right frames");
+        //        System.err.println(",MergeJoiner Statistics Log," + partition + ",partition," + memorySize + ",memory,"
+        //                + tupleCounts[LEFT_PARTITION] + ",left tuples," + tupleCounts[RIGHT_PARTITION] + ",right tuples,"
+        //                + frameCounts[LEFT_PARTITION] + ",left frames," + frameCounts[RIGHT_PARTITION] + ",right frames");
         if (LOGGER.isLoggable(Level.WARNING)) {
             long ioCost = runFileStream.getWriteCount() + runFileStream.getReadCount();
             LOGGER.warning(",MergeJoiner Statistics Log," + partition + ",partition," + memorySize + ",memory,"
@@ -231,20 +314,23 @@ public class IntervalMergeJoiner extends AbstractIntervalMergeJoiner {
     }
 
     private void processLeftTuple(IFrameWriter writer) throws HyracksDataException {
+        inputTuple[LEFT_PARTITION].loadTuple();
         // Check against memory (right)
         if (memoryHasTuples()) {
             for (int i = memoryBuffer.size() - 1; i > -1; --i) {
-                memoryAccessor.reset(memoryBuffer.get(i));
-                if (mjc.checkToSaveInResult(inputAccessor[LEFT_PARTITION], inputAccessor[LEFT_PARTITION].getTupleId(),
-                        memoryAccessor, memoryBuffer.get(i).getTupleIndex(), false)) {
+                memoryTuple.setTuple(memoryBuffer.get(i));
+                if (inputTuple[LEFT_PARTITION].compareJoin(memoryTuple)) {
+//                        mjc.checkToSaveInResult(inputAccessor[LEFT_PARTITION], inputAccessor[LEFT_PARTITION].getTupleId(),
+//                        memoryAccessor, memoryBuffer.get(i).getTupleIndex(), false)) {
                     // add to result
                     addToResult(inputAccessor[LEFT_PARTITION], inputAccessor[LEFT_PARTITION].getTupleId(),
                             memoryAccessor, memoryBuffer.get(i).getTupleIndex(), writer);
                 }
                 joinComparisonCount++;
-                if (mjc.checkToRemoveInMemory(inputAccessor[LEFT_PARTITION], inputAccessor[LEFT_PARTITION].getTupleId(),
-                        memoryAccessor, memoryBuffer.get(i).getTupleIndex())) {
-                    // remove from memory
+                if (inputTuple[LEFT_PARTITION].removeFromMemory(memoryTuple)) {
+//                    if (mjc.checkToRemoveInMemory(inputAccessor[LEFT_PARTITION], inputAccessor[LEFT_PARTITION].getTupleId(),
+//                            memoryAccessor, memoryBuffer.get(i).getTupleIndex())) {
+                        // remove from memory
                     removeFromMemory(memoryBuffer.get(i));
                 }
             }
