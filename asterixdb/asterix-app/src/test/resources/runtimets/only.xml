@@ -40,5 +40,10 @@
                 <output-dir compare="Text">interval_overlapping</output-dir>
             </compilation-unit>
         </test-case>
+        <test-case FilePath="temporal/interval_joins_with_spilling">
+            <compilation-unit name="interval_overlapping_disjoint_case">
+                <output-dir compare="Text">interval_overlapping_disjoint_case</output-dir>
+            </compilation-unit>
+        </test-case>
     </test-group>
 </test-suite>
