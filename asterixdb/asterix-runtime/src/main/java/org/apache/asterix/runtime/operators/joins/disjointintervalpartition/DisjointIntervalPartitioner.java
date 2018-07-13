@@ -138,23 +138,23 @@ public class DisjointIntervalPartitioner {
         Arrays.fill(partitionSizeInTups, 0);
         Arrays.fill(runFileWriters, null);
         spillWriter = writer;
-        dipc.reset();
+        dipc[LEFT_PARTITION].reset();
         spillSizeInTups = 0;
         spillWriteCount = 0;
     }
 
     public void processFrame(ByteBuffer buffer) throws HyracksDataException {
-        accessor.reset(buffer);
-        int tupleCount = accessor.getTupleCount();
+        accessor[LEFT_PARTITION].reset(buffer);
+        int tupleCount = accessor[LEFT_PARTITION].getTupleCount();
 
         for (int i = 0; i < tupleCount; ++i) {
-            int pid = dipc.partition(accessor, i, numOfPartitions);
-            processTuple(accessor, i, pid);
+            int pid = dipc[LEFT_PARTITION].partition(accessor[LEFT_PARTITION], i, numOfPartitions);
+            processTuple(accessor[LEFT_PARTITION], i, pid);
         }
     }
 
     public void processTupleAccessor(ITupleAccessor accessor) throws HyracksDataException {
-        int pid = dipc.partition(accessor, accessor.getTupleId(), numOfPartitions);
+        int pid = dipc[LEFT_PARTITION].partition(accessor, accessor.getTupleId(), numOfPartitions);
         processTuple(accessor, accessor.getTupleId(), pid);
     }
 
@@ -201,7 +201,7 @@ public class DisjointIntervalPartitioner {
     private RunFileWriter getSpillWriterOrCreateNewOneIfNotExist(int pid) throws HyracksDataException {
         RunFileWriter writer = runFileWriters[pid];
         if (writer == null) {
-            FileReference file = ctx.getJobletContext().createManagedWorkspaceFile(runFilePrefix);
+            FileReference file = ctx.getJobletContext().createManagedWorkspaceFile(runFilePrefix[LEFT_PARTITION]);
             writer = new RunFileWriter(file, ctx.getIOManager());
             writer.open();
             runFileWriters[pid] = writer;
