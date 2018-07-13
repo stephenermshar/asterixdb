@@ -267,7 +267,7 @@ public class DisjointIntervalPartitioner {
     public ITupleAccessor getPartitionTupleAccessor(int i) {
         IFrameBufferManager tmpBm = bufferManager.getPartitionFrameBufferManager(i);
         if (null != tmpBm) {
-            return tmpBm.getTupleAccessor(rd);
+            return tmpBm.getTupleAccessor(rd[LEFT_PARTITION]);
         }
         return null;
     }
