@@ -20,20 +20,20 @@
   <metadataNode>asterix_nc1</metadataNode>
   <store>
     <ncId>asterix_nc1</ncId>
-    <storeDirs>iodevice0<!-- ,iodevice1 --></storeDirs>
+    <storeDirs>iodevice0,iodevice1</storeDirs>
   </store>
-<!--   <store>
+  <store>
     <ncId>asterix_nc2</ncId>
     <storeDirs>iodevice0,iodevice1</storeDirs>
-  </store> -->
+  </store>
   <transactionLogDir>
     <ncId>asterix_nc1</ncId>
     <txnLogDirPath>target/txnLogDir/asterix_nc1</txnLogDirPath>
   </transactionLogDir>
-<!--    <transactionLogDir>
+  <transactionLogDir>
     <ncId>asterix_nc2</ncId>
     <txnLogDirPath>target/txnLogDir/asterix_nc2</txnLogDirPath>
-  </transactionLogDir> -->
+  </transactionLogDir>
 
   <property>
     <name>max.wait.active.cluster</name>
@@ -52,19 +52,19 @@
   </property>
   <property>
     <name>compiler.framesize</name>
-    <value>32768</value>
+    <value>32KB</value>
   </property>
   <property>
     <name>compiler.sortmemory</name>
-    <value>33554432</value>
+    <value>320KB</value>
   </property>
   <property>
     <name>compiler.groupmemory</name>
-    <value>33554432</value>
+    <value>160KB</value>
   </property>
   <property>
     <name>compiler.joinmemory</name>
-    <value>33554432</value>
+    <value>160KB</value>
   </property>
   <property>
     <name>compiler.pregelix.home</name>

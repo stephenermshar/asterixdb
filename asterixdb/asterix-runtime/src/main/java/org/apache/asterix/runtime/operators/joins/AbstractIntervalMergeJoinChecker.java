@@ -163,9 +163,9 @@ public abstract class AbstractIntervalMergeJoinChecker implements IIntervalMerge
     @Override
     public boolean checkToSaveInResult(long start0, long end0, long start1, long end1, boolean reversed) {
         if (reversed) {
-            return compareInterval(start0, end0, start1, end1);
-        } else {
             return compareInterval(start1, end1, start0, end0);
+        } else {
+            return compareInterval(start0, end0, start1, end1);
         }
     }
 

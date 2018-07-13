@@ -61,8 +61,8 @@ class IntervalSideTuple {
         this.fieldId = fieldId;
     }
 
-    public void setTuple(TuplePointer tp) {
-        if (frameIndex != tp.getFrameIndex()) {
+    public void setTuple(TuplePointer tp, boolean force) {
+        if (force || frameIndex != tp.getFrameIndex()) {
             accessor.reset(tp);
             frameIndex = tp.getFrameIndex();
         }
@@ -96,7 +96,7 @@ class IntervalSideTuple {
     }
 
     public boolean compareJoin(IntervalSideTuple ist) {
-        return imjc.checkToSaveInResult(start, end, ist.start, ist.end, true);
+        return imjc.checkToSaveInResult(start, end, ist.start, ist.end, false);
     }
 
     public boolean addToMemory(IntervalSideTuple ist) {
@@ -104,7 +104,7 @@ class IntervalSideTuple {
     }
 
     public boolean removeFromMemory(IntervalSideTuple ist) {
-        return imjc.checkToRemoveFromMemory(start, end, ist.start, ist.end, true);
+        return imjc.checkToRemoveFromMemory(start, end, ist.start, ist.end, false);
     }
 
     public boolean startsBefore(IntervalSideTuple ist) {
@@ -314,23 +314,19 @@ public class IntervalMergeJoiner extends AbstractIntervalMergeJoiner {
     }
 
     private void processLeftTuple(IFrameWriter writer) throws HyracksDataException {
-        inputTuple[LEFT_PARTITION].loadTuple();
         // Check against memory (right)
         if (memoryHasTuples()) {
+            inputTuple[LEFT_PARTITION].loadTuple();
             for (int i = memoryBuffer.size() - 1; i > -1; --i) {
-                memoryTuple.setTuple(memoryBuffer.get(i));
+                memoryTuple.setTuple(memoryBuffer.get(i), i == memoryBuffer.size() - 1);
                 if (inputTuple[LEFT_PARTITION].compareJoin(memoryTuple)) {
-//                        mjc.checkToSaveInResult(inputAccessor[LEFT_PARTITION], inputAccessor[LEFT_PARTITION].getTupleId(),
-//                        memoryAccessor, memoryBuffer.get(i).getTupleIndex(), false)) {
                     // add to result
                     addToResult(inputAccessor[LEFT_PARTITION], inputAccessor[LEFT_PARTITION].getTupleId(),
                             memoryAccessor, memoryBuffer.get(i).getTupleIndex(), writer);
                 }
                 joinComparisonCount++;
                 if (inputTuple[LEFT_PARTITION].removeFromMemory(memoryTuple)) {
-//                    if (mjc.checkToRemoveInMemory(inputAccessor[LEFT_PARTITION], inputAccessor[LEFT_PARTITION].getTupleId(),
-//                            memoryAccessor, memoryBuffer.get(i).getTupleIndex())) {
-                        // remove from memory
+                    // remove from memory
                     removeFromMemory(memoryBuffer.get(i));
                 }
             }

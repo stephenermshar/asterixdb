@@ -269,6 +269,14 @@ public class IntervalForwardSweepJoiner extends AbstractMergeJoiner {
         return loaded;
     }
 
+    private TupleStatus loadSideTuple(int partition) throws HyracksDataException {
+        if (partition == RIGHT_PARTITION) {
+            return loadRightTuple();
+        } else {
+            return loadLeftTuple();
+        }
+    }
+
     /**
      * Ensures a frame exists for the left branch, either from memory or the run file.
      *
@@ -607,7 +615,7 @@ public class IntervalForwardSweepJoiner extends AbstractMergeJoiner {
             throws HyracksDataException {
         memoryTuple[inner].setTuple(searchEndTp);
         // Add tuples from the stream.
-        while (loadRightTuple().isLoaded() && imjc.checkToSaveInMemory(memoryTuple[inner].getAccessor(),
+        while (loadSideTuple(outer).isLoaded() && imjc.checkToSaveInMemory(memoryTuple[inner].getAccessor(),
                 memoryTuple[inner].getTupleIndex(), inputAccessor[outer], inputAccessor[outer].getTupleId())) {
             TuplePointer tp = activeManager[outer].addTuple(inputAccessor[outer]);
             if (tp != null) {
