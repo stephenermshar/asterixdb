@@ -193,16 +193,17 @@ public class JoinUtils {
                 ijea.getRightMaxDuration() > 0 ? ijea.getRightMaxDuration() : getMaxDuration(rightKeys, context);
         int tuplesPerFrame = ijea.getTuplesPerFrame() > 0 ? ijea.getTuplesPerFrame()
                 : context.getPhysicalOptimizationConfig().getMaxRecordsPerFrame();
-
+        
         int k = OverlappingIntervalPartitionUtil.determineK(leftCount, leftMaxDuration, rightCount, rightMaxDuration,
                 tuplesPerFrame);
+
         // Add two partition for intervals that start or end outside the given range.
         k += 2;
         if (k <= 2) {
-            k = 3;
             if (LOGGER.isLoggable(Level.WARNING)) {
                 LOGGER.warning("IntervalPartitionJoin has overridden the suggested value of k (" + k + ") with 3.");
             }
+            k = 3;
         }
 
         RangeId leftRangeId = context.newRangeId();
