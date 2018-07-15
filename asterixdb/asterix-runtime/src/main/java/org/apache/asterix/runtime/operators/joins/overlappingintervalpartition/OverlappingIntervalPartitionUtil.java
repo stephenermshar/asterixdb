@@ -143,29 +143,27 @@ public class OverlappingIntervalPartitionUtil {
         return new Pair<>(i, j);
     }
 
-    public static long getStartOfPartition(IRangeMap rangeMap, int partition) {
-        int fieldIndex = 0;
-        long partitionStart = LongPointable.getLong(rangeMap.getMinByteArray(fieldIndex),
-                rangeMap.getMinStartOffset(fieldIndex) + 1);
-        if (partition != 0 && partition <= rangeMap.getSplitCount()) {
-            partitionStart = LongPointable.getLong(rangeMap.getByteArray(fieldIndex, partition - 1),
-                    rangeMap.getStartOffset(fieldIndex, partition - 1) + 1);
-        } else if (partition > rangeMap.getSplitCount()) {
-            partitionStart = LongPointable.getLong(rangeMap.getMaxByteArray(fieldIndex),
-                    rangeMap.getMaxStartOffset(fieldIndex) + 1);
+    public static long getPartitionStartValue(IRangeMap rangeMap, int pid, int nPartitions) {
+        if (pid > rangeMap.getSplitCount()) {
+            // RangeMap is smaller than the number of partitions.
+            pid = rangeMap.getSplitCount();
         }
-        return partitionStart;
+        int slotId = rangeMap.getMinSlotFromPartition(pid, nPartitions);
+        if (slotId < 0) {
+            return LongPointable.getLong(rangeMap.getMinByteArray(0), rangeMap.getMinStartOffset(0) + 1);
+        } else {
+            return LongPointable.getLong(rangeMap.getByteArray(0, slotId), rangeMap.getStartOffset(0, slotId) + 1);
+        }
     }
 
-    public static long getEndOfPartition(IRangeMap rangeMap, int partition) {
-        int fieldIndex = 0;
-        long partitionEnd = LongPointable.getLong(rangeMap.getMaxByteArray(fieldIndex),
-                rangeMap.getMaxStartOffset(fieldIndex) + 1);
-        if (partition < rangeMap.getSplitCount()) {
-            partitionEnd = LongPointable.getLong(rangeMap.getByteArray(fieldIndex, partition),
-                    rangeMap.getStartOffset(fieldIndex, partition) + 1);
+    public static long getPartitionEndValue(IRangeMap rangeMap, int pid, int nPartitions) {
+        int slotId = rangeMap.getMaxSlotFromPartition(pid, nPartitions);
+        if (slotId >= rangeMap.getSplitCount()) {
+            // Last available slot.
+            return LongPointable.getLong(rangeMap.getMaxByteArray(0), rangeMap.getMaxStartOffset(0) + 1);
+        } else {
+            return LongPointable.getLong(rangeMap.getByteArray(0, slotId), rangeMap.getStartOffset(0, slotId) + 1);
         }
-        return partitionEnd;
     }
 
     public static long getPartitionDuration(long partitionStart, long partitionEnd, int k) throws HyracksDataException {

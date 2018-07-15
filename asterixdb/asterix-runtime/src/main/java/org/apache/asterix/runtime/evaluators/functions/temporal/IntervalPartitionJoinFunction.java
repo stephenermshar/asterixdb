@@ -57,8 +57,8 @@ public class IntervalPartitionJoinFunction implements IScalarEvaluator {
     private int partitionId;
 
     @SuppressWarnings("unchecked")
-    private ISerializerDeserializer<AInt32> intSerde = AqlSerializerDeserializerProvider.INSTANCE
-            .getSerializerDeserializer(BuiltinType.AINT32);
+    private ISerializerDeserializer<AInt32> intSerde =
+            AqlSerializerDeserializerProvider.INSTANCE.getSerializerDeserializer(BuiltinType.AINT32);
     private AMutableInt32 aInt = new AMutableInt32(0);
 
     private IHyracksTaskContext ctx;
@@ -82,32 +82,9 @@ public class IntervalPartitionJoinFunction implements IScalarEvaluator {
         IRangeMap rangeMap = rangeState.getRangeMap();
         int nPartitions = rangeState.getNumberOfPartitions();
 
-        partitionStart = getPartitionStartValue(rangeMap, partitionId, nPartitions);
-        long partitionEnd = getPartitionEndValue(rangeMap, partitionId, nPartitions);
+        partitionStart = OverlappingIntervalPartitionUtil.getPartitionStartValue(rangeMap, partitionId, nPartitions);
+        long partitionEnd = OverlappingIntervalPartitionUtil.getPartitionEndValue(rangeMap, partitionId, nPartitions);
         partitionDuration = OverlappingIntervalPartitionUtil.getPartitionDuration(partitionStart, partitionEnd, k);
-    }
-
-    private long getPartitionStartValue(IRangeMap rangeMap, int pid, int nPartitions) throws HyracksDataException {
-        if (pid > rangeMap.getSplitCount()) {
-            // RangeMap is smaller than the number of partitions.
-            pid = rangeMap.getSplitCount();
-        }
-        int slotId = rangeMap.getMinSlotFromPartition(pid, nPartitions);
-        if (slotId <  0) {
-            return LongPointable.getLong(rangeMap.getMinByteArray(0), rangeMap.getMinStartOffset(0) + 1);
-        } else {
-            return LongPointable.getLong(rangeMap.getByteArray(0, slotId), rangeMap.getStartOffset(0,slotId) + 1);
-        }
-    }
-
-    private long getPartitionEndValue(IRangeMap rangeMap, int pid, int nPartitions) throws HyracksDataException {
-        int slotId = rangeMap.getMaxSlotFromPartition(pid, nPartitions);
-        if (slotId >= rangeMap.getSplitCount()) {
-            // Last available slot.
-            return LongPointable.getLong(rangeMap.getMaxByteArray(0), rangeMap.getMaxStartOffset(0) + 1);
-        } else {
-            return LongPointable.getLong(rangeMap.getByteArray(0, slotId), rangeMap.getStartOffset(0, slotId) + 1);
-        }
     }
 
     public void evaluate(IFrameTupleReference tuple, IPointable result) throws AlgebricksException {
@@ -165,8 +142,8 @@ public class IntervalPartitionJoinFunction implements IScalarEvaluator {
                 rangeIdCache = rangeId;
             }
 
-            int partition = OverlappingIntervalPartitionUtil.getIntervalPartition(point, partitionStart,
-                    partitionDuration, k);
+            int partition =
+                    OverlappingIntervalPartitionUtil.getIntervalPartition(point, partitionStart, partitionDuration, k);
             aInt.setValue(partition);
             intSerde.serialize(aInt, out);
         } catch (HyracksDataException hex) {

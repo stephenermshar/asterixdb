@@ -216,20 +216,22 @@ public class OverlappingIntervalPartitionJoinOperatorDescriptor extends Abstract
                 throws HyracksDataException {
             locks.setPartitions(nPartitions);
             RecordDescriptor inRecordDesc = recordDescProvider.getInputRecordDescriptor(getActivityId(), 0);
-            return new RightDataOperator(ctx, partition, inRecordDesc);
+            return new RightDataOperator(ctx, partition, nPartitions, inRecordDesc);
         }
 
         private class RightDataOperator extends AbstractUnaryInputSinkOperatorNodePushable {
 
             private int partition;
+            private int totalPartitions;
             private IHyracksTaskContext ctx;
             private final RecordDescriptor rightRd;
             private OverlappingIntervalPartitionJoinTaskState state;
             private boolean first = true;
 
-            public RightDataOperator(IHyracksTaskContext ctx, int partition, RecordDescriptor inRecordDesc) {
+            public RightDataOperator(IHyracksTaskContext ctx, int partition, int totalPartitions, RecordDescriptor inRecordDesc) {
                 this.ctx = ctx;
                 this.partition = partition;
+                this.totalPartitions = totalPartitions;
                 this.rightRd = inRecordDesc;
             }
 
@@ -247,9 +249,9 @@ public class OverlappingIntervalPartitionJoinOperatorDescriptor extends Abstract
                     state.k = k;
 
                     RangeForwardTaskState rangeState = RangeForwardTaskState.getRangeState(rangeId.getId(), ctx);
-                    long partitionStart = OverlappingIntervalPartitionUtil.getStartOfPartition(rangeState.getRangeMap(),
-                            partition);
-                    long partitionEnd = OverlappingIntervalPartitionUtil.getEndOfPartition(rangeState.getRangeMap(), partition);
+                    long partitionStart = OverlappingIntervalPartitionUtil.getPartitionStartValue(rangeState.getRangeMap(),
+                            partition, totalPartitions);
+                    long partitionEnd = OverlappingIntervalPartitionUtil.getPartitionEndValue(rangeState.getRangeMap(), partition, totalPartitions);
                     ITuplePartitionComputer buildHpc = new OverlappingIntervalPartitionComputerFactory(buildKey, state.k,
                             partitionStart, partitionEnd).createPartitioner();
                     ITuplePartitionComputer probeHpc = new OverlappingIntervalPartitionComputerFactory(probeKey, state.k,
