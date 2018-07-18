@@ -42,7 +42,7 @@
 use dataverse CostModel;
 
 insert into dataset R
-let $filler := repeat("i", 859)
+let $filler := repeat("i", 971)
 let $start := 1
 let $end := 1024
 let $lambda := 2
@@ -52,14 +52,12 @@ for $s in range($start, $end)
   return {
     "id": create-uuid(),
     "data": interval(datetime-from-unix-time-in-ms($s), datetime-from-unix-time-in-ms($s + $d)),
-    "s": $s,
-    "l": $l,
     "filler": $filler
   };
 
 
 insert into dataset S
-let $filler := repeat("i", 859)
+let $filler := repeat("i", 971)
 let $start := 1
 let $end := 1024
 let $lambda := 2
@@ -69,7 +67,5 @@ for $s in range($start, $end)
   return {
     "id": create-uuid(),
     "data": interval(datetime-from-unix-time-in-ms($s), datetime-from-unix-time-in-ms($s + $d)),
-    "s": $s,
-    "l": $l,
     "filler": $filler
   };

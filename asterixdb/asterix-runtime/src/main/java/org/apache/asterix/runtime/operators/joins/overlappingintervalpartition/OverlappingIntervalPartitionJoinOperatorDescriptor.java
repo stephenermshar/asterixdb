@@ -66,8 +66,8 @@ public class OverlappingIntervalPartitionJoinOperatorDescriptor extends Abstract
             RangeId rangeId) {
         super(spec, 2, 1);
         recordDescriptors[0] = recordDescriptor;
-        this.buildKey = leftKeys[0];
-        this.probeKey = rightKeys[0];
+        this.probeKey = leftKeys[0];
+        this.buildKey = rightKeys[0];
         this.k = k;
         this.leftKeys = leftKeys;
         this.rightKeys = rightKeys;

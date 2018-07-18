@@ -156,8 +156,11 @@ public class OverlappingIntervalPartitionJoiner extends AbstractMergeJoiner {
                     + memorySize + ",memory," + joinResultCount + ",results," + joinComparisonCount + ",CPU," + ioCost
                     + ",IO," + k + ",k," + spillWriteCount + ",frames_written," + spillReadCount + ",frames_read");
         }
+        //        long ioCost = spillWriteCount + spillReadCount;
+        //        System.err.println(",OverlappingIntervalPartitionJoiner Statistics Log," + partition + ",partition,"
+        //                + memorySize + ",memory," + joinResultCount + ",results," + joinComparisonCount + ",CPU," + ioCost
+        //                + ",IO," + k + ",k," + spillWriteCount + ",frames_written," + spillReadCount + ",frames_read");
         probeRunFileWriter.close();
-        //printPartitionStatus();
     }
 
     private void printPartitionStatus() {
@@ -229,7 +232,8 @@ public class OverlappingIntervalPartitionJoiner extends AbstractMergeJoiner {
 
             for (int buildId : buildInMemoryPartitions) {
                 Pair<Integer, Integer> build = OverlappingIntervalPartitionUtil.getIntervalPartition(buildId, k);
-                if (imjc.compareIntervalPartition(probe.first, probe.second, build.first, build.second)) {
+                if (!(probe.first == 0 && build.first == 0)
+                        && imjc.compareIntervalPartition(probe.first, probe.second, build.first, build.second)) {
                     fbms.add(buildBufferManager.getPartitionFrameBufferManager(buildId));
                     //                    System.err.print(build + " (" + buildPartitionSizes[buildId] + "), ");
                 }
@@ -292,7 +296,7 @@ public class OverlappingIntervalPartitionJoiner extends AbstractMergeJoiner {
             fbm.getFrame(frameIndex, bufferInfo);
             accessorBuild.reset(bufferInfo.getBuffer());
             for (int buildTupleIndex = 0; buildTupleIndex < accessorBuild.getTupleCount(); ++buildTupleIndex) {
-                if (imjc.checkToSaveInResult(accessorBuild, buildTupleIndex, accessorProbe, probeTupleIndex, false)) {
+                if (imjc.checkToSaveInResult(accessorProbe, probeTupleIndex, accessorBuild, buildTupleIndex, false)) {
                     appendToResult(accessorBuild, buildTupleIndex, accessorProbe, probeTupleIndex, writer);
                 }
                 joinComparisonCount++;
@@ -326,6 +330,8 @@ public class OverlappingIntervalPartitionJoiner extends AbstractMergeJoiner {
                 return;
             }
 
+            //            System.err.println("Tuple count:" + inputAccessor[RIGHT_PARTITION].getTupleCount() + " Tuple size:"
+            //                    + inputAccessor[RIGHT_PARTITION].getTupleLength());
             if (!buildBufferManager.insertTuple(pid, inputAccessor[RIGHT_PARTITION],
                     inputAccessor[RIGHT_PARTITION].getTupleId(), tempPtr)) {
                 return;

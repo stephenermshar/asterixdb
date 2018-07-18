@@ -18,6 +18,7 @@
  */
 package org.apache.asterix.runtime.operators.joins;
 
+import org.apache.asterix.dataflow.data.nontagged.serde.AIntervalSerializerDeserializer;
 import org.apache.asterix.om.pointables.nonvisitor.AIntervalPointable;
 import org.apache.asterix.runtime.evaluators.functions.temporal.IntervalLogic;
 import org.apache.asterix.runtime.evaluators.functions.temporal.IntervalLogicWithLong;
@@ -52,19 +53,18 @@ public class OverlappingIntervalMergeJoinChecker extends AbstractIntervalMergeJo
     @Override
     public boolean checkToSaveInResult(IFrameTupleAccessor accessorLeft, int leftTupleIndex,
             IFrameTupleAccessor accessorRight, int rightTupleIndex, boolean reversed) throws HyracksDataException {
-        long start0 = IntervalJoinUtil.getIntervalStart(accessorLeft, leftTupleIndex, idLeft);
-        long start1 = IntervalJoinUtil.getIntervalStart(accessorRight, rightTupleIndex, idRight);
+        int offset0 = IntervalJoinUtil.getIntervalOffset(accessorLeft, leftTupleIndex, (reversed ? idRight : idLeft));
+        int offset1 = IntervalJoinUtil.getIntervalOffset(accessorRight, rightTupleIndex, (reversed ? idLeft : idRight));
+        
+        long start0 = AIntervalSerializerDeserializer.getIntervalStart(accessorLeft.getBuffer().array(), offset0);
+        long start1 = AIntervalSerializerDeserializer.getIntervalStart(accessorRight.getBuffer().array(), offset1);
         if (start0 < partitionStart && start1 < partitionStart) {
             // Both tuples will match in a different partition.
             return false;
         }
-        long end0 = IntervalJoinUtil.getIntervalEnd(accessorLeft, leftTupleIndex, idLeft);
-        long end1 = IntervalJoinUtil.getIntervalEnd(accessorRight, rightTupleIndex, idRight);
-        if (reversed) {
-            return IntervalLogic.overlapping(start1, end1, start0, end0);
-        } else {
-            return IntervalLogic.overlapping(start0, end0, start1, end1);
-        }
+        long end0 = AIntervalSerializerDeserializer.getIntervalEnd(accessorLeft.getBuffer().array(), offset0);
+        long end1 = AIntervalSerializerDeserializer.getIntervalEnd(accessorRight.getBuffer().array(), offset1);
+        return IntervalLogic.overlapping(start0, end0, start1, end1);
     }
 
     public boolean checkToSaveInResult(long start0, long end0, long start1, long end1, boolean reversed) {

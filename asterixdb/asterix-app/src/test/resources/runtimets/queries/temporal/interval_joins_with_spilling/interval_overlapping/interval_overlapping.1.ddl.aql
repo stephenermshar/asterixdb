@@ -26,9 +26,10 @@ drop dataverse CostModel if exists;
 create dataverse CostModel;
 use dataverse CostModel;
 
-create type IntervalType as open {
+create type IntervalType as closed {
     id: uuid,
-    data: interval
+    data: interval,
+    filler: string
 }
 create dataset R(IntervalType) primary key id;
 create dataset S(IntervalType) primary key id;
