@@ -28,5 +28,5 @@ count(
   for $r in dataset R
     for $s in dataset S
     where /*+ interval-raw-join */ interval-overlapping($s.data, $r.data)
-    return $r.filler
+    return [$r, $s]
 );

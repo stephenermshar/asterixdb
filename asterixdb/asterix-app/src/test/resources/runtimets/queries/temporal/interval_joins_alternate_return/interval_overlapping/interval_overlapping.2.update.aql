@@ -24,9 +24,31 @@
 
 use dataverse CostModel;
 
-count(
-  for $r in dataset R
-    for $s in dataset S
-    where /*+ disjoint-interval-partition-join [0,257,513,769,1025] */ interval-overlapping($r.data, $s.data)
-    return [$r, $s]
-);
+insert into dataset R
+let $filler := repeat("i", 1971)
+let $start := 1
+let $end := 1024
+let $lambda := 2
+let $d := 256
+for $s in range($start, $end)
+  for $l in range(1, $lambda)
+  return {
+    "id": create-uuid(),
+    "data": interval(datetime-from-unix-time-in-ms($s), datetime-from-unix-time-in-ms($s + $d)),
+    "filler": $filler
+  };
+
+
+insert into dataset S
+let $filler := repeat("i", 1971)
+let $start := 1
+let $end := 1024
+let $lambda := 2
+let $d := 256
+for $s in range($start, $end)
+  for $l in range(1, $lambda)
+  return {
+    "id": create-uuid(),
+    "data": interval(datetime-from-unix-time-in-ms($s), datetime-from-unix-time-in-ms($s + $d)),
+    "filler": $filler
+  };

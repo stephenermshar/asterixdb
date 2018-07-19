@@ -22,11 +22,14 @@
  * Date             :   11th Jul, 2017
  */
 
+drop dataverse CostModel if exists;
+create dataverse CostModel;
 use dataverse CostModel;
 
-count(
-  for $r in dataset R
-    for $s in dataset S
-    where /*+ disjoint-interval-partition-join [0,257,513,769,1025] */ interval-overlapping($r.data, $s.data)
-    return [$r, $s]
-);
+create type IntervalType as closed {
+    id: uuid,
+    data: interval,
+    filler: string
+}
+create dataset R(IntervalType) primary key id;
+create dataset S(IntervalType) primary key id;
