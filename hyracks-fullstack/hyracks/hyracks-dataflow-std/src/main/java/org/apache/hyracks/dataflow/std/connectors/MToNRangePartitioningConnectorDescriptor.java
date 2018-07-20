@@ -36,6 +36,8 @@ import org.apache.hyracks.api.job.IConnectorDescriptorRegistry;
 import org.apache.hyracks.dataflow.std.base.AbstractMToNConnectorDescriptor;
 import org.apache.hyracks.dataflow.std.base.RangeId;
 import org.apache.hyracks.dataflow.std.collectors.IPartitionBatchManager;
+import org.apache.hyracks.dataflow.std.collectors.NonDeterministicChannelReader;
+import org.apache.hyracks.dataflow.std.collectors.NonDeterministicFrameReader;
 import org.apache.hyracks.dataflow.std.collectors.NonDeterministicPartitionBatchManager;
 import org.apache.hyracks.dataflow.std.collectors.PartitionCollector;
 import org.apache.hyracks.dataflow.std.collectors.SortMergeFrameReader;
@@ -45,9 +47,6 @@ public class MToNRangePartitioningConnectorDescriptor extends AbstractMToNConnec
 
     private final ITupleRangePartitionComputerFactory trpcf;
     private final RangeId rangeId;
-    private final int[] sortFields;
-    private final IBinaryComparatorFactory[] comparatorFactories;
-    private final INormalizedKeyComputerFactory nkcFactory;
 
     public MToNRangePartitioningConnectorDescriptor(IConnectorDescriptorRegistry spec,
             ITupleRangePartitionComputerFactory trpcf, RangeId rangeId, int[] sortFields,
@@ -55,9 +54,6 @@ public class MToNRangePartitioningConnectorDescriptor extends AbstractMToNConnec
         super(spec);
         this.trpcf = trpcf;
         this.rangeId = rangeId;
-        this.sortFields = sortFields;
-        this.comparatorFactories = comparatorFactories;
-        this.nkcFactory = nkcFactory;
     }
 
     @Override
@@ -70,16 +66,11 @@ public class MToNRangePartitioningConnectorDescriptor extends AbstractMToNConnec
     @Override
     public IPartitionCollector createPartitionCollector(IHyracksTaskContext ctx, RecordDescriptor recordDesc, int index,
             int nProducerPartitions, int nConsumerPartitions) throws HyracksDataException {
-        IBinaryComparator[] comparators = new IBinaryComparator[comparatorFactories.length];
-        for (int i = 0; i < comparatorFactories.length; ++i) {
-            comparators[i] = comparatorFactories[i].createBinaryComparator();
-        }
-        INormalizedKeyComputer nmkComputer = nkcFactory == null ? null : nkcFactory.createNormalizedKeyComputer();
-        IPartitionBatchManager pbm = new NonDeterministicPartitionBatchManager(nProducerPartitions);
-        IFrameReader sortMergeFrameReader = new SortMergeFrameReader(ctx, nProducerPartitions, nProducerPartitions,
-                sortFields, comparators, nmkComputer, recordDesc, pbm);
-        BitSet expectedPartitions = new BitSet();
+        BitSet expectedPartitions = new BitSet(nProducerPartitions);
         expectedPartitions.set(0, nProducerPartitions);
-        return new PartitionCollector(ctx, getConnectorId(), index, expectedPartitions, sortMergeFrameReader, pbm);
+        NonDeterministicChannelReader channelReader = new NonDeterministicChannelReader(nProducerPartitions,
+                expectedPartitions);
+        NonDeterministicFrameReader frameReader = new NonDeterministicFrameReader(channelReader);
+        return new PartitionCollector(ctx, getConnectorId(), index, expectedPartitions, frameReader, channelReader);
     }
 }
