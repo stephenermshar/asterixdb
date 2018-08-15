@@ -148,6 +148,10 @@ public class DisjointIntervalPartitionJoiner extends AbstractMergeJoiner {
                     + (spillWriteCount + spillReadCount) + ",IO," + spillWriteCount + ",frames_written,"
                     + spillReadCount + ",frames_read");
         }
+        System.out.println(",DisjointIntervalPartitionJoiner Statistics Log," + partition + ",partition," + memorySize
+                + ",memory," + joinResultCount + ",results," + joinComparisonCount + ",CPU,"
+                + (spillWriteCount + spillReadCount) + ",IO," + spillWriteCount + ",frames_written,"
+                + spillReadCount + ",frames_read");
     }
 
     private void processInMemoryJoin(IFrameWriter writer) throws HyracksDataException {

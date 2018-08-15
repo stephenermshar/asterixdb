@@ -156,6 +156,7 @@ public class OverlappingIntervalPartitionJoiner extends AbstractMergeJoiner {
                     + memorySize + ",memory," + joinResultCount + ",results," + joinComparisonCount + ",CPU," + ioCost
                     + ",IO," + k + ",k," + spillWriteCount + ",frames_written," + spillReadCount + ",frames_read");
         }
+        // printPartitionStatus();
         //        long ioCost = spillWriteCount + spillReadCount;
         //        System.err.println(",OverlappingIntervalPartitionJoiner Statistics Log," + partition + ",partition,"
         //                + memorySize + ",memory," + joinResultCount + ",results," + joinComparisonCount + ",CPU," + ioCost

@@ -130,7 +130,7 @@ public abstract class AbstractIntervalMergeJoinChecker implements IIntervalMerge
         long start1 = IntervalJoinUtil.getIntervalStart(accessorRight, rightTupleIndex, idRight);
         long end0 = IntervalJoinUtil.getIntervalEnd(accessorLeft, leftTupleIndex, idLeft);
         long end1 = IntervalJoinUtil.getIntervalEnd(accessorRight, rightTupleIndex, idRight);
-        return start0 > end1;
+        return start0 >= end1;
 
     }
 
