@@ -25,7 +25,6 @@ import org.apache.asterix.runtime.evaluators.functions.temporal.IntervalLogicWit
 import org.apache.asterix.runtime.evaluators.functions.temporal.IntervalPartitionLogic;
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
-import org.apache.hyracks.dataflow.std.buffermanager.ITupleAccessor;
 
 public class OverlappingIntervalMergeJoinChecker extends AbstractIntervalMergeJoinChecker {
     private static final long serialVersionUID = 1L;
@@ -34,20 +33,6 @@ public class OverlappingIntervalMergeJoinChecker extends AbstractIntervalMergeJo
     public OverlappingIntervalMergeJoinChecker(int[] keysLeft, int[] keysRight, long partitionStart) {
         super(keysLeft[0], keysRight[0]);
         this.partitionStart = partitionStart;
-    }
-
-    @Override
-    public boolean checkToSaveInResult(ITupleAccessor accessorLeft, ITupleAccessor accessorRight)
-            throws HyracksDataException {
-        long start0 = IntervalJoinUtil.getIntervalStart(accessorLeft, idLeft);
-        long start1 = IntervalJoinUtil.getIntervalStart(accessorRight, idRight);
-        if (start0 < partitionStart && start1 < partitionStart) {
-            // Both tuples will match in a different partition.
-            return false;
-        }
-        long end0 = IntervalJoinUtil.getIntervalEnd(accessorLeft, idLeft);
-        long end1 = IntervalJoinUtil.getIntervalEnd(accessorRight, idRight);
-        return IntervalLogic.overlapping(start0, end0, start1, end1);
     }
 
     @Override
@@ -87,7 +72,7 @@ public class OverlappingIntervalMergeJoinChecker extends AbstractIntervalMergeJo
 
     @Override
     public boolean compareInterval(long start0, long end0, long start1, long end1) {
-        return IntervalLogicWithLong.overlapping(start1, end1, start0, end0);
+        return IntervalLogicWithLong.overlapping(start0, end0, start1, end1);
     }
 
 }

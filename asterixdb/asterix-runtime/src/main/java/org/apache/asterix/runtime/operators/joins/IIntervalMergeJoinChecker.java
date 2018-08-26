@@ -38,10 +38,6 @@ public interface IIntervalMergeJoinChecker extends IMergeJoinChecker {
 
     public boolean checkToSaveInResult(long start0, long end0, long start1, long end1, boolean reversed);
 
-    public boolean checkToSaveInMemory(long start0, long end0, long start1, long end1, boolean reversed);
-
-    public boolean checkToRemoveFromMemory(long start0, long end0, long start1, long end1, boolean reversed);
-
     boolean compareInterval(long start0, long end0, long start1, long end1) throws HyracksDataException;
 
 }

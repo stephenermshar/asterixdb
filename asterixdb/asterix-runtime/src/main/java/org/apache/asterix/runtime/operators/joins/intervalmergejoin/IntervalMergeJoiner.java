@@ -51,10 +51,6 @@ class IntervalSideTuple {
     // Join details
     final IIntervalMergeJoinChecker imjc;
 
-    // Interval details
-    long start;
-    long end;
-
     public IntervalSideTuple(IIntervalMergeJoinChecker imjc, ITupleAccessor accessor, int fieldId) {
         this.imjc = imjc;
         this.accessor = accessor;
@@ -67,16 +63,10 @@ class IntervalSideTuple {
             frameIndex = tp.getFrameIndex();
         }
         tupleIndex = tp.getTupleIndex();
-        int offset = IntervalJoinUtil.getIntervalOffset(accessor, tupleIndex, fieldId);
-        start = AIntervalSerializerDeserializer.getIntervalStart(accessor.getBuffer().array(), offset);
-        end = AIntervalSerializerDeserializer.getIntervalEnd(accessor.getBuffer().array(), offset);
     }
 
     public void loadTuple() {
         tupleIndex = accessor.getTupleId();
-        int offset = IntervalJoinUtil.getIntervalOffset(accessor, tupleIndex, fieldId);
-        start = AIntervalSerializerDeserializer.getIntervalStart(accessor.getBuffer().array(), offset);
-        end = AIntervalSerializerDeserializer.getIntervalEnd(accessor.getBuffer().array(), offset);
     }
 
     public int getTupleIndex() {
@@ -87,30 +77,17 @@ class IntervalSideTuple {
         return accessor;
     }
 
-    public long getStart() {
-        return start;
+    public boolean compareJoin(IntervalSideTuple ist) throws HyracksDataException {
+        return imjc.checkToSaveInResult(accessor, tupleIndex, ist.accessor, ist.tupleIndex, false);
     }
 
-    public long getEnd() {
-        return end;
+    public boolean addToMemory(IntervalSideTuple ist) throws HyracksDataException {
+        return imjc.checkToSaveInMemory(accessor, tupleIndex, ist.accessor, ist.tupleIndex);
     }
 
-    public boolean compareJoin(IntervalSideTuple ist) {
-        return imjc.checkToSaveInResult(start, end, ist.start, ist.end, false);
+    public boolean removeFromMemory(IntervalSideTuple ist) throws HyracksDataException {
+        return imjc.checkToRemoveInMemory(accessor, tupleIndex, ist.accessor, ist.tupleIndex);
     }
-
-    public boolean addToMemory(IntervalSideTuple ist) {
-        return imjc.checkToSaveInMemory(start, end, ist.start, ist.end, true);
-    }
-
-    public boolean removeFromMemory(IntervalSideTuple ist) {
-        return imjc.checkToRemoveFromMemory(start, end, ist.start, ist.end, false);
-    }
-
-    public boolean startsBefore(IntervalSideTuple ist) {
-        return start <= ist.start;
-    }
-
 }
 
 /**
