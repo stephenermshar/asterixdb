@@ -49,7 +49,7 @@ public class OverlappingIntervalMergeJoinChecker extends AbstractIntervalMergeJo
         }
         long end0 = AIntervalSerializerDeserializer.getIntervalEnd(accessorLeft.getBuffer().array(), offset0);
         long end1 = AIntervalSerializerDeserializer.getIntervalEnd(accessorRight.getBuffer().array(), offset1);
-        return IntervalLogic.overlapping(start0, end0, start1, end1);
+        return IntervalLogicWithLong.overlapping(start0, end0, start1, end1);
     }
 
     public boolean checkToSaveInResult(long start0, long end0, long start1, long end1, boolean reversed) {
