@@ -99,7 +99,7 @@ class IntervalSideTuple {
     }
 
     public boolean compareJoin(IntervalSideTuple ist) throws HyracksDataException {
-        return imjc.checkToSaveInResult(accessor, tupleIndex, ist.accessor, ist.tupleIndex, true);
+        return imjc.checkToSaveInResult(accessor, tupleIndex, ist.accessor, ist.tupleIndex, false);
     }
 
     public boolean addToMemory(IntervalSideTuple ist) throws HyracksDataException {
