@@ -378,6 +378,8 @@ public class IntervalForwardSweepJoiner extends AbstractMergeJoiner {
         activeManager[RIGHT_PARTITION].clear();
         runFileStream[LEFT_PARTITION].close();
         runFileStream[RIGHT_PARTITION].close();
+        runFileStream[LEFT_PARTITION].removeRunFile();
+        runFileStream[RIGHT_PARTITION].removeRunFile();
 
         if (LOGGER.isLoggable(Level.WARNING)) {
             long ioCost = runFileStream[LEFT_PARTITION].getWriteCount() + runFileStream[LEFT_PARTITION].getReadCount()

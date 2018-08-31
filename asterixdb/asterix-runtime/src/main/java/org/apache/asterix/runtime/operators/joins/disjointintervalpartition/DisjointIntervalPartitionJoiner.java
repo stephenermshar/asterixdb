@@ -317,8 +317,8 @@ public class DisjointIntervalPartitionJoiner extends AbstractMergeJoiner {
 
     private void cleanupPartitions(List<RunFileReader> partitionRunsReaders) throws HyracksDataException {
         for (int i = 0; i < partitionRunsReaders.size(); i++) {
-            partitionRunsReaders.get(i).delete();
             partitionRunsReaders.get(i).close();
+            partitionRunsReaders.get(i).delete();
         }
     }
 
