@@ -138,6 +138,7 @@ public class DisjointIntervalPartitionJoiner extends AbstractMergeJoiner {
             processInMemoryJoin(writer);
         }
 
+        partitionAndSpill.close();
         resultAppender.write(writer, true);
 
         cleanupPartitions(leftRunFileReaders);

@@ -71,8 +71,6 @@ public class RunFileStream {
         runFileBuffer = new VSizeFrame(ctx);
         runFileAppender = new FrameTupleAppender(new VSizeFrame(ctx));
 
-        String prefix = key + '-' + this.toString();
-        runfile = ctx.getJobletContext().createManagedWorkspaceFile(prefix);
     }
 
     public long getFileCount() {
@@ -93,6 +91,8 @@ public class RunFileStream {
 
     public void createRunFileWriting() throws HyracksDataException {
         runFileCounter++;
+        String prefix = key + '-' + runFileCounter + '-' + this.toString();
+        runfile = ctx.getJobletContext().createManagedWorkspaceFile(prefix);
 
         runFileWriter = new RunFileWriter(runfile, ctx.getIOManager());
         runFileWriter.open();

@@ -107,6 +107,9 @@ public class DisjointIntervalPartitionAndSpill {
     }
 
     public void reset(RunFileWriter writer) throws HyracksDataException {
+        // Make sure all file handles are closed
+        close();
+        // reset variables.
         bufferManager.reset();
         spilledStatus.clear();
         Arrays.fill(partitionSizeInTups, 0);
@@ -244,6 +247,13 @@ public class DisjointIntervalPartitionAndSpill {
             return tmpBm.getTupleAccessor(rd);
         }
         return null;
+    }
+
+    public void close() throws HyracksDataException {
+        for (int pid = 0; pid < numOfPartitions; pid++) {
+            runFileWriters[pid].close();
+        }
+        spillWriter.close();
     }
 
 }
