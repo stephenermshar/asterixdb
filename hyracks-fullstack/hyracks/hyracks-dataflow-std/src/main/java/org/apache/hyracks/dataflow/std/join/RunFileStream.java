@@ -71,7 +71,7 @@ public class RunFileStream {
         runFileBuffer = new VSizeFrame(ctx);
         runFileAppender = new FrameTupleAppender(new VSizeFrame(ctx));
 
-        String prefix = this.getClass().getSimpleName() + '-' + key + '-' + this.toString();
+        String prefix = key + '-' + this.toString();
         runfile = ctx.getJobletContext().createManagedWorkspaceFile(prefix);
     }
 

@@ -197,8 +197,8 @@ public class IntervalForwardSweepJoiner extends AbstractMergeJoiner {
 
         // Run files for both branches
         runFileStream = new RunFileStream[JOIN_PARTITIONS];
-        runFileStream[LEFT_PARTITION] = new RunFileStream(ctx, "left", status.branch[LEFT_PARTITION]);
-        runFileStream[RIGHT_PARTITION] = new RunFileStream(ctx, "right", status.branch[RIGHT_PARTITION]);
+        runFileStream[LEFT_PARTITION] = new RunFileStream(ctx, "ifsj-left", status.branch[LEFT_PARTITION]);
+        runFileStream[RIGHT_PARTITION] = new RunFileStream(ctx, "ifsj-right", status.branch[RIGHT_PARTITION]);
         runFilePointer = new RunFilePointer[JOIN_PARTITIONS];
         runFilePointer[LEFT_PARTITION] = new RunFilePointer();
         runFilePointer[RIGHT_PARTITION] = new RunFilePointer();
@@ -751,9 +751,8 @@ public class IntervalForwardSweepJoiner extends AbstractMergeJoiner {
         // Stop reading.
         runFileStream[diskPartition].closeRunFileReading();
         if (runFilePointer[diskPartition].getFileOffset() < 0) {
-            // Remove file if not needed.
+            // It will automatically reuse the file when creating a new writer.
             runFileStream[diskPartition].close();
-            runFileStream[diskPartition].removeRunFile();
         }
 
         // Continue on stream

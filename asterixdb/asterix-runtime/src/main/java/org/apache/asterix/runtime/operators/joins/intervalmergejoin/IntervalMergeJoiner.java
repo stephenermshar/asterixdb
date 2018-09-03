@@ -144,7 +144,7 @@ public class IntervalMergeJoiner extends AbstractIntervalMergeJoiner {
 
         // Run File and frame cache (left buffer)
         leftStreamIndex = TupleAccessor.UNSET;
-        runFileStream = new RunFileStream(ctx, "left", status.branch[LEFT_PARTITION]);
+        runFileStream = new RunFileStream(ctx, "ismj-left", status.branch[LEFT_PARTITION]);
         runFilePointer = new RunFilePointer();
 
         memoryTuple = new IntervalSideTuple(mjc, memoryAccessor, rightKeys[0]);
@@ -274,6 +274,7 @@ public class IntervalMergeJoiner extends AbstractIntervalMergeJoiner {
                     + ",spills," + runFileStream.getWriteCount() + ",frames_written," + runFileStream.getReadCount()
                     + ",frames_read");
         }
+        runFileStream.removeRunFile();
     }
 
     private TupleStatus processLeftTupleSpill(IFrameWriter writer) throws HyracksDataException {
@@ -354,7 +355,6 @@ public class IntervalMergeJoiner extends AbstractIntervalMergeJoiner {
         if (runFilePointer.getFileOffset() < 0) {
             // Remove file if not needed.
             runFileStream.close();
-            runFileStream.removeRunFile();
         }
 
         // Continue on stream

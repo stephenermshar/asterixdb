@@ -213,6 +213,7 @@ public class MergeJoiner extends AbstractMergeJoiner {
                     + ",spills," + runFileStream.getWriteCount() + ",frames_written," + runFileStream.getReadCount()
                     + ",frames_read");
         }
+        runFileStream.removeRunFile();
     }
 
     private TupleStatus processLeftTupleSpill(IFrameWriter writer) throws HyracksDataException {
@@ -294,7 +295,6 @@ public class MergeJoiner extends AbstractMergeJoiner {
         if (runFilePointer.getFileOffset() < 0) {
             // Remove file if not needed.
             runFileStream.close();
-            runFileStream.removeRunFile();
         }
 
         // Continue on stream

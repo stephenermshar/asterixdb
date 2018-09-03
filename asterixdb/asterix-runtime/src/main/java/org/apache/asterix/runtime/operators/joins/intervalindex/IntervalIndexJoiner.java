@@ -126,8 +126,8 @@ public class IntervalIndexJoiner extends AbstractMergeJoiner {
 
         // Run files for both branches
         runFileStream = new RunFileStream[JOIN_PARTITIONS];
-        runFileStream[LEFT_PARTITION] = new RunFileStream(ctx, "left", status.branch[LEFT_PARTITION]);
-        runFileStream[RIGHT_PARTITION] = new RunFileStream(ctx, "right", status.branch[RIGHT_PARTITION]);
+        runFileStream[LEFT_PARTITION] = new RunFileStream(ctx, "itsj-left", status.branch[LEFT_PARTITION]);
+        runFileStream[RIGHT_PARTITION] = new RunFileStream(ctx, "itsj-right", status.branch[RIGHT_PARTITION]);
         runFilePointer = new RunFilePointer[JOIN_PARTITIONS];
         runFilePointer[LEFT_PARTITION] = new RunFilePointer();
         runFilePointer[RIGHT_PARTITION] = new RunFilePointer();
@@ -234,6 +234,8 @@ public class IntervalIndexJoiner extends AbstractMergeJoiner {
         activeManager[RIGHT_PARTITION].clear();
         runFileStream[LEFT_PARTITION].close();
         runFileStream[RIGHT_PARTITION].close();
+        runFileStream[LEFT_PARTITION].removeRunFile();
+        runFileStream[RIGHT_PARTITION].removeRunFile();
 
         long ioCost = runFileStream[LEFT_PARTITION].getWriteCount() + runFileStream[LEFT_PARTITION].getReadCount()
                 + runFileStream[RIGHT_PARTITION].getWriteCount() + runFileStream[RIGHT_PARTITION].getReadCount();
@@ -509,7 +511,6 @@ public class IntervalIndexJoiner extends AbstractMergeJoiner {
         if (runFilePointer[diskPartition].getFileOffset() < 0) {
             // Remove file if not needed.
             runFileStream[diskPartition].close();
-            runFileStream[diskPartition].removeRunFile();
         }
 
         // Continue on stream
