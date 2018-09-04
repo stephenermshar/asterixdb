@@ -347,7 +347,6 @@ public class IntervalForwardSweepJoiner extends AbstractMergeJoiner {
         if (runFileStream[LEFT_PARTITION].isWriting()) {
             unfreezeAndContinue(LEFT_PARTITION, inputAccessor[LEFT_PARTITION]);
         }
-        processLeftFrame(writer);
         // Continue loading Right side while memory is available
         TupleStatus rightTs = loadRightTuple();
         while (activeManager[LEFT_PARTITION].hasRecords() && rightTs.isLoaded()) {
@@ -360,14 +359,13 @@ public class IntervalForwardSweepJoiner extends AbstractMergeJoiner {
                 //                System.err.println("Active empty, load right: " + tp);
                 //                TuplePrinterUtil.printTuple("    right: ", inputAccessor[RIGHT_PARTITION]);
                 inputAccessor[RIGHT_PARTITION].next();
-                rightTs = loadRightTuple();
             }
             // If both sides have value in memory, run join.
             if (activeManager[LEFT_PARTITION].hasRecords() && activeManager[RIGHT_PARTITION].hasRecords()) {
-                // Left side from stream
-                processTuple(LEFT_PARTITION, RIGHT_PARTITION, writer);
-                rightTs = loadRightTuple();
+                // Process right side with left's memory (keeps the join from continuing to spill).
+                processTuple(RIGHT_PARTITION, LEFT_PARTITION, writer);
             }
+            rightTs = loadRightTuple();
         }
         // Process in memory tuples
         processInMemoryJoin(LEFT_PARTITION, RIGHT_PARTITION, false, writer, empty);

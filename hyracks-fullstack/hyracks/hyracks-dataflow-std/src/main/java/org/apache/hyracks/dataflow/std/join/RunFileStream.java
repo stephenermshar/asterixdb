@@ -93,6 +93,9 @@ public class RunFileStream {
         runFileCounter++;
         String prefix = key + '-' + runFileCounter + '-' + this.toString();
         runfile = ctx.getJobletContext().createManagedWorkspaceFile(prefix);
+        if (runFileWriter != null) {
+            runFileWriter.close();
+        }
 
         runFileWriter = new RunFileWriter(runfile, ctx.getIOManager());
         runFileWriter.open();
@@ -128,6 +131,9 @@ public class RunFileStream {
     }
 
     public void startReadingRunFile(ITupleAccessor accessor, long startOffset) throws HyracksDataException {
+        if (runFileReader != null) {
+            runFileReader.close();
+        }
         status.setRunFileReading(true);
 
         // Create reader
