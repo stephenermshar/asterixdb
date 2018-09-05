@@ -55,8 +55,8 @@ public class DisjointIntervalPartitionJoinOperatorDescriptor extends AbstractOpe
     private final int probeKey;
     private final int buildKey;
 
-    private static final Logger LOGGER = Logger
-            .getLogger(DisjointIntervalPartitionJoinOperatorDescriptor.class.getName());
+    private static final Logger LOGGER =
+            Logger.getLogger(DisjointIntervalPartitionJoinOperatorDescriptor.class.getName());
 
     public DisjointIntervalPartitionJoinOperatorDescriptor(IOperatorDescriptorRegistry spec, int memoryForJoin,
             int[] leftKeys, int[] rightKeys, RecordDescriptor recordDescriptor,
@@ -242,21 +242,23 @@ public class DisjointIntervalPartitionJoinOperatorDescriptor extends AbstractOpe
                         }
                     } while (state == null);
 
-                    PriorityQueue<PartitionMinItem> partitionMinRight = new PriorityQueue<>(16,
-                            PartitionMinItem.PartitionMinComparator);
-                    PriorityQueue<PartitionMinItem> partitionMinLeft = new PriorityQueue<>(16,
-                            PartitionMinItem.PartitionMinComparator);
+                    PriorityQueue<PartitionMinItem> partitionMinRight =
+                            new PriorityQueue<>(16, PartitionMinItem.PartitionMinComparator);
+                    PriorityQueue<PartitionMinItem> partitionMinLeft =
+                            new PriorityQueue<>(16, PartitionMinItem.PartitionMinComparator);
 
-                    DisjointIntervalPartitionComputer leftDipc = new DisjointIntervalPartitionComputerFactory(buildKey,
-                            partitionMinRight).createPartitioner();
-                    DisjointIntervalPartitionComputer rightDipc = new DisjointIntervalPartitionComputerFactory(probeKey,
-                            partitionMinLeft).createPartitioner();
+                    DisjointIntervalPartitionComputer leftDipc =
+                            new DisjointIntervalPartitionComputerFactory(buildKey, partitionMinRight)
+                                    .createPartitioner();
+                    DisjointIntervalPartitionComputer rightDipc =
+                            new DisjointIntervalPartitionComputerFactory(probeKey, partitionMinLeft)
+                                    .createPartitioner();
                     IIntervalMergeJoinChecker imjc = imjcf.createMergeJoinChecker(leftKeys, rightKeys, ctx);
 
                     state.rightRd = rightRd;
-                    state.partitionJoiner = new DisjointIntervalPartitionJoiner(ctx, memoryForJoin, partition,
-                            state.status, locks, imjc, buildKey, probeKey, state.leftRd, state.rightRd, leftDipc,
-                            rightDipc);
+                    state.partitionJoiner =
+                            new DisjointIntervalPartitionJoiner(ctx, memoryForJoin, partition, state.status, locks,
+                                    imjc, buildKey, probeKey, state.leftRd, state.rightRd, leftDipc, rightDipc);
                     state.status.branch[RIGHT_ACTIVITY_ID].setStageOpen();
                     locks.getLeft(partition).signal();
                 } catch (InterruptedException e) {
@@ -294,7 +296,9 @@ public class DisjointIntervalPartitionJoinOperatorDescriptor extends AbstractOpe
                 locks.getLock(partition).lock();
                 try {
                     state.failed = true;
-                    state.partitionJoiner.failureCleanUp();
+                    if (state.partitionJoiner != null) {
+                        state.partitionJoiner.failureCleanUp();
+                    }
                     locks.getLeft(partition).signal();
                 } finally {
                     locks.getLock(partition).unlock();

@@ -181,7 +181,9 @@ public class RunFileStream {
     }
 
     public void removeRunFile() {
-        FileUtils.deleteQuietly(runfile.getFile());
+        if (runfile != null) {
+            FileUtils.deleteQuietly(runfile.getFile());
+        }
     }
 
     public long getReadPointer() {

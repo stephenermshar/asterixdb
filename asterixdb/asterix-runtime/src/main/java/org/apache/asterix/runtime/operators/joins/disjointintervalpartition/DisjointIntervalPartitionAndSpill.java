@@ -92,8 +92,8 @@ public class DisjointIntervalPartitionAndSpill {
         bufferManager = new VPartitionTupleBufferManager(ctx,
                 PreferToSpillFullyOccupiedFramePolicy.createAtMostOneFrameForSpilledPartitionConstrain(spilledStatus),
                 numOfPartitions, memoryForPartitioning * ctx.getInitialFrameSize());
-        spillPolicy = new PreferToSpillFullyOccupiedFramePolicy(bufferManager, spilledStatus,
-                ctx.getInitialFrameSize());
+        spillPolicy =
+                new PreferToSpillFullyOccupiedFramePolicy(bufferManager, spilledStatus, ctx.getInitialFrameSize());
         spilledStatus.clear();
     }
 
@@ -136,7 +136,7 @@ public class DisjointIntervalPartitionAndSpill {
     }
 
     private void processTuple(IFrameTupleAccessor fta, int tid, int pid) throws HyracksDataException {
-//        TuplePrinterUtil.printTuple(runFilePrefix + " Partition: " + pid, fta, tid);
+        //        TuplePrinterUtil.printTuple(runFilePrefix + " Partition: " + pid, fta, tid);
         if (pid < 0) {
             addToSpillPartition(fta, tid);
         } else {
@@ -251,9 +251,13 @@ public class DisjointIntervalPartitionAndSpill {
 
     public void close() throws HyracksDataException {
         for (int pid = 0; pid < numOfPartitions; pid++) {
-            runFileWriters[pid].close();
+            if (runFileWriters[pid] != null) {
+                runFileWriters[pid].close();
+            }
         }
-        spillWriter.close();
+        if (spillWriter != null) {
+            spillWriter.close();
+        }
     }
 
 }
