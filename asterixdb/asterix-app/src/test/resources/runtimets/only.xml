@@ -40,6 +40,11 @@
                 <output-dir compare="Text">interval_overlapping</output-dir>
             </compilation-unit>
         </test-case>
+        <test-case FilePath="temporal/interval_joins_different_sizes">
+            <compilation-unit name="interval_overlapping">
+                <output-dir compare="Text">interval_overlapping</output-dir>
+            </compilation-unit>
+        </test-case>
         <test-case FilePath="temporal/interval_joins_alternate_return">
             <compilation-unit name="interval_overlapping">
                 <output-dir compare="Text">interval_overlapping</output-dir>
