@@ -55,5 +55,15 @@
                 <output-dir compare="Text">interval_overlapping_disjoint_case</output-dir>
             </compilation-unit>
         </test-case>
+        <test-case FilePath="temporal/interval_joins">
+            <compilation-unit name="interval_covers">
+                <output-dir compare="Text">interval_covers</output-dir>
+            </compilation-unit>
+        </test-case>
+        <test-case FilePath="temporal/interval_joins">
+            <compilation-unit name="interval_overlaps">
+                <output-dir compare="Text">interval_overlaps</output-dir>
+            </compilation-unit>
+        </test-case>
     </test-group>
 </test-suite>
