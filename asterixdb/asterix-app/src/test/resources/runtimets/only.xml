@@ -35,11 +35,31 @@
                 <output-dir compare="Text">interval_overlapping</output-dir>
             </compilation-unit>
         </test-case>
+        <test-case FilePath="temporal/interval_joins">
+            <compilation-unit name="interval_covers">
+                <output-dir compare="Text">interval_covers</output-dir>
+            </compilation-unit>
+        </test-case>
+        <test-case FilePath="temporal/interval_joins">
+            <compilation-unit name="interval_overlaps">
+                <output-dir compare="Text">interval_overlaps</output-dir>
+            </compilation-unit>
+        </test-case>
         <test-case FilePath="temporal/interval_joins_with_spilling">
             <compilation-unit name="interval_overlapping">
                 <output-dir compare="Text">interval_overlapping</output-dir>
             </compilation-unit>
         </test-case>
+<!--         <test-case FilePath="temporal/interval_joins_with_spilling"> -->
+<!--             <compilation-unit name="interval_overlaps"> -->
+<!--                 <output-dir compare="Text">interval_overlaps</output-dir> -->
+<!--             </compilation-unit> -->
+<!--         </test-case> -->
+<!--         <test-case FilePath="temporal/interval_joins_with_spilling"> -->
+<!--             <compilation-unit name="interval_covers"> -->
+<!--                 <output-dir compare="Text">interval_covers</output-dir> -->
+<!--             </compilation-unit> -->
+<!--         </test-case> -->
         <test-case FilePath="temporal/interval_joins_different_sizes">
             <compilation-unit name="interval_overlapping">
                 <output-dir compare="Text">interval_overlapping</output-dir>
@@ -50,19 +70,19 @@
                 <output-dir compare="Text">interval_overlapping</output-dir>
             </compilation-unit>
         </test-case>
-         <test-case FilePath="temporal/interval_joins_with_spilling">
-            <compilation-unit name="interval_overlapping_disjoint_case">
-                <output-dir compare="Text">interval_overlapping_disjoint_case</output-dir>
+        <test-case FilePath="temporal/interval_joins_alternate_return">
+            <compilation-unit name="interval_overlaps">
+                <output-dir compare="Text">interval_overlaps</output-dir>
             </compilation-unit>
         </test-case>
-        <test-case FilePath="temporal/interval_joins">
+        <test-case FilePath="temporal/interval_joins_alternate_return">
             <compilation-unit name="interval_covers">
                 <output-dir compare="Text">interval_covers</output-dir>
             </compilation-unit>
         </test-case>
-        <test-case FilePath="temporal/interval_joins">
-            <compilation-unit name="interval_overlaps">
-                <output-dir compare="Text">interval_overlaps</output-dir>
+         <test-case FilePath="temporal/interval_joins_with_spilling">
+            <compilation-unit name="interval_overlapping_disjoint_case">
+                <output-dir compare="Text">interval_overlapping_disjoint_case</output-dir>
             </compilation-unit>
         </test-case>
     </test-group>
