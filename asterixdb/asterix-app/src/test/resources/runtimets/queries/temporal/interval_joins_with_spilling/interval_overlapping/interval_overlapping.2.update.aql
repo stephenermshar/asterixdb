@@ -29,10 +29,10 @@
  * 2048 records / 4 nodes = 512 tuples per node
  *
  * 32000 byte frame size / ~1000 byte record = 32 records per frame
- * 256000 byte join size / ~1000 byte record = 256 records join memory
+ * 160000 byte join size / ~1000 byte record = 160 records join memory
  *
  * 256 duration * 2 arrival rate = 512 active records
- * 512 active records > 256 records join memory = spilling
+ * 512 active records > 160 records join memory = spilling
  *
  * Also, note that 512 tuples per node plus the overlapping intervals (512 before and 
  * 512 after) ensures enough active tuples for spilling.

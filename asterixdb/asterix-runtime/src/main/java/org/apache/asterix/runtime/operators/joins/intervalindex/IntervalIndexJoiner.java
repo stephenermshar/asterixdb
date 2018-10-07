@@ -26,6 +26,9 @@ import java.util.logging.Logger;
 import org.apache.asterix.runtime.operators.joins.IIntervalMergeJoinChecker;
 import org.apache.asterix.runtime.operators.joins.IIntervalMergeJoinCheckerFactory;
 import org.apache.asterix.runtime.operators.joins.IntervalJoinUtil;
+import org.apache.asterix.runtime.operators.joins.intervalmergejoin.AbstractIntervalMergeJoiner;
+import org.apache.asterix.runtime.operators.joins.intervalmergejoin.IntervalMergeJoinLocks;
+import org.apache.asterix.runtime.operators.joins.intervalmergejoin.IntervalMergeStatus;
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.comm.IFrameWriter;
 import org.apache.hyracks.api.context.IHyracksTaskContext;
@@ -34,12 +37,8 @@ import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.dataflow.common.comm.util.FrameUtils;
 import org.apache.hyracks.dataflow.std.buffermanager.IPartitionedDeletableTupleBufferManager;
 import org.apache.hyracks.dataflow.std.buffermanager.ITupleAccessor;
-import org.apache.hyracks.dataflow.std.buffermanager.ITuplePointerAccessor;
 import org.apache.hyracks.dataflow.std.buffermanager.TupleAccessor;
 import org.apache.hyracks.dataflow.std.buffermanager.VPartitionDeletableTupleBufferManager;
-import org.apache.hyracks.dataflow.std.join.AbstractMergeJoiner;
-import org.apache.hyracks.dataflow.std.join.MergeJoinLocks;
-import org.apache.hyracks.dataflow.std.join.MergeStatus;
 import org.apache.hyracks.dataflow.std.join.RunFileStream;
 import org.apache.hyracks.dataflow.std.structures.RunFilePointer;
 import org.apache.hyracks.dataflow.std.structures.TuplePointer;
@@ -51,7 +50,7 @@ import org.apache.hyracks.dataflow.std.structures.TuplePointer;
  * The left stream will spill to disk when memory is full.
  * The both right and left use memory to maintain active intervals for the join.
  */
-public class IntervalIndexJoiner extends AbstractMergeJoiner {
+public class IntervalIndexJoiner extends AbstractIntervalMergeJoiner {
 
     private static final Logger LOGGER = Logger.getLogger(IntervalIndexJoiner.class.getName());
 
@@ -81,8 +80,8 @@ public class IntervalIndexJoiner extends AbstractMergeJoiner {
     private final int partition;
     private final int memorySize;
 
-    public IntervalIndexJoiner(IHyracksTaskContext ctx, int memorySize, int partition, MergeStatus status,
-            MergeJoinLocks locks, Comparator<EndPointIndexItem> endPointComparator,
+    public IntervalIndexJoiner(IHyracksTaskContext ctx, int memorySize, int partition, IntervalMergeStatus status,
+            IntervalMergeJoinLocks locks, Comparator<EndPointIndexItem> endPointComparator,
             IIntervalMergeJoinCheckerFactory imjcf, int[] leftKeys, int[] rightKeys, RecordDescriptor leftRd,
             RecordDescriptor rightRd) throws HyracksDataException {
         super(ctx, partition, status, locks, leftRd, rightRd);

@@ -27,6 +27,6 @@ use dataverse CostModel;
 count(
   for $r in dataset R
     for $s in dataset S
-    where /*+ disjoint-interval-partition-join [0,257,513,769,1025] */ interval-overlaps($r.data, $s.data)
+    where /*+ disjoint-interval-partition-join [0,257,513,769,1025] */ interval-covers($r.data, $s.data)
     return $r.filler
 );

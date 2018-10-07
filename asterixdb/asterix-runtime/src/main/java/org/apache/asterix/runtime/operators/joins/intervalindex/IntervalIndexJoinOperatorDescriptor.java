@@ -23,6 +23,8 @@ import java.nio.ByteBuffer;
 import java.util.logging.Logger;
 
 import org.apache.asterix.runtime.operators.joins.IIntervalMergeJoinCheckerFactory;
+import org.apache.asterix.runtime.operators.joins.intervalmergejoin.IntervalMergeBranchStatus.Stage;
+import org.apache.asterix.runtime.operators.joins.intervalmergejoin.IntervalMergeJoinLocks;
 import org.apache.hyracks.api.context.IHyracksTaskContext;
 import org.apache.hyracks.api.dataflow.ActivityId;
 import org.apache.hyracks.api.dataflow.IActivity;
@@ -37,8 +39,6 @@ import org.apache.hyracks.dataflow.std.base.AbstractActivityNode;
 import org.apache.hyracks.dataflow.std.base.AbstractOperatorDescriptor;
 import org.apache.hyracks.dataflow.std.base.AbstractUnaryInputSinkOperatorNodePushable;
 import org.apache.hyracks.dataflow.std.base.AbstractUnaryInputUnaryOutputOperatorNodePushable;
-import org.apache.hyracks.dataflow.std.join.MergeBranchStatus.Stage;
-import org.apache.hyracks.dataflow.std.join.MergeJoinLocks;
 
 public class IntervalIndexJoinOperatorDescriptor extends AbstractOperatorDescriptor {
     private static final long serialVersionUID = 1L;
@@ -64,7 +64,7 @@ public class IntervalIndexJoinOperatorDescriptor extends AbstractOperatorDescrip
 
     @Override
     public void contributeActivities(IActivityGraphBuilder builder) {
-        MergeJoinLocks locks = new MergeJoinLocks();
+        IntervalMergeJoinLocks locks = new IntervalMergeJoinLocks();
 
         ActivityId leftAid = new ActivityId(odId, LEFT_ACTIVITY_ID);
         ActivityId rightAid = new ActivityId(odId, RIGHT_ACTIVITY_ID);
@@ -83,9 +83,9 @@ public class IntervalIndexJoinOperatorDescriptor extends AbstractOperatorDescrip
     private class LeftJoinerActivityNode extends AbstractActivityNode {
         private static final long serialVersionUID = 1L;
 
-        private final MergeJoinLocks locks;
+        private final IntervalMergeJoinLocks locks;
 
-        public LeftJoinerActivityNode(ActivityId id, ActivityId joinAid, MergeJoinLocks locks) {
+        public LeftJoinerActivityNode(ActivityId id, ActivityId joinAid, IntervalMergeJoinLocks locks) {
             super(id);
             this.locks = locks;
         }
@@ -191,9 +191,9 @@ public class IntervalIndexJoinOperatorDescriptor extends AbstractOperatorDescrip
         private static final long serialVersionUID = 1L;
 
         private final ActivityId joinAid;
-        private final MergeJoinLocks locks;
+        private final IntervalMergeJoinLocks locks;
 
-        public RightDataActivityNode(ActivityId id, ActivityId joinAid, MergeJoinLocks locks) {
+        public RightDataActivityNode(ActivityId id, ActivityId joinAid, IntervalMergeJoinLocks locks) {
             super(id);
             this.joinAid = joinAid;
             this.locks = locks;

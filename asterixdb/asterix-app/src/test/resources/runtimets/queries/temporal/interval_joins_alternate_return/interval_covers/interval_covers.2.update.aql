@@ -22,13 +22,28 @@
  * Date             :   11th Jul, 2017
  */
 
+/*
+ * The number of active tuples must exceed join memory.
+ *
+ * 1024 time points * 2 arrival rate = 2048 records
+ * 2048 records / 4 nodes = 512 tuples per node
+ *
+ * 32000 byte frame size / ~2000 byte record = 16 records per frame
+ * 160000 byte join size / ~2000 byte record = 80 records join memory
+ *
+ * Dataset R 256 duration * 2 arrival rate = 512 active records
+ * Dataset S 64 duration * 2 arrival rate = 128 active records
+ * Covers 256 - 64 = 192 active records
+ * 192 active records > 80 records join memory = spilling
+ */
+
 use dataverse CostModel;
 
 insert into dataset R
-let $filler := repeat("i", 1971)
+let $filler := repeat("i", 971)
 let $start := 1
 let $end := 1024
-let $lambda := 2
+let $lambda := 8
 let $d := 256
 for $s in range($start, $end)
   for $l in range(1, $lambda)
@@ -40,11 +55,11 @@ for $s in range($start, $end)
 
 
 insert into dataset S
-let $filler := repeat("i", 1971)
+let $filler := repeat("i", 971)
 let $start := 1
 let $end := 1024
 let $lambda := 2
-let $d := 256
+let $d := 64
 for $s in range($start, $end)
   for $l in range(1, $lambda)
   return {

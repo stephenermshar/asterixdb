@@ -20,11 +20,11 @@ package org.apache.asterix.runtime.operators.joins.intervalindex;
 
 import java.util.Comparator;
 
+import org.apache.asterix.runtime.operators.joins.intervalmergejoin.IntervalMergeJoinTaskState;
 import org.apache.hyracks.api.dataflow.TaskId;
 import org.apache.hyracks.api.job.JobId;
-import org.apache.hyracks.dataflow.std.join.MergeJoinTaskState;
 
-public class IndexJoinTaskState extends MergeJoinTaskState {
+public class IndexJoinTaskState extends IntervalMergeJoinTaskState {
     protected IntervalIndexJoiner indexJoiner;
     protected Comparator<EndPointIndexItem> endPointComparator;
     protected byte point;
