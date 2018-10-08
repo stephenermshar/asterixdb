@@ -1,0 +1,10 @@
+{ "staff": "Alex", "meeting": "A", "student": "Charles" }
+{ "staff": "Alex", "meeting": "A", "student": "Frank" }
+{ "staff": "Alex", "meeting": "A", "student": "Mary" }
+{ "staff": "Elisabeth", "meeting": "B", "student": "Charles" }
+{ "staff": "Elisabeth", "meeting": "B", "student": "Frank" }
+{ "staff": "Elisabeth", "meeting": "B", "student": "Olga" }
+{ "staff": "Franklin", "meeting": "A", "student": "Mary" }
+{ "staff": "Henry", "meeting": "C", "student": "Charles" }
+{ "staff": "Henry", "meeting": "C", "student": "Frank" }
+{ "staff": "Henry", "meeting": "C", "student": "Mary" }

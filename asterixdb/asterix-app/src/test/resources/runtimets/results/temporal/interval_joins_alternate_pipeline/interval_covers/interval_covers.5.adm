@@ -1,0 +1,15 @@
+{ "staff": "Elisabeth", "meeting": "B", "student": "Karen" }
+{ "staff": "Elisabeth", "meeting": "B", "student": "Mary" }
+{ "staff": "Elisabeth", "meeting": "B", "student": "Steve" }
+{ "staff": "Elisabeth", "meeting": "B", "student": "Tess" }
+{ "staff": "Franklin", "meeting": "A", "student": "Karen" }
+{ "staff": "Maryann", "meeting": "B", "student": "Karen" }
+{ "staff": "Maryann", "meeting": "B", "student": "Steve" }
+{ "staff": "Maryann", "meeting": "B", "student": "Tess" }
+{ "staff": "Vicky", "meeting": "D", "student": "Charles" }
+{ "staff": "Vicky", "meeting": "D", "student": "Frank" }
+{ "staff": "Vicky", "meeting": "D", "student": "Karen" }
+{ "staff": "Vicky", "meeting": "D", "student": "Mary" }
+{ "staff": "Vicky", "meeting": "D", "student": "Olga" }
+{ "staff": "Vicky", "meeting": "D", "student": "Steve" }
+{ "staff": "Vicky", "meeting": "D", "student": "Tess" }
