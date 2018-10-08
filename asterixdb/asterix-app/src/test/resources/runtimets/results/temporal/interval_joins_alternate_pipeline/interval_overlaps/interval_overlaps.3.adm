@@ -1,6 +1,6 @@
-{ "staff": "Alex", "meeting": "A", "student": "Karen" }
-{ "staff": "Alex", "meeting": "A", "student": "Steve" }
-{ "staff": "Franklin", "meeting": "A", "student": "Steve" }
-{ "staff": "Franklin", "meeting": "A", "student": "Tess" }
-{ "staff": "Henry", "meeting": "C", "student": "Karen" }
-{ "staff": "Henry", "meeting": "C", "student": "Steve" }
+{ "meeting": "A" }
+{ "meeting": "A" }
+{ "meeting": "A" }
+{ "meeting": "A" }
+{ "meeting": "C" }
+{ "meeting": "C" }

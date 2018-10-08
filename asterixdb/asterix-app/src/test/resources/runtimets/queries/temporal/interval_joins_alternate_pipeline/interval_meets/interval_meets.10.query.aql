@@ -29,4 +29,4 @@ for $d in dataset Students
 where /*+ interval-raw-join */ interval-meets($f.employment, $d.attendance)
 /*+ range ["F", "L", "R"] */
 order by $f.name, $d.name
-return { "staff" : $f.name, "student" : $d.name }
+return { "meeting" : $f.office }

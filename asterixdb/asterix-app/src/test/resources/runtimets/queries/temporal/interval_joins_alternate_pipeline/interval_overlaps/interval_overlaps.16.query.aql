@@ -29,4 +29,4 @@ for $d in dataset Students
 where /*+ interval-partition-join [10000, 11000, 12000, 14000, 15000] */ interval-overlapped-by($d.attendance, $f.employment)
 /*+ range ["F", "L", "R"] */
 order by $f.name, $d.name
-return { "staff" : $f.name, "student" : $d.name }
+return { "meeting" : $f.office }

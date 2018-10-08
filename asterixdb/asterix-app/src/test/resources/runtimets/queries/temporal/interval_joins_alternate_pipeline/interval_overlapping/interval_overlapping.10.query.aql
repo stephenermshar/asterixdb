@@ -28,4 +28,4 @@ for $f in dataset Staff
 for $d in dataset Students
 where /*+ interval-raw-join */ interval-overlapping($f.employment, $d.attendance)
 order by $f.name, $d.name
-return { "staff" : $f.name, "meeting" : $f.office, "student" : $d.name }
+return { "meeting" : $f.office }

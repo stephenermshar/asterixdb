@@ -1,7 +1,7 @@
-{ "staff": "Elisabeth", "meeting": "B", "student": "Steve" }
-{ "staff": "Elisabeth", "meeting": "B", "student": "Tess" }
-{ "staff": "Franklin", "meeting": "A", "student": "Karen" }
-{ "staff": "Maryann", "meeting": "B", "student": "Steve" }
-{ "staff": "Maryann", "meeting": "B", "student": "Tess" }
-{ "staff": "Vicky", "meeting": "D", "student": "Steve" }
-{ "staff": "Vicky", "meeting": "D", "student": "Tess" }
+{ "meeting": "B" }
+{ "meeting": "B" }
+{ "meeting": "A" }
+{ "meeting": "B" }
+{ "meeting": "B" }
+{ "meeting": "D" }
+{ "meeting": "D" }

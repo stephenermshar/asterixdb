@@ -1,2 +1,2 @@
-{ "staff": "Alex", "meeting": "A", "student": "Tess" }
-{ "staff": "Henry", "meeting": "C", "student": "Tess" }
+{ "meeting": "A" }
+{ "meeting": "C" }
