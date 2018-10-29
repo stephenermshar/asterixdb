@@ -20,7 +20,6 @@ package org.apache.asterix.runtime.operators.joins;
 
 import org.apache.asterix.dataflow.data.nontagged.serde.AIntervalSerializerDeserializer;
 import org.apache.asterix.om.pointables.nonvisitor.AIntervalPointable;
-import org.apache.asterix.runtime.evaluators.functions.temporal.IntervalLogic;
 import org.apache.asterix.runtime.evaluators.functions.temporal.IntervalLogicWithLong;
 import org.apache.asterix.runtime.evaluators.functions.temporal.IntervalPartitionLogic;
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;

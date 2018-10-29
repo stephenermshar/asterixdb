@@ -21,6 +21,19 @@
  * Expected Result  :   Success
  * Date             :   11th Jul, 2017
  */
+/*
+ * The number of active tuples must exceed join memory.
+ *
+ * 1024 time points * 2 arrival rate = 2048 records
+ * 2048 records / 4 nodes = 512 tuples per node
+ *
+ * 32000 byte frame size / ~2000 byte record = 16 records per frame
+ * 160000 byte join size / ~2000 byte record = 80 records join memory
+ *
+ * Dataset 256 duration * 2 arrival rate = 512 records
+ * Overlaps 512 join joined records for each tuple in R with S
+ * 512 records > 80 records join memory = spilling
+ */
 
 use dataverse CostModel;
 
