@@ -18,6 +18,7 @@
  */
 package org.apache.asterix.runtime.operators.joins;
 
+import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.dataflow.std.buffermanager.ITupleAccessor;
 
@@ -29,20 +30,53 @@ public abstract class AbstractIntervalInverseMergeJoinChecker extends AbstractIn
         super(idLeft, idRight);
     }
 
+//    @Override
+//    public boolean checkToSaveInMemory(ITupleAccessor accessorLeft, ITupleAccessor accessorRight)
+//            throws HyracksDataException {
+//        IntervalJoinUtil.getIntervalPointable(accessorLeft, idLeft, tvp, ipLeft);
+//        IntervalJoinUtil.getIntervalPointable(accessorRight, idRight, tvp, ipRight);
+//        ipLeft.getStart(startLeft);
+//        ipRight.getEnd(endRight);
+//        return ch.compare(ipLeft.getTypeTag(), ipRight.getTypeTag(), startLeft, endRight) <= 0;
+//    }
+//
+//    @Override
+//    public boolean checkToRemoveInMemory(ITupleAccessor accessorLeft, ITupleAccessor accessorRight)
+//            throws HyracksDataException {
+//        return !checkToSaveInMemory(accessorLeft, accessorRight);
+//    }
+
+    /**
+     * Right (second argument) interval starts before left (first argument) interval ends.
+     */
     @Override
-    public boolean checkToSaveInMemory(ITupleAccessor accessorLeft, ITupleAccessor accessorRight)
-            throws HyracksDataException {
-        IntervalJoinUtil.getIntervalPointable(accessorLeft, idLeft, tvp, ipLeft);
-        IntervalJoinUtil.getIntervalPointable(accessorRight, idRight, tvp, ipRight);
-        ipLeft.getStart(startLeft);
-        ipRight.getEnd(endRight);
-        return ch.compare(ipLeft.getTypeTag(), ipRight.getTypeTag(), startLeft, endRight) <= 0;
+    public boolean checkToSaveInMemory(IFrameTupleAccessor accessorLeft, int leftTupleIndex,
+            IFrameTupleAccessor accessorRight, int rightTupleIndex) throws HyracksDataException {
+        long start1 = IntervalJoinUtil.getIntervalStart(accessorRight, rightTupleIndex, idRight);
+        long end0 = IntervalJoinUtil.getIntervalEnd(accessorLeft, leftTupleIndex, idLeft);
+        long start0 = IntervalJoinUtil.getIntervalStart(accessorLeft, leftTupleIndex, idLeft);
+        long end1 = IntervalJoinUtil.getIntervalEnd(accessorRight, rightTupleIndex, idRight);
+        return start0 <= end1;
+    }
+
+    /**
+     * Left (first argument) interval starts after the Right (second argument) interval ends.
+     */
+    @Override
+    public boolean checkToRemoveInMemory(IFrameTupleAccessor accessorLeft, int leftTupleIndex,
+            IFrameTupleAccessor accessorRight, int rightTupleIndex) throws HyracksDataException {
+        long start0 = IntervalJoinUtil.getIntervalStart(accessorLeft, leftTupleIndex, idLeft);
+        long end1 = IntervalJoinUtil.getIntervalEnd(accessorRight, rightTupleIndex, idRight);
+        return start0 > end1;
+
     }
 
     @Override
-    public boolean checkToRemoveInMemory(ITupleAccessor accessorLeft, ITupleAccessor accessorRight)
-            throws HyracksDataException {
-        return !checkToSaveInMemory(accessorLeft, accessorRight);
+    public boolean checkToLoadNextRightTuple(IFrameTupleAccessor accessorLeft, int leftTupleIndex,
+            IFrameTupleAccessor accessorRight, int rightTupleIndex) throws HyracksDataException {
+        long start1 = IntervalJoinUtil.getIntervalStart(accessorRight, rightTupleIndex, idRight);
+        long start0 = IntervalJoinUtil.getIntervalStart(accessorLeft, leftTupleIndex, idLeft);
+        return (start0 <= start1);
     }
 
 }

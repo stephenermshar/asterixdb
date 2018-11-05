@@ -19,6 +19,7 @@
 package org.apache.asterix.runtime.operators.joins;
 
 import org.apache.asterix.om.pointables.nonvisitor.AIntervalPointable;
+import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.dataflow.std.buffermanager.ITupleAccessor;
 import org.apache.hyracks.dataflow.std.join.IMergeJoinChecker;
@@ -39,5 +40,8 @@ public interface IIntervalMergeJoinChecker extends IMergeJoinChecker {
     public boolean checkToSaveInResult(long start0, long end0, long start1, long end1, boolean reversed);
 
     boolean compareInterval(long start0, long end0, long start1, long end1) throws HyracksDataException;
+
+    boolean checkToLoadNextRightTuple(IFrameTupleAccessor accessorLeft, int leftTupleIndex,
+            IFrameTupleAccessor accessorRight, int rightTupleIndex) throws HyracksDataException;
 
 }
