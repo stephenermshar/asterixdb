@@ -30,4 +30,7 @@ public interface IIntervalMergeJoinCheckerFactory extends IMergeJoinCheckerFacto
     public IIntervalMergeJoinChecker createMergeJoinChecker(int[] keys0, int[] keys1, IHyracksTaskContext ctx)
             throws HyracksDataException;
 
+    public IIntervalMergeJoinChecker createInverseMergeJoinChecker(int[] keys0, int[] keys1, IHyracksTaskContext ctx)
+            throws HyracksDataException;
+
 }

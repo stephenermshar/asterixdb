@@ -30,6 +30,11 @@ public class AfterIntervalMergeJoinCheckerFactory extends AbstractIntervalMergeJ
     }
 
     @Override
+    public IIntervalMergeJoinChecker createInverseMergeJoinChecker(int[] keys0, int[] keys1, IHyracksTaskContext ctx) {
+        return new BeforeIntervalMergeJoinChecker(keys0, keys1);
+    }
+
+    @Override
     public RangePartitioningType getLeftPartitioningType() {
         return RangePartitioningType.PROJECT;
     }

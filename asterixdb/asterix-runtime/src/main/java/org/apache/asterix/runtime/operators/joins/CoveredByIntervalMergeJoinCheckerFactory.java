@@ -28,4 +28,9 @@ public class CoveredByIntervalMergeJoinCheckerFactory extends AbstractIntervalIn
         return new CoveredByIntervalMergeJoinChecker(keys0, keys1);
     }
 
+    @Override
+    public IIntervalMergeJoinChecker createInverseMergeJoinChecker(int[] keys0, int[] keys1, IHyracksTaskContext ctx) {
+        return new CoversIntervalMergeJoinChecker(keys0, keys1);
+    }
+
 }

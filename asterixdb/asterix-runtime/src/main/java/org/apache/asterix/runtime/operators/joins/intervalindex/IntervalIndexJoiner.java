@@ -268,7 +268,7 @@ public class IntervalIndexJoiner extends AbstractIntervalMergeJoiner {
     private boolean checkToProcessRightTuple() {
         long leftStart = IntervalJoinUtil.getIntervalStart(inputAccessor[LEFT_PARTITION], leftKey);
         long rightStart = IntervalJoinUtil.getIntervalStart(inputAccessor[RIGHT_PARTITION], rightKey);
-        if (leftStart < rightStart) {
+        if (leftStart <= rightStart) {
             // Left stream has next tuple, check if right active must be updated first.
             return activeManager[RIGHT_PARTITION].hasRecords()
                     && activeManager[RIGHT_PARTITION].getTopPoint() < leftStart;
@@ -280,7 +280,7 @@ public class IntervalIndexJoiner extends AbstractIntervalMergeJoiner {
     }
 
     private boolean checkToProcessAdd(long startMemory, long endMemory) {
-        return startMemory < endMemory;
+        return startMemory <= endMemory;
     }
 
     private TupleStatus processLeftTupleSpill(IFrameWriter writer) throws HyracksDataException {

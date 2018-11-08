@@ -28,4 +28,9 @@ public class OverlapsIntervalMergeJoinCheckerFactory extends AbstractIntervalMer
         return new OverlapsIntervalMergeJoinChecker(keys0, keys1);
     }
 
+    @Override
+    public IIntervalMergeJoinChecker createInverseMergeJoinChecker(int[] keys0, int[] keys1, IHyracksTaskContext ctx) {
+        return new OverlappedByIntervalMergeJoinChecker(keys0, keys1);
+    }
+
 }
