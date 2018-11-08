@@ -150,7 +150,7 @@ public abstract class AbstractIntervalMergeJoinChecker implements IIntervalMerge
             IFrameTupleAccessor accessorRight, int rightTupleIndex) throws HyracksDataException {
         long start1 = IntervalJoinUtil.getIntervalStart(accessorRight, rightTupleIndex, idRight);
         long end0 = IntervalJoinUtil.getIntervalEnd(accessorLeft, leftTupleIndex, idLeft);
-        return !(end0 < start1);
+        return end0 > start1;
     }
 
     @Override
