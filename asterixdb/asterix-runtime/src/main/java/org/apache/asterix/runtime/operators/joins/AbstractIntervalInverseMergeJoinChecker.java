@@ -20,7 +20,6 @@ package org.apache.asterix.runtime.operators.joins;
 
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
-import org.apache.hyracks.dataflow.std.buffermanager.ITupleAccessor;
 
 public abstract class AbstractIntervalInverseMergeJoinChecker extends AbstractIntervalMergeJoinChecker {
 
@@ -56,7 +55,7 @@ public abstract class AbstractIntervalInverseMergeJoinChecker extends AbstractIn
         long end0 = IntervalJoinUtil.getIntervalEnd(accessorLeft, leftTupleIndex, idLeft);
         long start0 = IntervalJoinUtil.getIntervalStart(accessorLeft, leftTupleIndex, idLeft);
         long end1 = IntervalJoinUtil.getIntervalEnd(accessorRight, rightTupleIndex, idRight);
-        return start0 <= end1;
+        return start0 < end1;
     }
 
     /**
@@ -67,7 +66,7 @@ public abstract class AbstractIntervalInverseMergeJoinChecker extends AbstractIn
             IFrameTupleAccessor accessorRight, int rightTupleIndex) throws HyracksDataException {
         long start0 = IntervalJoinUtil.getIntervalStart(accessorLeft, leftTupleIndex, idLeft);
         long end1 = IntervalJoinUtil.getIntervalEnd(accessorRight, rightTupleIndex, idRight);
-        return start0 > end1;
+        return start0 >= end1;
 
     }
 
@@ -76,7 +75,7 @@ public abstract class AbstractIntervalInverseMergeJoinChecker extends AbstractIn
             IFrameTupleAccessor accessorRight, int rightTupleIndex) throws HyracksDataException {
         long start1 = IntervalJoinUtil.getIntervalStart(accessorRight, rightTupleIndex, idRight);
         long start0 = IntervalJoinUtil.getIntervalStart(accessorLeft, leftTupleIndex, idLeft);
-        return (start0 <= start1);
+        return start0 >= start1;
     }
 
 }

@@ -22,9 +22,8 @@ import java.util.LinkedList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.apache.asterix.dataflow.data.nontagged.serde.AIntervalSerializerDeserializer;
 import org.apache.asterix.runtime.operators.joins.IIntervalMergeJoinChecker;
-import org.apache.asterix.runtime.operators.joins.IntervalJoinUtil;
+import org.apache.asterix.runtime.operators.joins.intervalindex.TuplePrinterUtil;
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.comm.IFrameWriter;
 import org.apache.hyracks.api.context.IHyracksTaskContext;
@@ -124,6 +123,8 @@ public class IntervalMergeJoiner extends AbstractIntervalMergeJoiner {
 
     private final int partition;
     private final int memorySize;
+
+    private final boolean DEBUG = false;
 
     public IntervalMergeJoiner(IHyracksTaskContext ctx, int memorySize, int partition, IntervalMergeStatus status,
             IntervalMergeJoinLocks locks, IIntervalMergeJoinChecker mjc, int[] leftKeys, int[] rightKeys,
@@ -264,11 +265,12 @@ public class IntervalMergeJoiner extends AbstractIntervalMergeJoiner {
         processLeftFrame(writer);
         resultAppender.write(writer, true);
 
-        //        System.err.println(",MergeJoiner Statistics Log," + partition + ",partition," + memorySize + ",memory,"
-        //                + tupleCounts[LEFT_PARTITION] + ",left tuples," + tupleCounts[RIGHT_PARTITION] + ",right tuples,"
-        //                + frameCounts[LEFT_PARTITION] + ",left frames," + frameCounts[RIGHT_PARTITION] + ",right frames");
+        long ioCost = runFileStream.getWriteCount() + runFileStream.getReadCount();
+        System.out.println(",MergeJoiner Statistics Log," + partition + ",partition," + memorySize + ",memory,"
+                + joinResultCount + ",results," + joinComparisonCount + ",CPU," + ioCost + ",IO," + spillCount
+                + ",spills," + runFileStream.getWriteCount() + ",frames_written," + runFileStream.getReadCount()
+                + ",frames_read");
         if (LOGGER.isLoggable(Level.WARNING)) {
-            long ioCost = runFileStream.getWriteCount() + runFileStream.getReadCount();
             LOGGER.warning(",MergeJoiner Statistics Log," + partition + ",partition," + memorySize + ",memory,"
                     + joinResultCount + ",results," + joinComparisonCount + ",CPU," + ioCost + ",IO," + spillCount
                     + ",spills," + runFileStream.getWriteCount() + ",frames_written," + runFileStream.getReadCount()
@@ -297,6 +299,11 @@ public class IntervalMergeJoiner extends AbstractIntervalMergeJoiner {
             inputTuple[LEFT_PARTITION].loadTuple();
             for (int i = memoryBuffer.size() - 1; i > -1; --i) {
                 memoryTuple.setTuple(memoryBuffer.get(i), i == memoryBuffer.size() - 1);
+                if (DEBUG) {
+                    System.err.println("MERGE test from stream: " + memoryBuffer.get(i));
+                    TuplePrinterUtil.printTuple("    stream: ", inputAccessor[LEFT_PARTITION]);
+                    TuplePrinterUtil.printTuple("    memory: ", memoryTuple.getAccessor(), memoryTuple.getTupleIndex());
+                }
                 if (inputTuple[LEFT_PARTITION].compareJoin(memoryTuple)) {
                     // add to result
                     addToResult(inputAccessor[LEFT_PARTITION], inputAccessor[LEFT_PARTITION].getTupleId(),
@@ -304,6 +311,11 @@ public class IntervalMergeJoiner extends AbstractIntervalMergeJoiner {
                 }
                 joinComparisonCount++;
                 if (inputTuple[LEFT_PARTITION].removeFromMemory(memoryTuple)) {
+                    if (DEBUG) {
+                        System.err.println("REMOVE from memory: " + memoryBuffer.get(i));
+                        TuplePrinterUtil.printTuple("    memory: ", memoryTuple.getAccessor(),
+                                memoryTuple.getTupleIndex());
+                    }
                     // remove from memory
                     removeFromMemory(memoryBuffer.get(i));
                 }
@@ -320,6 +332,10 @@ public class IntervalMergeJoiner extends AbstractIntervalMergeJoiner {
                 // go to log saving state
                 freezeAndSpill();
                 return;
+            }
+            if (DEBUG) {
+                System.err.println("ADD to memory: ");
+                TuplePrinterUtil.printTuple("    memory: ", inputAccessor[RIGHT_PARTITION]);
             }
         }
         inputAccessor[RIGHT_PARTITION].next();

@@ -534,11 +534,14 @@ public class IntervalForwardSweepJoiner extends AbstractMergeJoiner {
     private boolean processGroupWithStream(int outer, int inner, TuplePointer searchEndTp, IFrameWriter writer)
             throws HyracksDataException {
         reloadLeftFrame = false;
-        memoryTuple[inner].setTuple(searchEndTp);
-        // Add tuples from the stream.
 
-        inputTuple[outer].loadTuple();
-        while (loadSideTuple(outer).isLoaded() && memoryTuple[inner].hasMoreMatches(inputTuple[outer])) {
+        // Add tuples from the stream.
+        while (loadSideTuple(outer).isLoaded()) {
+            inputTuple[outer].loadTuple();
+            memoryTuple[inner].setTuple(searchEndTp);
+            if (!memoryTuple[inner].hasMoreMatches(inputTuple[outer])) {
+                break;
+            }
             TuplePointer tp = activeManager[outer].addTuple(inputAccessor[outer]);
             if (tp != null) {
                 memoryTuple[outer].setTuple(tp);
@@ -578,8 +581,6 @@ public class IntervalForwardSweepJoiner extends AbstractMergeJoiner {
                 return false;
             }
             inputAccessor[outer].next();
-            inputTuple[outer].loadTuple();
-            memoryTuple[inner].setTuple(searchEndTp);
         }
         if (!loadSideTuple(LEFT_PARTITION).isKnown()) {
             reloadLeftFrame = true;
