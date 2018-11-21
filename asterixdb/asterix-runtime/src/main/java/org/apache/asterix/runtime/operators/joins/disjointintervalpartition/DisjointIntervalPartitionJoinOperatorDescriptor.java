@@ -242,10 +242,11 @@ public class DisjointIntervalPartitionJoinOperatorDescriptor extends AbstractOpe
                         }
                     } while (state == null);
 
-                    PriorityQueue<PartitionMinItem> partitionMinRight =
-                            new PriorityQueue<>(16, PartitionMinItem.PartitionMinComparator);
-                    PriorityQueue<PartitionMinItem> partitionMinLeft =
-                            new PriorityQueue<>(16, PartitionMinItem.PartitionMinComparator);
+                    PartitionMinItemComparator rightComparator = new PartitionMinItemComparator();
+                    PartitionMinItemComparator leftComparator = new PartitionMinItemComparator();
+
+                    PriorityQueue<PartitionMinItem> partitionMinRight = new PriorityQueue<>(16, rightComparator);
+                    PriorityQueue<PartitionMinItem> partitionMinLeft = new PriorityQueue<>(16, leftComparator);
 
                     DisjointIntervalPartitionComputer leftDipc =
                             new DisjointIntervalPartitionComputerFactory(buildKey, partitionMinRight)
@@ -256,9 +257,9 @@ public class DisjointIntervalPartitionJoinOperatorDescriptor extends AbstractOpe
                     IIntervalMergeJoinChecker imjc = imjcf.createMergeJoinChecker(leftKeys, rightKeys, ctx);
 
                     state.rightRd = rightRd;
-                    state.partitionJoiner =
-                            new DisjointIntervalPartitionJoiner(ctx, memoryForJoin, partition, state.status, locks,
-                                    imjc, buildKey, probeKey, state.leftRd, state.rightRd, leftDipc, rightDipc);
+                    state.partitionJoiner = new DisjointIntervalPartitionJoiner(ctx, memoryForJoin, partition,
+                            state.status, locks, imjc, buildKey, probeKey, state.leftRd, state.rightRd, leftDipc,
+                            rightDipc, rightComparator, leftComparator);
                     state.status.branch[RIGHT_ACTIVITY_ID].setStageOpen();
                     locks.getLeft(partition).signal();
                 } catch (InterruptedException e) {

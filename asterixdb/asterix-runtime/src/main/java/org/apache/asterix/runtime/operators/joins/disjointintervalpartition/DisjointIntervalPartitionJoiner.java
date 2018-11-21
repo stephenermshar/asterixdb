@@ -79,10 +79,14 @@ public class DisjointIntervalPartitionJoiner extends AbstractMergeJoiner {
     private final int memorySize;
     private DisjointIntervalPartitionComputer rightDipc;
 
+    private PartitionMinItemComparator rightComparator;
+    private PartitionMinItemComparator leftComparator;
+
     public DisjointIntervalPartitionJoiner(IHyracksTaskContext ctx, int memorySize, int partition, MergeStatus status,
             MergeJoinLocks locks, IIntervalMergeJoinChecker imjc, int leftKey, int rightKey, RecordDescriptor leftRd,
             RecordDescriptor rightRd, DisjointIntervalPartitionComputer leftDipc,
-            DisjointIntervalPartitionComputer rightDipc) throws HyracksDataException {
+            DisjointIntervalPartitionComputer rightDipc, PartitionMinItemComparator rightComparator,
+            PartitionMinItemComparator leftComparator) throws HyracksDataException {
         super(ctx, partition, status, locks, leftRd, rightRd);
         this.ctx = ctx;
         this.partition = partition;
@@ -98,6 +102,9 @@ public class DisjointIntervalPartitionJoiner extends AbstractMergeJoiner {
         this.rightRd = rightRd;
         this.leftRd = leftRd;
         this.imjc = imjc;
+
+        this.rightComparator = rightComparator;
+        this.leftComparator = leftComparator;
 
         tmpFrame = new VSizeFrame(ctx);
         joinTupleAccessor = new TupleAccessor(leftRd);
@@ -143,16 +150,21 @@ public class DisjointIntervalPartitionJoiner extends AbstractMergeJoiner {
 
         cleanupPartitions(leftRunFileReaders);
         cleanupPartitions(rightRunFileReaders);
+        long cpu = joinComparisonCount + leftComparator.getTotalCalled() + rightComparator.getTotalCalled();
         if (LOGGER.isLoggable(Level.WARNING)) {
             LOGGER.warning(",DisjointIntervalPartitionJoiner Statistics Log," + partition + ",partition," + memorySize
-                    + ",memory," + joinResultCount + ",results," + joinComparisonCount + ",CPU,"
+                    + ",memory," + joinResultCount + ",results," + cpu + ",CPU,"
                     + (spillWriteCount + spillReadCount) + ",IO," + spillWriteCount + ",frames_written,"
-                    + spillReadCount + ",frames_read");
+                    + spillReadCount + ",frames_read," + leftComparator.getTotalCalled() + ",partition_comparison_left,"
+                    + rightComparator.getTotalCalled() + ",partition_comparison_right," + joinComparisonCount
+                    + ",join_comparison");
         }
         System.out.println(",DisjointIntervalPartitionJoiner Statistics Log," + partition + ",partition," + memorySize
-                + ",memory," + joinResultCount + ",results," + joinComparisonCount + ",CPU,"
-                + (spillWriteCount + spillReadCount) + ",IO," + spillWriteCount + ",frames_written,"
-                + spillReadCount + ",frames_read");
+                + ",memory," + joinResultCount + ",results," + cpu + ",CPU,"
+                + (spillWriteCount + spillReadCount) + ",IO," + spillWriteCount + ",frames_written," + spillReadCount
+                + ",frames_read," + leftComparator.getTotalCalled() + ",partition_comparison_left,"
+                + rightComparator.getTotalCalled() + ",partition_comparison_right," + joinComparisonCount
+                + ",join_comparison");
     }
 
     private void processInMemoryJoin(IFrameWriter writer) throws HyracksDataException {
