@@ -239,20 +239,18 @@ public class IntervalIndexJoiner extends AbstractIntervalMergeJoiner {
         long ioCost = runFileStream[LEFT_PARTITION].getWriteCount() + runFileStream[LEFT_PARTITION].getReadCount()
                 + runFileStream[RIGHT_PARTITION].getWriteCount() + runFileStream[RIGHT_PARTITION].getReadCount();
         if (LOGGER.isLoggable(Level.WARNING)) {
-            LOGGER.warning(",IntervalIndexJoiner Statistics Log,"+ partition + ",partition," + memorySize
-                    + ",memory,"  + joinResultCount + ",results," + joinComparisonCount
-                    + ",CPU," + ioCost + ",IO," + leftSpillCount + ",left spills,"
-                    + runFileStream[LEFT_PARTITION].getWriteCount() + ",left frames_written,"
-                    + runFileStream[LEFT_PARTITION].getReadCount() + ",left frames_read," + rightSpillCount + ",right spills,"
-                    + runFileStream[RIGHT_PARTITION].getWriteCount() + ",right frames_written,"
+            LOGGER.warning(",IntervalIndexJoiner Statistics Log," + partition + ",partition," + memorySize + ",memory,"
+                    + joinResultCount + ",results," + joinComparisonCount + ",CPU," + ioCost + ",IO," + leftSpillCount
+                    + ",left spills," + runFileStream[LEFT_PARTITION].getWriteCount() + ",left frames_written,"
+                    + runFileStream[LEFT_PARTITION].getReadCount() + ",left frames_read," + rightSpillCount
+                    + ",right spills," + runFileStream[RIGHT_PARTITION].getWriteCount() + ",right frames_written,"
                     + runFileStream[RIGHT_PARTITION].getReadCount() + ",right frames_read");
         }
-        System.out.println(",IntervalIndexJoiner Statistics Log,"+ partition + ",partition," + memorySize
-                + ",memory,"  + joinResultCount + ",results," + joinComparisonCount
-                + ",CPU," + ioCost + ",IO," + leftSpillCount + ",left spills,"
-                + runFileStream[LEFT_PARTITION].getWriteCount() + ",left frames_written,"
-                + runFileStream[LEFT_PARTITION].getReadCount() + ",left frames_read," + rightSpillCount + ",right spills,"
-                + runFileStream[RIGHT_PARTITION].getWriteCount() + ",right frames_written,"
+        System.out.println(",IntervalIndexJoiner Statistics Log," + partition + ",partition," + memorySize + ",memory,"
+                + joinResultCount + ",results," + joinComparisonCount + ",CPU," + ioCost + ",IO," + leftSpillCount
+                + ",left spills," + runFileStream[LEFT_PARTITION].getWriteCount() + ",left frames_written,"
+                + runFileStream[LEFT_PARTITION].getReadCount() + ",left frames_read," + rightSpillCount
+                + ",right spills," + runFileStream[RIGHT_PARTITION].getWriteCount() + ",right frames_written,"
                 + runFileStream[RIGHT_PARTITION].getReadCount() + ",right frames_read");
     }
 
@@ -356,65 +354,37 @@ public class IntervalIndexJoiner extends AbstractIntervalMergeJoiner {
     private void processLeftTuple(IFrameWriter writer) throws HyracksDataException {
         // Process endpoints
         do {
-            if ((!activeManager[LEFT_PARTITION].hasRecords()
-                    || checkToProcessAdd(IntervalJoinUtil.getIntervalStart(inputAccessor[LEFT_PARTITION], leftKey),
-                            activeManager[LEFT_PARTITION].getTopPoint()))
-                    || !imjc.checkToRemoveLeftActive()) {
-                // Add to active, end point index and buffer.
-                TuplePointer tp = new TuplePointer();
-                if (activeManager[LEFT_PARTITION].addTuple(inputAccessor[LEFT_PARTITION], tp)) {
-                    processTupleJoin(activeManager[RIGHT_PARTITION].getActiveList(), memoryAccessor[RIGHT_PARTITION],
-                            inputAccessor[LEFT_PARTITION], true, writer);
-                    //                    buffer.add(tp);
-                } else {
-                    // Spill case
-                    freezeAndSpill();
-                    break;
-                }
-                inputAccessor[LEFT_PARTITION].next();
-            } else {
-                // Remove from active.
-                activeManager[LEFT_PARTITION].removeTop();
-            }
+            processJoin(LEFT_PARTITION, RIGHT_PARTITION, leftKey, imjc.checkToRemoveLeftActive(), true, writer);
         } while (loadLeftTuple().isLoaded() && loadRightTuple().isLoaded() && !checkToProcessRightTuple());
-
-        // Add Results
-        //        if (!buffer.isEmpty()) {
-        //            processActiveJoin(activeManager[RIGHT_PARTITION].getActiveList(), memoryAccessor[RIGHT_PARTITION], buffer,
-        //                    memoryAccessor[LEFT_PARTITION], true, writer);
-        //        }
     }
 
     private void processRightTuple(IFrameWriter writer) throws HyracksDataException {
         // Process endpoints
         do {
-            if ((!activeManager[RIGHT_PARTITION].hasRecords()
-                    || checkToProcessAdd(IntervalJoinUtil.getIntervalStart(inputAccessor[RIGHT_PARTITION], rightKey),
-                            activeManager[RIGHT_PARTITION].getTopPoint()))
-                    || !imjc.checkToRemoveRightActive()) {
-                // Add to active, end point index and buffer.
-                TuplePointer tp = new TuplePointer();
-                if (activeManager[RIGHT_PARTITION].addTuple(inputAccessor[RIGHT_PARTITION], tp)) {
-                    processTupleJoin(activeManager[LEFT_PARTITION].getActiveList(), memoryAccessor[LEFT_PARTITION],
-                            inputAccessor[RIGHT_PARTITION], false, writer);
-                    //                    buffer.add(tp);
-                } else {
-                    // Spill case
-                    freezeAndSpill();
-                    break;
-                }
-                inputAccessor[RIGHT_PARTITION].next();
-            } else {
-                // Remove from active.
-                activeManager[RIGHT_PARTITION].removeTop();
-            }
+            processJoin(RIGHT_PARTITION, LEFT_PARTITION, rightKey, imjc.checkToRemoveRightActive(), false, writer);
         } while (loadRightTuple().isLoaded() && checkToProcessRightTuple());
+    }
 
-        // Add Results
-        //        if (!buffer.isEmpty()) {
-        //            processActiveJoin(activeManager[LEFT_PARTITION].getActiveList(), memoryAccessor[LEFT_PARTITION], buffer,
-        //                    memoryAccessor[RIGHT_PARTITION], false, writer);
-        //        }
+    private void processJoin(int active, int passive, int key, boolean removeActive, boolean reversed, IFrameWriter writer)
+            throws HyracksDataException {
+        if (!activeManager[active].hasRecords() || (activeManager[passive].hasRecords() && checkToProcessAdd(
+                IntervalJoinUtil.getIntervalStart(inputAccessor[active], key), activeManager[passive].getTopPoint()))) {
+            //    || !removeActive) {
+            // Add to active, end point index and buffer.
+            TuplePointer tp = new TuplePointer();
+            if (activeManager[active].addTuple(inputAccessor[active], tp)) {
+                processTupleJoin(activeManager[passive].getActiveList(), memoryAccessor[passive], inputAccessor[active],
+                        reversed, writer);
+            } else {
+                // Spill case
+                freezeAndSpill();
+                return;
+            }
+            inputAccessor[active].next();
+        } else if (activeManager[passive].hasRecords()) {
+            // Remove from passive.
+            activeManager[passive].removeTop();
+        }
     }
 
     //    private void processActiveJoin(List<TuplePointer> outer, ITuplePointerAccessor outerAccessor,
@@ -438,8 +408,8 @@ public class IntervalIndexJoiner extends AbstractIntervalMergeJoiner {
     //        buffer.clear();
     //    }
 
-    private void processTupleJoin(List<TuplePointer> outer, ITupleAccessor outerAccessor,
-            ITupleAccessor tupleAccessor, boolean reversed, IFrameWriter writer) throws HyracksDataException {
+    private void processTupleJoin(List<TuplePointer> outer, ITupleAccessor outerAccessor, ITupleAccessor tupleAccessor,
+            boolean reversed, IFrameWriter writer) throws HyracksDataException {
         for (TuplePointer outerTp : outer) {
             outerAccessor.reset(outerTp);
             if (imjc.checkToSaveInResult(outerAccessor, outerTp.getTupleIndex(), tupleAccessor,
@@ -452,11 +422,11 @@ public class IntervalIndexJoiner extends AbstractIntervalMergeJoiner {
     }
 
     private void freezeAndSpill() throws HyracksDataException {
-//        if (LOGGER.isLoggable(Level.FINEST)) {
-//            LOGGER.finest("freeze snapshot: " + frameCounts[RIGHT_PARTITION] + " right, " + frameCounts[LEFT_PARTITION]
-//                    + " left, left[" + bufferManager.getNumTuples(LEFT_PARTITION) + " memory]. right["
-//                    + bufferManager.getNumTuples(RIGHT_PARTITION) + " memory].");
-//        }
+        //        if (LOGGER.isLoggable(Level.FINEST)) {
+        //            LOGGER.finest("freeze snapshot: " + frameCounts[RIGHT_PARTITION] + " right, " + frameCounts[LEFT_PARTITION]
+        //                    + " left, left[" + bufferManager.getNumTuples(LEFT_PARTITION) + " memory]. right["
+        //                    + bufferManager.getNumTuples(RIGHT_PARTITION) + " memory].");
+        //        }
         //        LOGGER.warning("disk IO: right, " + runFileStream[RIGHT_PARTITION].getReadCount() + " left, "
         //                + runFileStream[LEFT_PARTITION].getReadCount());
         int freezePartition;
@@ -468,16 +438,16 @@ public class IntervalIndexJoiner extends AbstractIntervalMergeJoiner {
             leftSpillCount++;
         }
 
-//        LOGGER.warning("freeze snapshot(" + freezePartition + "): " + frameCounts[RIGHT_PARTITION] + " right, "
-//                + frameCounts[LEFT_PARTITION] + " left, left[" + bufferManager.getNumTuples(LEFT_PARTITION)
-//                + " memory, " + leftSpillCount + " spills, "
-//                + (runFileStream[LEFT_PARTITION].getFileCount() - spillFileCount[LEFT_PARTITION]) + " files, "
-//                + (runFileStream[LEFT_PARTITION].getWriteCount() - spillWriteCount[LEFT_PARTITION]) + " written, "
-//                + (runFileStream[LEFT_PARTITION].getReadCount() - spillReadCount[LEFT_PARTITION]) + " read]. right["
-//                + bufferManager.getNumTuples(RIGHT_PARTITION) + " memory, " + +rightSpillCount + " spills, "
-//                + (runFileStream[RIGHT_PARTITION].getFileCount() - spillFileCount[RIGHT_PARTITION]) + " files, "
-//                + (runFileStream[RIGHT_PARTITION].getWriteCount() - spillWriteCount[RIGHT_PARTITION]) + " written, "
-//                + (runFileStream[RIGHT_PARTITION].getReadCount() - spillReadCount[RIGHT_PARTITION]) + " read].");
+        //        LOGGER.warning("freeze snapshot(" + freezePartition + "): " + frameCounts[RIGHT_PARTITION] + " right, "
+        //                + frameCounts[LEFT_PARTITION] + " left, left[" + bufferManager.getNumTuples(LEFT_PARTITION)
+        //                + " memory, " + leftSpillCount + " spills, "
+        //                + (runFileStream[LEFT_PARTITION].getFileCount() - spillFileCount[LEFT_PARTITION]) + " files, "
+        //                + (runFileStream[LEFT_PARTITION].getWriteCount() - spillWriteCount[LEFT_PARTITION]) + " written, "
+        //                + (runFileStream[LEFT_PARTITION].getReadCount() - spillReadCount[LEFT_PARTITION]) + " read]. right["
+        //                + bufferManager.getNumTuples(RIGHT_PARTITION) + " memory, " + +rightSpillCount + " spills, "
+        //                + (runFileStream[RIGHT_PARTITION].getFileCount() - spillFileCount[RIGHT_PARTITION]) + " files, "
+        //                + (runFileStream[RIGHT_PARTITION].getWriteCount() - spillWriteCount[RIGHT_PARTITION]) + " written, "
+        //                + (runFileStream[RIGHT_PARTITION].getReadCount() - spillReadCount[RIGHT_PARTITION]) + " read].");
         spillFileCount[LEFT_PARTITION] = runFileStream[LEFT_PARTITION].getFileCount();
         spillReadCount[LEFT_PARTITION] = runFileStream[LEFT_PARTITION].getReadCount();
         spillWriteCount[LEFT_PARTITION] = runFileStream[LEFT_PARTITION].getWriteCount();
@@ -523,22 +493,22 @@ public class IntervalIndexJoiner extends AbstractIntervalMergeJoiner {
     private void unfreezeAndContinue(int frozenPartition, ITupleAccessor accessor) throws HyracksDataException {
         int flushPartition = frozenPartition == LEFT_PARTITION ? RIGHT_PARTITION : LEFT_PARTITION;
         //                if (LOGGER.isLoggable(Level.FINEST)) {
-//        LOGGER.warning("unfreeze snapshot(" + frozenPartition + "): " + frameCounts[RIGHT_PARTITION] + " right, "
-//                + frameCounts[LEFT_PARTITION] + " left, left[" + bufferManager.getNumTuples(LEFT_PARTITION)
-//                + " memory, " + leftSpillCount + " spills, "
-//                + (runFileStream[LEFT_PARTITION].getFileCount() - spillFileCount[LEFT_PARTITION]) + " files, "
-//                + (runFileStream[LEFT_PARTITION].getWriteCount() - spillWriteCount[LEFT_PARTITION]) + " written, "
-//                + (runFileStream[LEFT_PARTITION].getReadCount() - spillReadCount[LEFT_PARTITION]) + " read]. right["
-//                + bufferManager.getNumTuples(RIGHT_PARTITION) + " memory, " + rightSpillCount + " spills, "
-//                + (runFileStream[RIGHT_PARTITION].getFileCount() - spillFileCount[RIGHT_PARTITION]) + " files, "
-//                + (runFileStream[RIGHT_PARTITION].getWriteCount() - spillWriteCount[RIGHT_PARTITION]) + " written, "
-//                + (runFileStream[RIGHT_PARTITION].getReadCount() - spillReadCount[RIGHT_PARTITION]) + " read].");
-//        spillFileCount[LEFT_PARTITION] = runFileStream[LEFT_PARTITION].getFileCount();
-//        spillReadCount[LEFT_PARTITION] = runFileStream[LEFT_PARTITION].getReadCount();
-//        spillWriteCount[LEFT_PARTITION] = runFileStream[LEFT_PARTITION].getWriteCount();
-//        spillFileCount[RIGHT_PARTITION] = runFileStream[RIGHT_PARTITION].getFileCount();
-//        spillReadCount[RIGHT_PARTITION] = runFileStream[RIGHT_PARTITION].getReadCount();
-//        spillWriteCount[RIGHT_PARTITION] = runFileStream[RIGHT_PARTITION].getWriteCount();
+        //        LOGGER.warning("unfreeze snapshot(" + frozenPartition + "): " + frameCounts[RIGHT_PARTITION] + " right, "
+        //                + frameCounts[LEFT_PARTITION] + " left, left[" + bufferManager.getNumTuples(LEFT_PARTITION)
+        //                + " memory, " + leftSpillCount + " spills, "
+        //                + (runFileStream[LEFT_PARTITION].getFileCount() - spillFileCount[LEFT_PARTITION]) + " files, "
+        //                + (runFileStream[LEFT_PARTITION].getWriteCount() - spillWriteCount[LEFT_PARTITION]) + " written, "
+        //                + (runFileStream[LEFT_PARTITION].getReadCount() - spillReadCount[LEFT_PARTITION]) + " read]. right["
+        //                + bufferManager.getNumTuples(RIGHT_PARTITION) + " memory, " + rightSpillCount + " spills, "
+        //                + (runFileStream[RIGHT_PARTITION].getFileCount() - spillFileCount[RIGHT_PARTITION]) + " files, "
+        //                + (runFileStream[RIGHT_PARTITION].getWriteCount() - spillWriteCount[RIGHT_PARTITION]) + " written, "
+        //                + (runFileStream[RIGHT_PARTITION].getReadCount() - spillReadCount[RIGHT_PARTITION]) + " read].");
+        //        spillFileCount[LEFT_PARTITION] = runFileStream[LEFT_PARTITION].getFileCount();
+        //        spillReadCount[LEFT_PARTITION] = runFileStream[LEFT_PARTITION].getReadCount();
+        //        spillWriteCount[LEFT_PARTITION] = runFileStream[LEFT_PARTITION].getWriteCount();
+        //        spillFileCount[RIGHT_PARTITION] = runFileStream[RIGHT_PARTITION].getFileCount();
+        //        spillReadCount[RIGHT_PARTITION] = runFileStream[RIGHT_PARTITION].getReadCount();
+        //        spillWriteCount[RIGHT_PARTITION] = runFileStream[RIGHT_PARTITION].getWriteCount();
         //                }
 
         // Finish writing

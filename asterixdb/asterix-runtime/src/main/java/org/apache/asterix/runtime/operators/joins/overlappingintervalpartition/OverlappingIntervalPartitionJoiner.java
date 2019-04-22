@@ -153,41 +153,41 @@ public class OverlappingIntervalPartitionJoiner extends AbstractMergeJoiner {
                     + memorySize + ",memory," + joinResultCount + ",results," + joinComparisonCount + ",CPU," + ioCost
                     + ",IO," + k + ",k," + spillWriteCount + ",frames_written," + spillReadCount + ",frames_read");
         }
-        // printPartitionStatus();
-        //        long ioCost = spillWriteCount + spillReadCount;
-        //        System.err.println(",OverlappingIntervalPartitionJoiner Statistics Log," + partition + ",partition,"
-        //                + memorySize + ",memory," + joinResultCount + ",results," + joinComparisonCount + ",CPU," + ioCost
-        //                + ",IO," + k + ",k," + spillWriteCount + ",frames_written," + spillReadCount + ",frames_read");
+//         printPartitionStatus();
+//                long ioCost = spillWriteCount + spillReadCount;
+//                System.err.println(",OverlappingIntervalPartitionJoiner Statistics Log," + partition + ",partition,"
+//                        + memorySize + ",memory," + joinResultCount + ",results," + joinComparisonCount + ",CPU," + ioCost
+//                        + ",IO," + k + ",k," + spillWriteCount + ",frames_written," + spillReadCount + ",frames_read");
         probeRunFileWriter.close();
     }
 
-    private void printPartitionStatus() {
-        System.err.println("k=" + k + " numOfPartitions:" + numOfPartitions);
-        System.err.println("left:" + frameCounts[LEFT_PARTITION] + " right:" + frameCounts[RIGHT_PARTITION]);
-        System.err.println("build[");
-        int count = 0;
-        for (int i = 0; i < buildPartitionSizes.length; i++) {
-            if (buildPartitionSizes[i] > 0) {
-                System.err.println("  (" + OverlappingIntervalPartitionUtil.getIntervalPartition(i, k) + ") "
-                        + buildPartitionSizes[i] + " ");
-                count++;
-            }
-        }
-        System.err.println("]");
-        System.err.println("Used Partitions:" + count);
-
-        System.err.println("probe[");
-        count = 0;
-        for (int i = 0; i < probePartitionSizes.length; i++) {
-            if (probePartitionSizes[i] > 0) {
-                System.err.println("  (" + OverlappingIntervalPartitionUtil.getIntervalPartition(i, k) + ") "
-                        + probePartitionSizes[i] + " ");
-                count++;
-            }
-        }
-        System.err.println("]");
-        System.err.println("Used Partitions:" + count);
-    }
+//    private void printPartitionStatus() {
+//        System.err.println("k=" + k + " numOfPartitions:" + numOfPartitions);
+//        System.err.println("left:" + frameCounts[LEFT_PARTITION] + " right:" + frameCounts[RIGHT_PARTITION]);
+//        System.err.println("build[");
+//        int count = 0;
+//        for (int i = 0; i < buildPartitionSizes.length; i++) {
+//            if (buildPartitionSizes[i] > 0) {
+//                System.err.println("  (" + OverlappingIntervalPartitionUtil.getIntervalPartition(i, k) + ") "
+//                        + buildPartitionSizes[i] + " ");
+//                count++;
+//            }
+//        }
+//        System.err.println("]");
+//        System.err.println("Used Partitions:" + count);
+//
+//        System.err.println("probe[");
+//        count = 0;
+//        for (int i = 0; i < probePartitionSizes.length; i++) {
+//            if (probePartitionSizes[i] > 0) {
+//                System.err.println("  (" + OverlappingIntervalPartitionUtil.getIntervalPartition(i, k) + ") "
+//                        + probePartitionSizes[i] + " ");
+//                count++;
+//            }
+//        }
+//        System.err.println("]");
+//        System.err.println("Used Partitions:" + count);
+//    }
 
     private void joinLoopOnMemory(IFrameWriter writer) throws HyracksDataException {
         RunFileReader pReader = probeRunFileWriter.createDeleteOnCloseReader();
@@ -213,25 +213,25 @@ public class OverlappingIntervalPartitionJoiner extends AbstractMergeJoiner {
         for (RunFilePointer probeId : probeRunFilePointers.navigableKeySet()) {
             Pair<Integer, Integer> probe =
                     OverlappingIntervalPartitionUtil.getIntervalPartition(probeRunFilePointers.get(probeId), k);
-            //            System.err.print("join " + probe + " (" + probePartitionSizes[probeRunFilePointers.get(probeId)]
-            //                    + ") with ");
+//                        System.err.print("join " + probe + " (" + probePartitionSizes[probeRunFilePointers.get(probeId)]
+//                                + ") with ");
 
             for (int buildId : buildInMemoryPartitions) {
                 Pair<Integer, Integer> build = OverlappingIntervalPartitionUtil.getIntervalPartition(buildId, k);
                 if (!(probe.first == 0 && build.first == 0)
                         && imjc.compareIntervalPartition(probe.first, probe.second, build.first, build.second)) {
                     fbms.add(buildBufferManager.getPartitionFrameBufferManager(buildId));
-                    //                    System.err.print(build + " (" + buildPartitionSizes[buildId] + "), ");
+//                                        System.err.print(build + " (" + buildPartitionSizes[buildId] + "), ");
                 }
             }
 
             if (!fbms.isEmpty()) {
                 join(pReader, probeId, fbms, writer);
             } else {
-                //                System.err.print("none");
+//                                System.err.print("none");
             }
 
-            //            System.err.println("");
+//                        System.err.println("");
             fbms.clear();
         }
     }

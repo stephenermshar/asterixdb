@@ -18,9 +18,11 @@
  */
 package org.apache.hyracks.dataflow.std.structures;
 
+import java.io.Serializable;
 import java.util.Comparator;
 
-public final class TuplePointer implements IResetable<TuplePointer> {
+public final class TuplePointer implements IResetable<TuplePointer>, Serializable {
+    private static final long serialVersionUID = 1L;
     public static final int INVALID_ID = -1;
     private int frameIndex;
     private int tupleIndex;

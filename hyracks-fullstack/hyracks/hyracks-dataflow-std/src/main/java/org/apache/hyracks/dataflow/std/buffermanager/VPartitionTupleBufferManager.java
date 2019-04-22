@@ -320,7 +320,7 @@ public class VPartitionTupleBufferManager implements IPartitionedTupleBufferMana
                     getFrame(tuplePointer.getFrameIndex(), tempBI);
                     innerAccessor.reset(tempBI.getBuffer(), tempBI.getStartOffset(), tempBI.getLength());
                 }
-                
+
                 @Override
                 int getFrameCount() {
                     return buffers.size();
@@ -366,6 +366,7 @@ public class VPartitionTupleBufferManager implements IPartitionedTupleBufferMana
                 innerAccessor.reset(tempInfo.getBuffer(), tempInfo.getStartOffset(), tempInfo.getLength());
             }
 
+            @Override
             void resetInnerAccessor(int frameIndex) {
                 partitionArray[parsePartitionId(frameIndex)].getFrame(parseFrameIdInPartition(frameIndex), tempInfo);
                 innerAccessor.reset(tempInfo.getBuffer(), tempInfo.getStartOffset(), tempInfo.getLength());
