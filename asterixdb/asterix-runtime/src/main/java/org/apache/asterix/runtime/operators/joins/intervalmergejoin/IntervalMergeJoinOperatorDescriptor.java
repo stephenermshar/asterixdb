@@ -298,7 +298,6 @@ public class IntervalMergeJoinOperatorDescriptor extends AbstractOperatorDescrip
                 } finally {
                     locks.getLock(partition).unlock();
                 }
-                //                System.err.println("Right next calls: " + count);
             }
         }
     }

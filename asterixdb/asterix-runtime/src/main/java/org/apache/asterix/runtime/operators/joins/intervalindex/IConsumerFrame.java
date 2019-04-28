@@ -18,19 +18,16 @@
  */
 package org.apache.asterix.runtime.operators.joins.intervalindex;
 
-import java.util.Comparator;
+import java.nio.ByteBuffer;
 
-import org.apache.asterix.runtime.operators.joins.intervalmergejoin.IntervalMergeJoinTaskState;
-import org.apache.hyracks.api.dataflow.TaskId;
-import org.apache.hyracks.api.job.JobId;
+import org.apache.hyracks.api.dataflow.value.RecordDescriptor;
 
-public class IndexJoinTaskState extends IntervalMergeJoinTaskState {
-    protected IntervalIndexJoiner indexJoiner;
-    protected Comparator<EndPointIndexItem> endPointComparator;
-    protected byte point;
+public interface IConsumerFrame {
 
-    public IndexJoinTaskState(JobId jobId, TaskId taskId) {
-        super(jobId, taskId);
-    }
+    public RecordDescriptor getRecordDescriptor();
+
+    public ByteBuffer getFrame();
+
+    public boolean hasMoreFrames();
 
 }
