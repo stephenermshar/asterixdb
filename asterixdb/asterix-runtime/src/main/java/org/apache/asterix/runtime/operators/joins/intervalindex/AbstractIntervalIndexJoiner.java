@@ -48,6 +48,7 @@ public abstract class AbstractIntervalIndexJoiner implements IIndexJoiner {
             return !this.equals(UNKNOWN);
         }
     }
+
     protected final IntervalMergeBranchStatus[] branchStatus;
 
     protected static final int JOIN_PARTITIONS = 2;
@@ -93,16 +94,23 @@ public abstract class AbstractIntervalIndexJoiner implements IIndexJoiner {
             // Still processing frame.
             loaded = TupleStatus.LOADED;
         } else {
-            if (consumerFrames[branch].hasMoreFrames()) {
-                setFrame(branch, consumerFrames[branch].getFrame());
+            if (branchStatus[branch].hasMore() && getNextFrame(branch)) {
                 loaded = TupleStatus.LOADED;
             } else {
                 // No more frames or tuples to process.
-                loaded = TupleStatus.EMPTY;
                 branchStatus[branch].noMore();
+                loaded = TupleStatus.EMPTY;
             }
         }
         return loaded;
+    }
+
+    protected boolean getNextFrame(int branch) throws HyracksDataException {
+        if (consumerFrames[branch].hasMoreFrames()) {
+            setFrame(branch, consumerFrames[branch].getFrame());
+            return true;
+        }
+        return false;
     }
 
     private void setFrame(int branch, ByteBuffer buffer) throws HyracksDataException {
@@ -111,7 +119,6 @@ public abstract class AbstractIntervalIndexJoiner implements IIndexJoiner {
             inputBuffer[branch].resize(buffer.capacity());
         }
         inputBuffer[branch].getBuffer().put(buffer.array(), 0, buffer.capacity());
-//        inputBuffer[branch].getBuffer().put(buffer);
         inputAccessor[branch].reset(inputBuffer[branch].getBuffer());
         inputAccessor[branch].next();
         frameCounts[branch]++;
