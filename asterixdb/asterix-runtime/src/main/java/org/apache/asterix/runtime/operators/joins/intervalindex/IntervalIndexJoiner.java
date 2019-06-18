@@ -84,7 +84,7 @@ public class IntervalIndexJoiner extends AbstractIntervalIndexJoiner {
         this.partition = partition;
         this.memorySize = memorySize;
 
-        this.point = imjcf.isOrderAsc() ? EndPointIndexItem.START_POINT : EndPointIndexItem.END_POINT;
+        this.point = !imjcf.isOrderAsc() ? EndPointIndexItem.START_POINT : EndPointIndexItem.END_POINT;
 
         this.imjc = imjcf.createMergeJoinChecker(leftKeys, rightKeys, ctx);
 
@@ -115,9 +115,9 @@ public class IntervalIndexJoiner extends AbstractIntervalIndexJoiner {
 
         activeManager = new ActiveSweepManager[JOIN_PARTITIONS];
         activeManager[LEFT_PARTITION] = new ActiveSweepManager(bufferManager, leftKey, LEFT_PARTITION,
-                endPointComparator);
+                endPointComparator, point);
         activeManager[RIGHT_PARTITION] = new ActiveSweepManager(bufferManager, rightKey, RIGHT_PARTITION,
-                endPointComparator);
+                endPointComparator, point);
 
         // Run files for both branches
         runFileStream = new RunFileStream[JOIN_PARTITIONS];
@@ -196,15 +196,22 @@ public class IntervalIndexJoiner extends AbstractIntervalIndexJoiner {
         TupleStatus rightTs = loadRightTuple();
         while (checkHasMoreTuples(LEFT_PARTITION) || checkHasMoreTuples(RIGHT_PARTITION)) {
             if (leftTs.isEmpty() || checkToProcessRightTuple()) {
+//                TuplePrinterUtil.printTuple("  >> processing: ", inputAccessor[RIGHT_PARTITION]);
+
                 processRemoveOldTuples(RIGHT_PARTITION, LEFT_PARTITION, rightKey);
                 addToMemoryAndProcessJoin(RIGHT_PARTITION, LEFT_PARTITION, rightKey, imjc.checkToRemoveRightActive(),
                         false, writer);
                 rightTs = loadRightTuple();
             } else {
+//                TuplePrinterUtil.printTuple("  >> processing: ", inputAccessor[LEFT_PARTITION]);
+
                 processRemoveOldTuples(LEFT_PARTITION, RIGHT_PARTITION, leftKey);
                 addToMemoryAndProcessJoin(LEFT_PARTITION, RIGHT_PARTITION, leftKey, imjc.checkToRemoveLeftActive(),
                         true, writer);
                 leftTs = loadLeftTuple();
+            }
+            if (joinComparisonCount > 20000000) {
+                System.err.println("stop");
             }
         }
 
@@ -245,9 +252,6 @@ public class IntervalIndexJoiner extends AbstractIntervalIndexJoiner {
         return !(leftStart <= rightStart);
     }
 
-    private boolean checkToProcessAdd(long startMemory, long endMemory) {
-        return startMemory <= endMemory;
-    }
 
     private TupleStatus processTupleSpill(int active, int passive, int key, boolean removeActive, boolean reversed,
             IFrameWriter writer) throws HyracksDataException {
@@ -288,10 +292,18 @@ public class IntervalIndexJoiner extends AbstractIntervalIndexJoiner {
     private void processRemoveOldTuples(int active, int passive, int key) throws HyracksDataException {
         // Remove from passive that can no longer match with active.
         while (activeManager[passive].hasRecords()
-                && !checkToProcessAdd(IntervalJoinUtil.getIntervalStart(inputAccessor[active], key),
+                && checkToRemove(IntervalJoinUtil.getIntervalStart(inputAccessor[active], key),
                         activeManager[passive].getTopPoint())) {
-            activeManager[passive].removeTop();
+           activeManager[passive].removeTop();
         }
+    }
+
+    private boolean checkToProcessAdd(long startMemory, long endMemory) {
+        return startMemory <= endMemory;
+    }
+
+    private boolean checkToRemove(long startMemory, long endMemory) {
+        return startMemory > endMemory;
     }
 
     private void addToMemoryAndProcessJoin(int active, int passive, int key, boolean removeActive, boolean reversed,
@@ -300,7 +312,7 @@ public class IntervalIndexJoiner extends AbstractIntervalIndexJoiner {
         TuplePointer tp = new TuplePointer();
         if (activeManager[active].addTuple(inputAccessor[active], tp)) {
 
-            //                TuplePrinterUtil.printTuple("  added to memory: ", inputAccessor[active]);
+//            TuplePrinterUtil.printTuple("  added to memory: ", inputAccessor[active]);
 
             processTupleJoin(activeManager[passive].getActiveList(), memoryAccessor[passive], inputAccessor[active],
                     reversed, writer);
@@ -317,8 +329,8 @@ public class IntervalIndexJoiner extends AbstractIntervalIndexJoiner {
         for (TuplePointer outerTp : outer) {
             outerAccessor.reset(outerTp);
 
-            //                        TuplePrinterUtil.printTuple("    outer: ", outerAccessor, outerTp.getTupleIndex());
-            //                        TuplePrinterUtil.printTuple("    inner: ", tupleAccessor);
+//            TuplePrinterUtil.printTuple("    outer: ", outerAccessor, outerTp.getTupleIndex());
+//            TuplePrinterUtil.printTuple("    inner: ", tupleAccessor);
 
             if (imjc.checkToSaveInResult(outerAccessor, outerTp.getTupleIndex(), tupleAccessor,
                     tupleAccessor.getTupleId(), reversed)) {

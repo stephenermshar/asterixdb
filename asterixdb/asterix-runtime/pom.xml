@@ -66,6 +66,11 @@
       <groupId>org.apache.hyracks</groupId>
       <artifactId>hyracks-dataflow-std</artifactId>
     </dependency>
+     <dependency>
+      <groupId>org.apache.hyracks</groupId>
+      <artifactId>hyracks-test-support</artifactId>
+      <scope>test</scope>
+    </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-client</artifactId>
@@ -87,6 +92,11 @@
       <groupId>com.e-movimento.tinytools</groupId>
       <artifactId>privilegedaccessor</artifactId>
       <version>1.2.2</version>
+    </dependency>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <scope>test</scope>
     </dependency>
   </dependencies>
 </project>

@@ -38,6 +38,7 @@ public class ActiveSweepManager {
 
     private final int partition;
     private final int key;
+    private final byte indexPoint;
 
     private final IPartitionedDeletableTupleBufferManager bufferManager;
     private final PriorityQueue<EndPointIndexItem> indexQueue;
@@ -45,23 +46,30 @@ public class ActiveSweepManager {
     private final LinkedList<TuplePointer> active = new LinkedList<>();
 
     public ActiveSweepManager(IPartitionedDeletableTupleBufferManager bufferManager, int key, int joinBranch,
-            Comparator<EndPointIndexItem> endPointComparator) {
+            Comparator<EndPointIndexItem> endPointComparator, byte point) {
         this.bufferManager = bufferManager;
         this.key = key;
         this.partition = joinBranch;
-        indexQueue = new PriorityQueue<>(16, endPointComparator);
+        indexQueue = new PriorityQueue<EndPointIndexItem>(16, endPointComparator);
+        this.indexPoint = point;
     }
 
     public boolean addTuple(ITupleAccessor accessor, TuplePointer tp) throws HyracksDataException {
         if (bufferManager.insertTuple(partition, accessor, accessor.getTupleId(), tp)) {
-            EndPointIndexItem e = new EndPointIndexItem(tp, EndPointIndexItem.END_POINT,
-                    IntervalJoinUtil.getIntervalEnd(accessor, accessor.getTupleId(), key));
+            long point;
+            if (indexPoint == 1) {
+                point = IntervalJoinUtil.getIntervalEnd(accessor, accessor.getTupleId(), key);
+            } else {
+                point = IntervalJoinUtil.getIntervalStart(accessor, accessor.getTupleId(), key);
+            }
+            EndPointIndexItem e = new EndPointIndexItem(tp, indexPoint, point);
             indexQueue.add(e);
             active.add(tp);
             item = indexQueue.peek();
             if (LOGGER.isLoggable(Level.FINE)) {
                 LOGGER.fine("Add to memory (partition: " + partition + " index: " + e + ").");
             }
+            //            System.err.println("Add to memory (partition: " + partition + " index: " + e + ").");
             return true;
         }
         return false;
@@ -72,6 +80,7 @@ public class ActiveSweepManager {
         if (LOGGER.isLoggable(Level.FINE)) {
             LOGGER.fine("Remove top from memory (partition: " + partition + " index: " + item + ").");
         }
+        //        System.err.println("Remove top from memory (partition: " + partition + " index: " + item + ").");
         bufferManager.deleteTuple(partition, item.getTuplePointer());
         active.remove(item.getTuplePointer());
         indexQueue.remove(item);
@@ -79,6 +88,7 @@ public class ActiveSweepManager {
     }
 
     public long getTopPoint() {
+        //        System.err.println("Get top from memory (partition: " + partition + " index: " + item + ").");
         return item.getPoint();
     }
 
