@@ -19,7 +19,7 @@
 package org.apache.hyracks.dataflow.std.join.mergejoin;
 
 import org.apache.hyracks.api.context.IHyracksTaskContext;
-import org.apache.hyracks.api.dataflow.value.IRangePartitionType.RangePartitioningType;
+//import org.apache.hyracks.api.dataflow.value.IRangePartitionType.RangePartitioningType;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 
 import java.io.Serializable;
@@ -29,9 +29,9 @@ public interface IMergeJoinCheckerFactory extends Serializable {
     IMergeJoinChecker createMergeJoinChecker(int[] keys0, int[] keys1, IHyracksTaskContext ctx) throws
             HyracksDataException;
 
-    RangePartitioningType getLeftPartitioningType();
+//    RangePartitioningType getLeftPartitioningType();
 
-    RangePartitioningType getRightPartitioningType();
+//    RangePartitioningType getRightPartitioningType();
 
     boolean isOrderAsc();
 
