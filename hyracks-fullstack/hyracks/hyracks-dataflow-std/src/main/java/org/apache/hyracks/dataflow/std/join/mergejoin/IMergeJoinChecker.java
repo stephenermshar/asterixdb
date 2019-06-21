@@ -70,7 +70,7 @@ public interface IMergeJoinChecker extends Serializable {
     boolean checkToLoadNextRightTuple(ITupleAccessor accessorLeft, ITupleAccessor accessorRight)
             throws HyracksDataException;
 
-    
+
     /**
      * Check to see if the left tuple should continue checking for matches.
      * The check is true if the next left tuple is NOT able match with this right tuple.
