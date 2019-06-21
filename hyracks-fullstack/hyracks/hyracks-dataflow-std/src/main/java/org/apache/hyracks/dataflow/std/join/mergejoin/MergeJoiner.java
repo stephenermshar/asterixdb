@@ -22,8 +22,6 @@ import java.util.LinkedList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.apache.asterix.runtime.operators.joins.IIntervalMergeJoinChecker;
-import org.apache.asterix.runtime.operators.joins.intervalindex.TuplePrinterUtil;
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.comm.IFrameWriter;
 import org.apache.hyracks.api.context.IHyracksTaskContext;
@@ -40,7 +38,7 @@ import org.apache.hyracks.dataflow.std.join.RunFileStream;
 import org.apache.hyracks.dataflow.std.structures.RunFilePointer;
 import org.apache.hyracks.dataflow.std.structures.TuplePointer;
 
-class IntervalSideTuple {
+class SideTuple {
     // Tuple access
     int fieldId;
     ITupleAccessor accessor;
@@ -48,10 +46,10 @@ class IntervalSideTuple {
     int frameIndex = -1;
 
     // Join details
-    final IIntervalMergeJoinChecker imjc;
+    final IMergeJoinChecker mjc;
 
-    public IntervalSideTuple(IIntervalMergeJoinChecker imjc, ITupleAccessor accessor, int fieldId) {
-        this.imjc = imjc;
+    public SideTuple(IMergeJoinChecker mjc, ITupleAccessor accessor, int fieldId) {
+        this.mjc = mjc;
         this.accessor = accessor;
         this.fieldId = fieldId;
     }
@@ -76,16 +74,16 @@ class IntervalSideTuple {
         return accessor;
     }
 
-    public boolean compareJoin(IntervalSideTuple ist) throws HyracksDataException {
-        return imjc.checkToSaveInResult(accessor, tupleIndex, ist.accessor, ist.tupleIndex, false);
+    public boolean compareJoin(SideTuple ist) throws HyracksDataException {
+        return mjc.checkToSaveInResult(accessor, tupleIndex, ist.accessor, ist.tupleIndex, false);
     }
 
-    public boolean addToMemory(IntervalSideTuple ist) throws HyracksDataException {
-        return imjc.checkToSaveInMemory(accessor, tupleIndex, ist.accessor, ist.tupleIndex);
+    public boolean addToMemory(SideTuple ist) throws HyracksDataException {
+        return mjc.checkToSaveInMemory(accessor, tupleIndex, ist.accessor, ist.tupleIndex);
     }
 
-    public boolean removeFromMemory(IntervalSideTuple ist) throws HyracksDataException {
-        return imjc.checkToRemoveInMemory(accessor, tupleIndex, ist.accessor, ist.tupleIndex);
+    public boolean removeFromMemory(SideTuple ist) throws HyracksDataException {
+        return mjc.checkToRemoveInMemory(accessor, tupleIndex, ist.accessor, ist.tupleIndex);
     }
 }
 
@@ -96,9 +94,9 @@ class IntervalSideTuple {
  * The left stream will spill to disk when memory is full.
  * The right stream spills to memory and pause when memory is full.
  */
-public class IntervalMergeJoiner extends AbstractIntervalMergeJoiner {
+public class MergeJoiner extends AbstractMergeJoiner {
 
-    private static final Logger LOGGER = Logger.getLogger(IntervalMergeJoiner.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(MergeJoiner.class.getName());
 
     private final IDeallocatableFramePool framePool;
     private final IDeletableTupleBufferManager bufferManager;
@@ -109,10 +107,10 @@ public class IntervalMergeJoiner extends AbstractIntervalMergeJoiner {
     private final RunFileStream runFileStream;
     private final RunFilePointer runFilePointer;
 
-    private IntervalSideTuple memoryTuple;
-    private IntervalSideTuple[] inputTuple;
+    private SideTuple memoryTuple;
+    private SideTuple[] inputTuple;
 
-    private final IIntervalMergeJoinChecker mjc;
+    private final IMergeJoinChecker mjc;
 
     private long joinComparisonCount = 0;
     private long joinResultCount = 0;
@@ -126,8 +124,8 @@ public class IntervalMergeJoiner extends AbstractIntervalMergeJoiner {
 
     private final boolean DEBUG = false;
 
-    public IntervalMergeJoiner(IHyracksTaskContext ctx, int memorySize, int partition, IntervalMergeStatus status,
-            IntervalMergeJoinLocks locks, IIntervalMergeJoinChecker mjc, int[] leftKeys, int[] rightKeys,
+    public MergeJoiner(IHyracksTaskContext ctx, int memorySize, int partition, MergeStatus status,
+            MergeJoinLocks locks, IMergeJoinChecker mjc, int[] leftKeys, int[] rightKeys,
             RecordDescriptor leftRd, RecordDescriptor rightRd) throws HyracksDataException {
         super(ctx, partition, status, locks, leftRd, rightRd);
         this.mjc = mjc;
@@ -148,15 +146,11 @@ public class IntervalMergeJoiner extends AbstractIntervalMergeJoiner {
         runFileStream = new RunFileStream(ctx, "ismj-left", status.branch[LEFT_PARTITION]);
         runFilePointer = new RunFilePointer();
 
-        memoryTuple = new IntervalSideTuple(mjc, memoryAccessor, rightKeys[0]);
+        memoryTuple = new SideTuple(mjc, memoryAccessor, rightKeys[0]);
 
-        inputTuple = new IntervalSideTuple[JOIN_PARTITIONS];
-        inputTuple[LEFT_PARTITION] = new IntervalSideTuple(mjc, inputAccessor[LEFT_PARTITION], leftKeys[0]);
-        inputTuple[RIGHT_PARTITION] = new IntervalSideTuple(mjc, inputAccessor[RIGHT_PARTITION], rightKeys[0]);
-        //        if (LOGGER.isLoggable(Level.WARNING)) {
-        //            LOGGER.warning(
-        //                    "MergeJoiner has started partition " + partition + " with " + memorySize + " frames of memory.");
-        //        }
+        inputTuple = new SideTuple[JOIN_PARTITIONS];
+        inputTuple[LEFT_PARTITION] = new SideTuple(mjc, inputAccessor[LEFT_PARTITION], leftKeys[0]);
+        inputTuple[RIGHT_PARTITION] = new SideTuple(mjc, inputAccessor[RIGHT_PARTITION], rightKeys[0]);
     }
 
     private boolean addToMemory(ITupleAccessor accessor) throws HyracksDataException {
