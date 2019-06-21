@@ -97,7 +97,7 @@ public class RunFileStream {
             runFileWriter.close();
         }
 
-        runFileWriter = new RunFileWriter(runfile, ctx.getIOManager());
+        runFileWriter = new RunFileWriter(runfile, ctx.getIoManager());
         runFileWriter.open();
         if (LOGGER.isLoggable(Level.FINE)) {
             LOGGER.fine("A new run file has been started (key: " + key + ", number: " + runFileCounter + ", file: "
