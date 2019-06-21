@@ -34,7 +34,7 @@ import org.apache.hyracks.dataflow.std.buffermanager.IDeletableTupleBufferManage
 import org.apache.hyracks.dataflow.std.buffermanager.ITupleAccessor;
 import org.apache.hyracks.dataflow.std.buffermanager.TupleAccessor;
 import org.apache.hyracks.dataflow.std.buffermanager.VariableDeletableTupleMemoryManager;
-import org.apache.hyracks.dataflow.std.join.RunFileStream;
+import org.apache.hyracks.dataflow.std.join.mergejoin.RunFileStream;
 import org.apache.hyracks.dataflow.std.structures.RunFilePointer;
 import org.apache.hyracks.dataflow.std.structures.TuplePointer;
 
