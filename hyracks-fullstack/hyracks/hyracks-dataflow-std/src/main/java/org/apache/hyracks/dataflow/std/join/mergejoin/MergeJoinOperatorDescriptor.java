@@ -240,8 +240,8 @@ public class MergeJoinOperatorDescriptor extends AbstractOperatorDescriptor {
                         }
                     } while (state == null);
                     state.rightRd = rightRd;
-                    state.joiner = new MergeJoiner(ctx, memoryForJoin, partition, state.status, locks, mjc,
-                            state.leftRd, state.rightRd);
+                    state.joiner = new MergeJoiner(ctx, memoryForJoin, partition, state.status, locks, mjc, leftKeys,
+                            rightKeys, state.leftRd, state.rightRd);
                     state.status.branch[RIGHT_ACTIVITY_ID].setStageOpen();
                     locks.getLeft(partition).signal();
                 } catch (InterruptedException e) {
