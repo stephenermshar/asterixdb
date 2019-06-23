@@ -54,7 +54,7 @@ public class IntervalIndexJoinOperatorDescriptor extends AbstractOperatorDescrip
     public IntervalIndexJoinOperatorDescriptor(IOperatorDescriptorRegistry spec, int memoryForJoin, int[] leftKeys,
             int[] rightKeys, RecordDescriptor recordDescriptor, IMergeJoinCheckerFactory imjcf) {
         super(spec, 2, 1);
-        recordDescriptors[0] = recordDescriptor;
+        outRecDescs[0] = recordDescriptor;
         this.leftKeys = leftKeys;
         this.rightKeys = rightKeys;
         this.memoryForJoin = memoryForJoin;
