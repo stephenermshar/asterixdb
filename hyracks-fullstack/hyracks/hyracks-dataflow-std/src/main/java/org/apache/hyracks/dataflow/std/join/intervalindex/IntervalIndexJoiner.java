@@ -59,7 +59,7 @@ public class IntervalIndexJoiner extends AbstractIntervalIndexJoiner {
     private final RunFileStream[] runFileStream;
     private final RunFilePointer[] runFilePointer;
 
-    private final IIntervalMergeJoinChecker imjc;
+    private final IMergeJoinChecker imjc;
 
     private final byte point;
 
@@ -78,7 +78,7 @@ public class IntervalIndexJoiner extends AbstractIntervalIndexJoiner {
     private final int memorySize;
 
     public IntervalIndexJoiner(IHyracksTaskContext ctx, int memorySize, int partition,
-            Comparator<EndPointIndexItem> endPointComparator, IIntervalMergeJoinCheckerFactory imjcf, int[] leftKeys,
+            Comparator<EndPointIndexItem> endPointComparator, IMergeJoinCheckerFactory imjcf, int[] leftKeys,
             int[] rightKeys, IConsumerFrame leftCF, IConsumerFrame rightCF) throws HyracksDataException {
         super(ctx, partition, leftCF, rightCF);
         this.partition = partition;

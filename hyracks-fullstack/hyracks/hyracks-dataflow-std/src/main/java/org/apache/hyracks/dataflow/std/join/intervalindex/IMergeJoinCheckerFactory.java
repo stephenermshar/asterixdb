@@ -31,6 +31,12 @@ public interface IMergeJoinCheckerFactory extends Serializable {
 
     boolean isOrderAsc();
 
-//    RangePartitioningType getRightPartitioningType();
-//    RangePartitioningType getLeftPartitioningType();
+    //    RangePartitioningType getRightPartitioningType();
+    //    RangePartitioningType getLeftPartitioningType();
+
+    // Copied from IIntervalMergeJoinCheckerFactory
+
+    public IMergeJoinChecker createInverseMergeJoinChecker(int[] keys0, int[] keys1, IHyracksTaskContext ctx)
+            throws HyracksDataException;
+
 }
