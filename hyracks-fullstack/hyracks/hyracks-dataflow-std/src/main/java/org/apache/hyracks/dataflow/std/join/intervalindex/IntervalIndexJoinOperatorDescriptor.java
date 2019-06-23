@@ -148,7 +148,7 @@ public class IntervalIndexJoinOperatorDescriptor extends AbstractOperatorDescrip
                     indexJoiner.processJoin(writer);
                 } catch (Exception ex) {
                     writer.fail();
-                    throw new HyracksDataException(ex);
+                    throw new HyracksDataException(ex.getMessage());
                 } finally {
                     writer.close();
                 }
