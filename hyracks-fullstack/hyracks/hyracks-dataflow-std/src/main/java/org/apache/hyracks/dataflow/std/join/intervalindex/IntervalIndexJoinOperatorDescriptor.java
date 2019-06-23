@@ -19,7 +19,6 @@
 
 package org.apache.hyracks.dataflow.std.join.intervalindex;
 
-import org.apache.asterix.runtime.operators.joins.IIntervalMergeJoinCheckerFactory;
 import org.apache.hyracks.api.context.IHyracksTaskContext;
 import org.apache.hyracks.api.dataflow.ActivityId;
 import org.apache.hyracks.api.dataflow.IActivity;
@@ -48,12 +47,12 @@ public class IntervalIndexJoinOperatorDescriptor extends AbstractOperatorDescrip
     private final int[] leftKeys;
     private final int[] rightKeys;
     private final int memoryForJoin;
-    private final IIntervalMergeJoinCheckerFactory imjcf;
+    private final IMergeJoinCheckerFactory imjcf;
 
     private static final Logger LOGGER = Logger.getLogger(IntervalIndexJoinOperatorDescriptor.class.getName());
 
     public IntervalIndexJoinOperatorDescriptor(IOperatorDescriptorRegistry spec, int memoryForJoin, int[] leftKeys,
-            int[] rightKeys, RecordDescriptor recordDescriptor, IIntervalMergeJoinCheckerFactory imjcf) {
+            int[] rightKeys, RecordDescriptor recordDescriptor, IMergeJoinCheckerFactory imjcf) {
         super(spec, 2, 1);
         recordDescriptors[0] = recordDescriptor;
         this.leftKeys = leftKeys;
