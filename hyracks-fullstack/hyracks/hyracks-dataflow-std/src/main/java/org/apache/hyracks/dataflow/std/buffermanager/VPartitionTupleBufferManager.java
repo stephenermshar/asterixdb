@@ -45,12 +45,12 @@ public class VPartitionTupleBufferManager implements IPartitionedTupleBufferMana
         }
     };
 
-    private IDeallocatableFramePool framePool;
-    private IFrameBufferManager[] partitionArray;
-    private int[] numTuples;
+    protected IDeallocatableFramePool framePool;
+    protected IFrameBufferManager[] partitionArray;
+    protected int[] numTuples;
     private final FixedSizeFrame appendFrame;
     private final FixedSizeFrameTupleAppender appender;
-    private BufferInfo tempInfo;
+    protected BufferInfo tempInfo;
     private final IPartitionedMemoryConstrain constrain;
 
     // In case where a frame pool is shared by one or more buffer manager(s), it can be provided from the caller.
