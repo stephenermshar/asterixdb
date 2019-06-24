@@ -200,8 +200,7 @@ public class VPartitionDeletableTupleBufferManager extends VPartitionTupleBuffer
             }
         };
     }
-
-    @Override
+    
     public ITupleAccessor getTupleAccessor(final RecordDescriptor recordDescriptor) {
         return new AbstractTupleAccessor() {
             private DeletableFrameTupleAppender innerAccessor = new DeletableFrameTupleAppender(recordDescriptor);
