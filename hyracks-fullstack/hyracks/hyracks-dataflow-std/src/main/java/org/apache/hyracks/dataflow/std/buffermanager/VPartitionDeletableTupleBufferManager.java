@@ -23,7 +23,7 @@ import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.context.IHyracksFrameMgrContext;
 import org.apache.hyracks.api.dataflow.value.RecordDescriptor;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
-import org.apache.hyracks.dataflow.std.sort.util.AppendDeletableFrameTupleAccessor;
+import org.apache.hyracks.dataflow.std.sort.util.DeletableFrameTupleAppender;
 import org.apache.hyracks.dataflow.std.sort.util.IAppendDeletableFrameTupleAccessor;
 import org.apache.hyracks.dataflow.std.structures.TuplePointer;
 
@@ -43,11 +43,11 @@ public class VPartitionDeletableTupleBufferManager extends VPartitionTupleBuffer
         super(ctx, constrain, partitions, frameLimitInBytes);
         int maxFrames = framePool.getMemoryBudgetBytes() / framePool.getMinFrameSize();
         this.policy = new FrameFreeSlotLastFit[partitions];
-        this.accessor = new AppendDeletableFrameTupleAccessor[partitions];
+        this.accessor = new DeletableFrameTupleAppender[partitions];
         this.minFreeSpace = new int[partitions];
         int i = 0;
         for (RecordDescriptor rd : recordDescriptors) {
-            this.accessor[i] = new AppendDeletableFrameTupleAccessor(rd);
+            this.accessor[i] = new DeletableFrameTupleAppender(rd);
             this.minFreeSpace[i] = calculateMinFreeSpace(rd);
             this.policy[i] = new FrameFreeSlotLastFit(maxFrames);
             ++i;
@@ -185,7 +185,7 @@ public class VPartitionDeletableTupleBufferManager extends VPartitionTupleBuffer
     @Override
     public ITuplePointerAccessor getTuplePointerAccessor(final RecordDescriptor recordDescriptor) {
         return new AbstractTuplePointerAccessor() {
-            private IAppendDeletableFrameTupleAccessor innerAccessor = new AppendDeletableFrameTupleAccessor(
+            private IAppendDeletableFrameTupleAccessor innerAccessor = new DeletableFrameTupleAppender(
                     recordDescriptor);
 
             @Override IFrameTupleAccessor getInnerAccessor() {
@@ -204,7 +204,7 @@ public class VPartitionDeletableTupleBufferManager extends VPartitionTupleBuffer
     @Override
     public ITupleAccessor getTupleAccessor(final RecordDescriptor recordDescriptor) {
         return new AbstractTupleAccessor() {
-            private AppendDeletableFrameTupleAccessor innerAccessor = new AppendDeletableFrameTupleAccessor(recordDescriptor);
+            private DeletableFrameTupleAppender innerAccessor = new DeletableFrameTupleAppender(recordDescriptor);
 
             @Override IFrameTupleAccessor getInnerAccessor() {
                 return innerAccessor;
