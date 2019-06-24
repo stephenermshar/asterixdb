@@ -29,7 +29,7 @@ import org.apache.hyracks.dataflow.std.buffermanager.TupleAccessor;
 
 import java.nio.ByteBuffer;
 
-public abstract class AbstractMergeJoiner implements IIndexJoiner {
+public abstract class AbstractMergeJoiner implements IMergeJoiner {
 
     public enum TupleStatus {
         UNKNOWN,
