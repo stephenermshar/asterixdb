@@ -175,19 +175,19 @@ public class VPartitionTupleBufferManager implements IPartitionedTupleBufferMana
         return FrameHelper.calcRequiredSpace(0, size);
     }
 
-    private int makeGroupFrameId(int partition, int fid) {
+    protected int makeGroupFrameId(int partition, int fid) {
         return fid * getNumPartitions() + partition;
     }
 
-    private int parsePartitionId(int externalFrameId) {
+    protected int parsePartitionId(int externalFrameId) {
         return externalFrameId % getNumPartitions();
     }
 
-    private int parseFrameIdInPartition(int externalFrameId) {
+    protected int parseFrameIdInPartition(int externalFrameId) {
         return externalFrameId / getNumPartitions();
     }
 
-    private int createNewBuffer(int partition, int size) throws HyracksDataException {
+    protected int createNewBuffer(int partition, int size) throws HyracksDataException {
         ByteBuffer newBuffer = requestNewBufferFromPool(size);
         if (newBuffer == null) {
             return -1;
