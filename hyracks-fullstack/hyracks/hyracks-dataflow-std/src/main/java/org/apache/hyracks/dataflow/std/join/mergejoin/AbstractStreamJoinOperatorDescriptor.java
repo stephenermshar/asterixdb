@@ -19,7 +19,6 @@
 
 package org.apache.hyracks.dataflow.std.join.mergejoin;
 
-import org.apache.asterix.runtime.operators.joins.IIntervalMergeJoinCheckerFactory;
 import org.apache.hyracks.api.context.IHyracksTaskContext;
 import org.apache.hyracks.api.dataflow.ActivityId;
 import org.apache.hyracks.api.dataflow.IActivity;
@@ -39,7 +38,7 @@ import java.nio.ByteBuffer;
 import java.util.Comparator;
 import java.util.logging.Logger;
 
-public class IntervalIndexJoinOperatorDescriptor extends AbstractOperatorDescriptor {
+public class AbstractStreamJoinOperatorDescriptor extends AbstractOperatorDescriptor {
     private static final long serialVersionUID = 1L;
 
     private static final int LEFT_ACTIVITY_ID = 0;
@@ -48,18 +47,16 @@ public class IntervalIndexJoinOperatorDescriptor extends AbstractOperatorDescrip
     private final int[] leftKeys;
     private final int[] rightKeys;
     private final int memoryForJoin;
-    private final IIntervalMergeJoinCheckerFactory imjcf;
 
-    private static final Logger LOGGER = Logger.getLogger(IntervalIndexJoinOperatorDescriptor.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(AbstractStreamJoinOperatorDescriptor.class.getName());
 
-    public IntervalIndexJoinOperatorDescriptor(IOperatorDescriptorRegistry spec, int memoryForJoin, int[] leftKeys,
-            int[] rightKeys, RecordDescriptor recordDescriptor, IIntervalMergeJoinCheckerFactory imjcf) {
+    public AbstractStreamJoinOperatorDescriptor(IOperatorDescriptorRegistry spec, int memoryForJoin, int[] leftKeys,
+            int[] rightKeys, RecordDescriptor recordDescriptor) {
         super(spec, 2, 1);
-        recordDescriptors[0] = recordDescriptor;
+        outRecDescs[0] = recordDescriptor;
         this.leftKeys = leftKeys;
         this.rightKeys = rightKeys;
         this.memoryForJoin = memoryForJoin;
-        this.imjcf = imjcf;
     }
 
     @Override
@@ -136,20 +133,14 @@ public class IntervalIndexJoinOperatorDescriptor extends AbstractOperatorDescrip
                     rightState = (ProducerConsumerFrameState) ctx.getStateObject(new TaskId(dataIds[1], partition));
                 } while (rightState == null);
 
-                byte point = imjcf.isOrderAsc() ? EndPointIndexItem.START_POINT : EndPointIndexItem.END_POINT;
-                Comparator<EndPointIndexItem> endPointComparator = imjcf.isOrderAsc()
-                        ? EndPointIndexItem.EndPointAscComparator
-                        : EndPointIndexItem.EndPointDescComparator;
-
                 try {
                     writer.open();
-                    IIndexJoiner indexJoiner = new IntervalIndexJoiner(ctx, memoryForJoin, partition,
-                            endPointComparator, imjcf, leftKeys, rightKeys, (IConsumerFrame) leftState,
-                            (IConsumerFrame) rightState);
-                    indexJoiner.processJoin(writer);
+                    IMergeJoiner mergeJoiner = new MergeJoiner(ctx, memoryForJoin, partition, leftKeys, rightKeys,
+                            (IConsumerFrame) leftState, (IConsumerFrame) rightState);
+                    mergeJoiner.processJoin(writer);
                 } catch (Exception ex) {
                     writer.fail();
-                    throw new HyracksDataException(ex);
+                    throw new HyracksDataException(ex.getMessage());
                 } finally {
                     writer.close();
                 }
