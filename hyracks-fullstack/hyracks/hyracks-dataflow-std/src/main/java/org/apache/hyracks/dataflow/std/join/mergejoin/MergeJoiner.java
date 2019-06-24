@@ -46,7 +46,7 @@ import java.util.logging.Logger;
  */
 public class MergeJoiner extends AbstractMergeJoiner {
 
-    private static final Logger LOGGER = Logger.getLogger(IntervalIndexJoiner.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(MergeJoiner.class.getName());
 
     private final IPartitionedDeletableTupleBufferManager bufferManager;
 

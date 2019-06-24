@@ -18,14 +18,11 @@
  */
 package org.apache.hyracks.dataflow.std.join.mergejoin;
 
-import org.apache.asterix.runtime.operators.joins.intervalmergejoin.IntervalMergeBranchStatus;
 import org.apache.hyracks.api.comm.IFrame;
 import org.apache.hyracks.api.comm.VSizeFrame;
 import org.apache.hyracks.api.context.IHyracksTaskContext;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.dataflow.common.comm.io.FrameTupleAppender;
-import org.apache.hyracks.dataflow.std.buffermanager.ITupleAccessor;
-import org.apache.hyracks.dataflow.std.buffermanager.TupleAccessor;
 
 import java.nio.ByteBuffer;
 
@@ -49,7 +46,7 @@ public abstract class AbstractMergeJoiner implements IMergeJoiner {
         }
     }
 
-    protected final IntervalMergeBranchStatus[] branchStatus;
+    protected final MergeBranchStatus[] branchStatus;
 
     protected static final int JOIN_PARTITIONS = 2;
     protected static final int LEFT_PARTITION = 0;
@@ -76,9 +73,9 @@ public abstract class AbstractMergeJoiner implements IMergeJoiner {
         inputBuffer[LEFT_PARTITION] = new VSizeFrame(ctx);
         inputBuffer[RIGHT_PARTITION] = new VSizeFrame(ctx);
 
-        branchStatus = new IntervalMergeBranchStatus[JOIN_PARTITIONS];
-        branchStatus[LEFT_PARTITION] = new IntervalMergeBranchStatus();
-        branchStatus[RIGHT_PARTITION] = new IntervalMergeBranchStatus();
+        branchStatus = new MergeBranchStatus[JOIN_PARTITIONS];
+        branchStatus[LEFT_PARTITION] = new MergeBranchStatus();
+        branchStatus[RIGHT_PARTITION] = new MergeBranchStatus();
 
         consumerFrames = new IConsumerFrame[JOIN_PARTITIONS];
         consumerFrames[LEFT_PARTITION] = leftCF;
