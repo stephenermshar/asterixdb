@@ -27,6 +27,7 @@ import org.apache.hyracks.dataflow.common.comm.util.FrameUtils;
 import org.apache.hyracks.dataflow.std.buffermanager.IPartitionedDeletableTupleBufferManager;
 import org.apache.hyracks.dataflow.std.buffermanager.ITupleAccessor;
 import org.apache.hyracks.dataflow.std.buffermanager.TupleAccessor;
+import org.apache.hyracks.dataflow.std.buffermanager.VPartitionDeletableTupleBufferManager;
 import org.apache.hyracks.dataflow.std.structures.TuplePointer;
 
 import java.util.Comparator;
