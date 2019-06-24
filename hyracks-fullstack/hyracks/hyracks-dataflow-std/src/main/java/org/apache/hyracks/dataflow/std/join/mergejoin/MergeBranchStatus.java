@@ -18,8 +18,6 @@
  */
 package org.apache.hyracks.dataflow.std.join.mergejoin;
 
-import org.apache.hyracks.dataflow.std.join.IRunFileStreamStatus;
-
 import java.io.Serializable;
 
 public class MergeBranchStatus implements IRunFileStreamStatus, Serializable {
