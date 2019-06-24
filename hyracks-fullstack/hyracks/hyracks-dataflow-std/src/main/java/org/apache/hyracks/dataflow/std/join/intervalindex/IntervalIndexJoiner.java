@@ -18,9 +18,6 @@
  */
 package org.apache.hyracks.dataflow.std.join.intervalindex;
 
-import org.apache.asterix.runtime.operators.joins.IIntervalMergeJoinChecker;
-import org.apache.asterix.runtime.operators.joins.IIntervalMergeJoinCheckerFactory;
-import org.apache.asterix.runtime.operators.joins.IntervalJoinUtil;
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.comm.IFrameWriter;
 import org.apache.hyracks.api.context.IHyracksTaskContext;
@@ -31,7 +28,6 @@ import org.apache.hyracks.dataflow.std.buffermanager.IPartitionedDeletableTupleB
 import org.apache.hyracks.dataflow.std.buffermanager.ITupleAccessor;
 import org.apache.hyracks.dataflow.std.buffermanager.TupleAccessor;
 import org.apache.hyracks.dataflow.std.buffermanager.VPartitionDeletableTupleBufferManager;
-import org.apache.hyracks.dataflow.std.join.RunFileStream;
 import org.apache.hyracks.dataflow.std.structures.RunFilePointer;
 import org.apache.hyracks.dataflow.std.structures.TuplePointer;
 
