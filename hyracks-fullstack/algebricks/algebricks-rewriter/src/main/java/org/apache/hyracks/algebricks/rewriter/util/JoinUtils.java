@@ -28,8 +28,10 @@ import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
 import org.apache.hyracks.algebricks.core.algebra.base.ILogicalExpression;
 import org.apache.hyracks.algebricks.core.algebra.base.ILogicalOperator;
 import org.apache.hyracks.algebricks.core.algebra.base.IOptimizationContext;
+import org.apache.hyracks.algebricks.core.algebra.base.IPhysicalOperator;
 import org.apache.hyracks.algebricks.core.algebra.base.LogicalExpressionTag;
 import org.apache.hyracks.algebricks.core.algebra.base.LogicalVariable;
+import org.apache.hyracks.algebricks.core.algebra.base.PhysicalOperatorTag;
 import org.apache.hyracks.algebricks.core.algebra.expressions.AbstractFunctionCallExpression;
 import org.apache.hyracks.algebricks.core.algebra.expressions.BroadcastExpressionAnnotation;
 import org.apache.hyracks.algebricks.core.algebra.expressions.BroadcastExpressionAnnotation.BroadcastSide;
@@ -39,10 +41,12 @@ import org.apache.hyracks.algebricks.core.algebra.functions.AlgebricksBuiltinFun
 import org.apache.hyracks.algebricks.core.algebra.functions.AlgebricksBuiltinFunctions.ComparisonKind;
 import org.apache.hyracks.algebricks.core.algebra.functions.FunctionIdentifier;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.AbstractBinaryJoinOperator;
+import org.apache.hyracks.algebricks.core.algebra.operators.logical.InnerJoinOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.visitors.LogicalPropertiesVisitor;
 import org.apache.hyracks.algebricks.core.algebra.operators.physical.AbstractJoinPOperator.JoinPartitioningType;
 import org.apache.hyracks.algebricks.core.algebra.operators.physical.HybridHashJoinPOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.physical.InMemoryHashJoinPOperator;
+import org.apache.hyracks.algebricks.core.algebra.operators.physical.MergeJoinPOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.physical.NestedLoopJoinPOperator;
 import org.apache.hyracks.algebricks.core.algebra.properties.ILogicalPropertiesVector;
 import org.apache.hyracks.algebricks.core.config.AlgebricksConfig;
@@ -60,7 +64,8 @@ public class JoinUtils {
         List<LogicalVariable> sideRight = new LinkedList<>();
         List<LogicalVariable> varsLeft = op.getInputs().get(0).getValue().getSchema();
         List<LogicalVariable> varsRight = op.getInputs().get(1).getValue().getSchema();
-        if (isHashJoinCondition(op.getCondition().getValue(), varsLeft, varsRight, sideLeft, sideRight)) {
+        // (Stephen) temporarily force this branch to MergeJoin
+        if (false && isHashJoinCondition(op.getCondition().getValue(), varsLeft, varsRight, sideLeft, sideRight)) {
             BroadcastSide side = getBroadcastJoinSide(op.getCondition().getValue(), varsLeft, varsRight);
             if (side == null) {
                 setHashJoinOp(op, JoinPartitioningType.PAIRWISE, sideLeft, sideRight, context);
@@ -86,6 +91,9 @@ public class JoinUtils {
                         throw new IllegalStateException(side.toString());
                 }
             }
+        // (Stephen) temporarily force this branch to MergeJoin
+        } else if (true) {
+            setMergeJoinOp(op, context);
         } else {
             setNestedLoopJoinOp(op);
         }
@@ -101,6 +109,23 @@ public class JoinUtils {
                 context.getPhysicalOptimizationConfig().getMaxFramesForJoinLeftInput(),
                 context.getPhysicalOptimizationConfig().getMaxRecordsPerFrame(),
                 context.getPhysicalOptimizationConfig().getFudgeFactor()));
+    }
+
+    private static void setMergeJoinOp(AbstractBinaryJoinOperator op, IOptimizationContext context) {
+        // (Stephen) copied from IntervalSplitPartitioningRule in the interval_join_symmetric branch
+        InnerJoinOperator ijo = (InnerJoinOperator) op;
+        InnerJoinOperator ijoClone = new InnerJoinOperator(ijo.getCondition());
+        int memoryJoinSize = context.getPhysicalOptimizationConfig().getMaxFramesForJoin();
+        IPhysicalOperator joinPo = ijo.getPhysicalOperator();
+        if (joinPo.getOperatorTag() == PhysicalOperatorTag.MERGE_JOIN) {
+            MergeJoinPOperator mjpo = (MergeJoinPOperator) joinPo;
+            MergeJoinPOperator mjpoClone =
+                    new MergeJoinPOperator(mjpo.getKind(), mjpo.getPartitioningType(), mjpo.getKeysLeftBranch(), mjpo.getKeysRightBranch(), memoryJoinSize,
+                            mjpo.getMergeJoinCheckerFactory(), mjpo.getLeftRangeId(), mjpo.getRightRangeId(), mjpo.getRangeMapHint());
+            ijoClone.setPhysicalOperator(mjpoClone);
+        } else {
+            throw new java.lang.Error("(Stephen) the Merge Join Operator did not receive a MERGE_JOIN Physical Operator Tag.");
+        }
     }
 
     public static boolean hybridToInMemHashJoin(AbstractBinaryJoinOperator op, IOptimizationContext context)
