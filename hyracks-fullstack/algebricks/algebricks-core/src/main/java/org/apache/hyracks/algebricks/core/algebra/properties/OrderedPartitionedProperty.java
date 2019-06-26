@@ -25,15 +25,33 @@ import java.util.Map;
 
 import org.apache.hyracks.algebricks.core.algebra.base.EquivalenceClass;
 import org.apache.hyracks.algebricks.core.algebra.base.LogicalVariable;
+import org.apache.hyracks.api.dataflow.value.IRangeMap;
+import org.apache.hyracks.api.dataflow.value.IRangePartitionType;
+import org.apache.hyracks.dataflow.std.base.RangeId;
 
 public class OrderedPartitionedProperty implements IPartitioningProperty {
 
-    private final List<OrderColumn> orderColumns;
+    private List<OrderColumn> orderColumns;
     private INodeDomain domain;
+    private RangeId rangeId;
+    private IRangePartitionType.RangePartitioningType rangeType;
+    private IRangeMap rangeMapHint;
 
-    public OrderedPartitionedProperty(List<OrderColumn> orderColumns, INodeDomain domain) {
+    public OrderedPartitionedProperty(List<OrderColumn> orderColumns, INodeDomain domain, RangeId rangeId,
+            IRangePartitionType.RangePartitioningType rangeType, IRangeMap rangeMapHint) {
         this.domain = domain;
         this.orderColumns = orderColumns;
+        this.rangeId = rangeId;
+        this.rangeType = rangeType;
+        this.rangeMapHint = rangeMapHint;
+    }
+
+    public OrderedPartitionedProperty(List<OrderColumn> orderColumns, INodeDomain domain, RangeId rangeId) {
+        this(orderColumns, domain, rangeId, IRangePartitionType.RangePartitioningType.PROJECT, null);
+    }
+
+    public OrderedPartitionedProperty(List<OrderColumn> orderColumns, INodeDomain domain) {
+        this(orderColumns, domain, null);
     }
 
     public List<OrderColumn> getOrderColumns() {
