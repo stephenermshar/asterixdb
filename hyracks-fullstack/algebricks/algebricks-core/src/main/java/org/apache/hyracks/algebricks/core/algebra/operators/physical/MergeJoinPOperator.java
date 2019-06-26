@@ -18,6 +18,10 @@
  */
 package org.apache.hyracks.algebricks.core.algebra.operators.physical;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.logging.Logger;
+
 import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
 import org.apache.hyracks.algebricks.core.algebra.base.IHyracksJobBuilder;
 import org.apache.hyracks.algebricks.core.algebra.base.ILogicalOperator;
@@ -46,10 +50,6 @@ import org.apache.hyracks.api.job.IOperatorDescriptorRegistry;
 import org.apache.hyracks.dataflow.std.base.RangeId;
 import org.apache.hyracks.dataflow.std.join.IMergeJoinCheckerFactory;
 import org.apache.hyracks.dataflow.std.join.MergeJoinOperatorDescriptor;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.logging.Logger;
 
 public class MergeJoinPOperator extends AbstractJoinPOperator {
 
@@ -121,8 +121,8 @@ public class MergeJoinPOperator extends AbstractJoinPOperator {
         for (LogicalVariable v : keysLeftBranch) {
             order.add(new OrderColumn(v, mjcf.isOrderAsc() ? OrderKind.ASC : OrderKind.DESC));
         }
-        IPartitioningProperty pp = new OrderedPartitionedProperty(order, null, leftRangeId,
-                RangePartitioningType.PROJECT, rangeMapHint);
+        IPartitioningProperty pp =
+                new OrderedPartitionedProperty(order, null, leftRangeId, RangePartitioningType.PROJECT, rangeMapHint);
         List<ILocalStructuralProperty> propsLocal = new ArrayList<>();
         propsLocal.add(new LocalOrderProperty(order));
         deliveredProperties = new StructuralPropertiesVector(pp, propsLocal);
@@ -172,11 +172,11 @@ public class MergeJoinPOperator extends AbstractJoinPOperator {
         int[] keysRight = JobGenHelper.variablesToFieldIndexes(keysRightBranch, inputSchemas[1]);
 
         IOperatorDescriptorRegistry spec = builder.getJobSpec();
-        RecordDescriptor recordDescriptor = JobGenHelper.mkRecordDescriptor(context.getTypeEnvironment(op), opSchema,
-                context);
+        RecordDescriptor recordDescriptor =
+                JobGenHelper.mkRecordDescriptor(context.getTypeEnvironment(op), opSchema, context);
 
-        MergeJoinOperatorDescriptor opDesc = new MergeJoinOperatorDescriptor(spec, memSizeInFrames, recordDescriptor,
-                keysLeft, keysRight, mjcf);
+        MergeJoinOperatorDescriptor opDesc =
+                new MergeJoinOperatorDescriptor(spec, memSizeInFrames, recordDescriptor, keysLeft, keysRight, mjcf);
         contributeOpDesc(builder, (AbstractLogicalOperator) op, opDesc);
 
         ILogicalOperator src1 = op.getInputs().get(0).getValue();
