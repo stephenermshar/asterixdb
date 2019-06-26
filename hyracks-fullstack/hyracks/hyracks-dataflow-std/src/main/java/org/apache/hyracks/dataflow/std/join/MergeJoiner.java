@@ -18,6 +18,10 @@
  */
 package org.apache.hyracks.dataflow.std.join;
 
+import java.util.LinkedList;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.comm.IFrameWriter;
 import org.apache.hyracks.api.context.IHyracksTaskContext;
@@ -32,10 +36,6 @@ import org.apache.hyracks.dataflow.std.buffermanager.TupleAccessor;
 import org.apache.hyracks.dataflow.std.buffermanager.VariableDeletableTupleMemoryManager;
 import org.apache.hyracks.dataflow.std.structures.RunFilePointer;
 import org.apache.hyracks.dataflow.std.structures.TuplePointer;
-
-import java.util.LinkedList;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * Merge Joiner takes two sorted streams of input and joins.
@@ -202,9 +202,9 @@ public class MergeJoiner extends AbstractMergeJoiner {
         processLeftFrame(writer);
         resultAppender.write(writer, true);
 
-//        System.err.println(",MergeJoiner Statistics Log," + partition + ",partition," + memorySize + ",memory,"
-//                + tupleCounts[LEFT_PARTITION] + ",left tuples," + tupleCounts[RIGHT_PARTITION] + ",right tuples,"
-//                + frameCounts[LEFT_PARTITION] + ",left frames," + frameCounts[RIGHT_PARTITION] + ",right frames");
+        //        System.err.println(",MergeJoiner Statistics Log," + partition + ",partition," + memorySize + ",memory,"
+        //                + tupleCounts[LEFT_PARTITION] + ",left tuples," + tupleCounts[RIGHT_PARTITION] + ",right tuples,"
+        //                + frameCounts[LEFT_PARTITION] + ",left frames," + frameCounts[RIGHT_PARTITION] + ",right frames");
         if (LOGGER.isLoggable(Level.WARNING)) {
             long ioCost = runFileStream.getWriteCount() + runFileStream.getReadCount();
             LOGGER.warning(",MergeJoiner Statistics Log," + partition + ",partition," + memorySize + ",memory,"

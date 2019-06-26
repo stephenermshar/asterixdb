@@ -18,11 +18,11 @@
  */
 package org.apache.hyracks.dataflow.std.join;
 
+import java.io.Serializable;
+
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.dataflow.std.buffermanager.ITupleAccessor;
-
-import java.io.Serializable;
 
 public interface IMergeJoinChecker extends Serializable {
 
@@ -70,7 +70,6 @@ public interface IMergeJoinChecker extends Serializable {
     boolean checkToLoadNextRightTuple(ITupleAccessor accessorLeft, ITupleAccessor accessorRight)
             throws HyracksDataException;
 
-    
     /**
      * Check to see if the left tuple should continue checking for matches.
      * The check is true if the next left tuple is NOT able match with this right tuple.
@@ -80,8 +79,7 @@ public interface IMergeJoinChecker extends Serializable {
      * @return boolean
      * @throws HyracksDataException
      */
-    boolean checkIfMoreMatches(ITupleAccessor accessorLeft, ITupleAccessor accessorRight)
-            throws HyracksDataException;
+    boolean checkIfMoreMatches(ITupleAccessor accessorLeft, ITupleAccessor accessorRight) throws HyracksDataException;
 
     boolean checkIfMoreMatches(IFrameTupleAccessor accessorLeft, int leftTupleIndex, IFrameTupleAccessor accessorRight,
             int rightTupleIndex) throws HyracksDataException;

@@ -19,10 +19,10 @@
 
 package org.apache.hyracks.dataflow.std.buffermanager;
 
+import java.nio.ByteBuffer;
+
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.dataflow.std.structures.TuplePointer;
-
-import java.nio.ByteBuffer;
 
 public abstract class AbstractTupleAccessor implements ITupleAccessor {
     public static final int UNSET = -2;
@@ -35,6 +35,7 @@ public abstract class AbstractTupleAccessor implements ITupleAccessor {
     abstract IFrameTupleAccessor getInnerAccessor();
 
     abstract void resetInnerAccessor(int frameId);
+
     abstract void resetInnerAccessor(TuplePointer tp);
 
     abstract int getFrameCount();
@@ -119,7 +120,6 @@ public abstract class AbstractTupleAccessor implements ITupleAccessor {
         resetInnerAccessor(tuplePointer.getFrameIndex());
     }
 
-    
     @Override
     public void reset(ByteBuffer buffer) {
         throw new IllegalAccessError("Should never call this reset");

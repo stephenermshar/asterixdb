@@ -18,6 +18,8 @@
  */
 package org.apache.hyracks.dataflow.std.join;
 
+import java.nio.ByteBuffer;
+
 import org.apache.hyracks.api.context.IHyracksTaskContext;
 import org.apache.hyracks.api.dataflow.ActivityId;
 import org.apache.hyracks.api.dataflow.IActivity;
@@ -33,8 +35,6 @@ import org.apache.hyracks.dataflow.std.base.AbstractOperatorDescriptor;
 import org.apache.hyracks.dataflow.std.base.AbstractUnaryInputSinkOperatorNodePushable;
 import org.apache.hyracks.dataflow.std.base.AbstractUnaryInputUnaryOutputOperatorNodePushable;
 import org.apache.hyracks.dataflow.std.join.MergeBranchStatus.Stage;
-
-import java.nio.ByteBuffer;
 
 /**
  * The merge join is made up of two operators: left and right.
@@ -183,7 +183,7 @@ public class MergeJoinOperatorDescriptor extends AbstractOperatorDescriptor {
                 } finally {
                     locks.getLock(partition).unlock();
                 }
-//                System.err.println("Left next calls: " + count);
+                //                System.err.println("Left next calls: " + count);
             }
         }
     }
@@ -295,7 +295,7 @@ public class MergeJoinOperatorDescriptor extends AbstractOperatorDescriptor {
                 } finally {
                     locks.getLock(partition).unlock();
                 }
-//                System.err.println("Right next calls: " + count);
+                //                System.err.println("Right next calls: " + count);
             }
         }
     }

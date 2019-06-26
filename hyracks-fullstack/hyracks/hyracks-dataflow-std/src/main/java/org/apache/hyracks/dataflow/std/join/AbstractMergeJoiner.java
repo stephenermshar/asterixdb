@@ -18,6 +18,8 @@
  */
 package org.apache.hyracks.dataflow.std.join;
 
+import java.nio.ByteBuffer;
+
 import org.apache.hyracks.api.comm.IFrame;
 import org.apache.hyracks.api.comm.VSizeFrame;
 import org.apache.hyracks.api.context.IHyracksTaskContext;
@@ -27,8 +29,6 @@ import org.apache.hyracks.dataflow.common.comm.io.FrameTupleAppender;
 import org.apache.hyracks.dataflow.std.buffermanager.ITupleAccessor;
 import org.apache.hyracks.dataflow.std.buffermanager.TupleAccessor;
 import org.apache.hyracks.dataflow.std.join.MergeBranchStatus.Stage;
-
-import java.nio.ByteBuffer;
 
 public abstract class AbstractMergeJoiner implements IMergeJoiner {
 

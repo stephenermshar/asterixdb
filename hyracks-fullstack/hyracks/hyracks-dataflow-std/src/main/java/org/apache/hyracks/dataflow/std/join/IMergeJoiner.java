@@ -18,10 +18,10 @@
  */
 package org.apache.hyracks.dataflow.std.join;
 
+import java.nio.ByteBuffer;
+
 import org.apache.hyracks.api.comm.IFrameWriter;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
-
-import java.nio.ByteBuffer;
 
 public interface IMergeJoiner {
 

@@ -19,10 +19,10 @@
 
 package org.apache.hyracks.dataflow.std.buffermanager;
 
+import java.nio.ByteBuffer;
+
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.dataflow.std.structures.TuplePointer;
-
-import java.nio.ByteBuffer;
 
 // TODO determine correct interface.
 public interface ITupleAccessor extends IFrameTupleAccessor {
@@ -45,9 +45,9 @@ public interface ITupleAccessor extends IFrameTupleAccessor {
     int getFieldEndOffset(int fieldId);
 
     int getFieldStartOffset(int fieldId);
-    
+
     void reset(TuplePointer tuplePointer);
-    
+
     @Override
     void reset(ByteBuffer buffer);
 

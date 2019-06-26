@@ -18,11 +18,11 @@
  */
 package org.apache.hyracks.dataflow.std.buffermanager;
 
+import java.nio.ByteBuffer;
+
 import org.apache.hyracks.api.dataflow.value.RecordDescriptor;
 import org.apache.hyracks.dataflow.common.comm.io.FrameTupleAccessor;
 import org.apache.hyracks.dataflow.std.structures.TuplePointer;
-
-import java.nio.ByteBuffer;
 
 public class TupleAccessor extends FrameTupleAccessor implements ITupleAccessor {
     public static final int UNSET = -2;
@@ -38,6 +38,7 @@ public class TupleAccessor extends FrameTupleAccessor implements ITupleAccessor 
         reset(buffer, 0, buffer.limit());
         tupleId = INITIALIZED;
     }
+
     public void reset(TuplePointer tp) {
         throw new IllegalAccessError("Should never call this reset");
     }

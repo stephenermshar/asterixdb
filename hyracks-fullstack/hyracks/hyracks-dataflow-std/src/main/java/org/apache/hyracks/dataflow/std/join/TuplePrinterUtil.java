@@ -18,11 +18,11 @@
  */
 package org.apache.hyracks.dataflow.std.join;
 
+import java.util.Arrays;
+
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.dataflow.std.buffermanager.ITupleAccessor;
-
-import java.util.Arrays;
 
 public class TuplePrinterUtil {
 
