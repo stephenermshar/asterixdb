@@ -64,8 +64,8 @@ public class JoinUtils {
         List<LogicalVariable> sideRight = new LinkedList<>();
         List<LogicalVariable> varsLeft = op.getInputs().get(0).getValue().getSchema();
         List<LogicalVariable> varsRight = op.getInputs().get(1).getValue().getSchema();
-        // (Stephen) temporarily force this branch to MergeJoin
         if (false && isHashJoinCondition(op.getCondition().getValue(), varsLeft, varsRight, sideLeft, sideRight)) {
+            // (Stephen) temporarily force this branch to MergeJoin
             BroadcastSide side = getBroadcastJoinSide(op.getCondition().getValue(), varsLeft, varsRight);
             if (side == null) {
                 setHashJoinOp(op, JoinPartitioningType.PAIRWISE, sideLeft, sideRight, context);
@@ -91,8 +91,8 @@ public class JoinUtils {
                         throw new IllegalStateException(side.toString());
                 }
             }
-        // (Stephen) temporarily force this branch to MergeJoin
         } else if (true) {
+            // (Stephen) temporarily force this branch to MergeJoin
             setMergeJoinOp(op, context);
         } else {
             setNestedLoopJoinOp(op);
@@ -113,6 +113,9 @@ public class JoinUtils {
 
     private static void setMergeJoinOp(AbstractBinaryJoinOperator op, IOptimizationContext context) {
         // (Stephen) copied from IntervalSplitPartitioningRule in the interval_join_symmetric branch
+
+        // (Stephen) copy structure from other set join operator, could build manual parameters (like range) for testing
+
         InnerJoinOperator ijo = (InnerJoinOperator) op;
         InnerJoinOperator ijoClone = new InnerJoinOperator(ijo.getCondition());
         int memoryJoinSize = context.getPhysicalOptimizationConfig().getMaxFramesForJoin();
@@ -120,11 +123,14 @@ public class JoinUtils {
         if (joinPo.getOperatorTag() == PhysicalOperatorTag.MERGE_JOIN) {
             MergeJoinPOperator mjpo = (MergeJoinPOperator) joinPo;
             MergeJoinPOperator mjpoClone =
-                    new MergeJoinPOperator(mjpo.getKind(), mjpo.getPartitioningType(), mjpo.getKeysLeftBranch(), mjpo.getKeysRightBranch(), memoryJoinSize,
-                            mjpo.getMergeJoinCheckerFactory(), mjpo.getLeftRangeId(), mjpo.getRightRangeId(), mjpo.getRangeMapHint());
+                    new MergeJoinPOperator(mjpo.getKind(), mjpo.getPartitioningType(), mjpo.getKeysLeftBranch(),
+                            mjpo.getKeysRightBranch(), memoryJoinSize, mjpo.getMergeJoinCheckerFactory(),
+                            mjpo.getLeftRangeId(), mjpo.getRightRangeId(), mjpo.getRangeMapHint());
             ijoClone.setPhysicalOperator(mjpoClone);
+//            op.setPhysicalOperator(new MergeJoinPOperator(op.getJoinKind(), ));
         } else {
-            throw new java.lang.Error("(Stephen) the Merge Join Operator did not receive a MERGE_JOIN Physical Operator Tag.");
+            throw new java.lang.Error(
+                    "(Stephen) the Merge Join Operator did not receive a MERGE_JOIN Physical Operator Tag.");
         }
     }
 
