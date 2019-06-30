@@ -17,15 +17,13 @@
  ! under the License.
  !-->
 <!DOCTYPE test-suite [
+  <!ENTITY ObjectsQueries SYSTEM "queries_sqlpp/objects/ObjectsQueries.xml">
   <!ENTITY AsyncDeferredQueries SYSTEM "queries_sqlpp/async-deferred/AsyncDeferredQueries.xml">
   <!ENTITY GeoQueries SYSTEM "queries_sqlpp/geojson/GeoJSONQueries.xml">
-  <!ENTITY MergeJoinQueries SYSTEM "queries_sqlpp/merge_join/MergeJoinQueries.xml">
-  <!ENTITY ObjectsQueries SYSTEM "queries_sqlpp/objects/ObjectsQueries.xml">
   <!ENTITY TemporalQueries SYSTEM "queries_sqlpp/temporal/TemporalQueries.xml">
 ]>
 <test-suite xmlns="urn:xml.testframework.asterix.apache.org" ResultOffsetPath="results" QueryOffsetPath="queries_sqlpp" QueryFileExtension=".sqlpp" SourceLocation="true">
   &AsyncDeferredQueries;
-  &MergeJoinQueries;
   &TemporalQueries;
   <test-group name="flwor">
     <test-case FilePath="flwor">
