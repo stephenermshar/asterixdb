@@ -18,7 +18,12 @@
  ! under the License.
  !-->
 <test-suite xmlns="urn:xml.testframework.asterix.apache.org" ResultOffsetPath="results" QueryOffsetPath="queries_sqlpp" QueryFileExtension=".sqlpp">
-  <test-group name="merge_join">
+  <test-group name="failed">
+    <test-case FilePath="index-join">
+      <compilation-unit name="btree-index-nested-loop-join">
+        <output-dir compare="Text">btree-index-nested-loop-join</output-dir>
+      </compilation-unit>
+    </test-case>
     <test-case FilePath="merge_join">
       <compilation-unit name="equi-join">
         <output-dir compare="Text">equi-join</output-dir>
