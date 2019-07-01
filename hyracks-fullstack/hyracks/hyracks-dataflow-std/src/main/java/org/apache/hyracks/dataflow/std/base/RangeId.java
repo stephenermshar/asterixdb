@@ -18,9 +18,9 @@
  */
 package org.apache.hyracks.dataflow.std.base;
 
-import org.apache.hyracks.api.context.IHyracksTaskContext;
-
 import java.io.Serializable;
+
+import org.apache.hyracks.api.context.IHyracksTaskContext;
 
 /**
  * Represents a range id in a logical plan.
