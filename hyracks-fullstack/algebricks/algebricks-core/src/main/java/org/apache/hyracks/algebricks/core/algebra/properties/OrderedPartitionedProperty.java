@@ -31,7 +31,7 @@ import org.apache.hyracks.dataflow.std.base.RangeId;
 
 public class OrderedPartitionedProperty implements IPartitioningProperty {
 
-    private List<OrderColumn> orderColumns;
+    private final List<OrderColumn> orderColumns;
     private INodeDomain domain;
     private RangeId rangeId;
     private IRangePartitionType.RangePartitioningType rangeType;

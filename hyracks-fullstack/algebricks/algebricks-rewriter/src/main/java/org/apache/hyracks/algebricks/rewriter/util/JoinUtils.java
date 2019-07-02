@@ -68,7 +68,8 @@ public class JoinUtils {
         List<LogicalVariable> sideRight = new LinkedList<>();
         List<LogicalVariable> varsLeft = op.getInputs().get(0).getValue().getSchema();
         List<LogicalVariable> varsRight = op.getInputs().get(1).getValue().getSchema();
-        if (isHashJoinCondition(op.getCondition().getValue(), varsLeft, varsRight, sideLeft, sideRight)) {
+        if (false && isHashJoinCondition(op.getCondition().getValue(), varsLeft, varsRight, sideLeft, sideRight)) {
+            // (Stephen) force merge join for testing
             BroadcastSide side = getBroadcastJoinSide(op.getCondition().getValue(), varsLeft, varsRight);
             if (side == null) {
                 setHashJoinOp(op, JoinPartitioningType.PAIRWISE, sideLeft, sideRight, context);
@@ -94,8 +95,8 @@ public class JoinUtils {
                         throw new IllegalStateException(side.toString());
                 }
             }
-        } else if (false) {
-            // (Stephen) prepare this branch for merge join, but never follow that path for now
+        } else if (true) {
+            // (Stephen) force merge join for testing
             // (Stephen) I don't know the difference between joinPartitioningTypes, so I'm guessing for now.
             setMergeJoinOp(op, JoinPartitioningType.BROADCAST, sideLeft, sideRight, context);
         } else {
