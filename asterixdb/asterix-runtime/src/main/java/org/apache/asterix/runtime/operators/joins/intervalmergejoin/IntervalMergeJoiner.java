@@ -18,6 +18,7 @@
  */
 package org.apache.asterix.runtime.operators.joins.intervalmergejoin;
 
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -86,6 +87,9 @@ class IntervalSideTuple {
 
     public boolean removeFromMemory(IntervalSideTuple ist) throws HyracksDataException {
         return imjc.checkToRemoveInMemory(accessor, tupleIndex, ist.accessor, ist.tupleIndex);
+    }
+    public boolean checkForEarlyExit(IntervalSideTuple ist) throws HyracksDataException {
+        return imjc.checkForEarlyExit(accessor, tupleIndex, ist.accessor, ist.tupleIndex);
     }
 }
 
@@ -166,11 +170,6 @@ public class IntervalMergeJoiner extends AbstractIntervalMergeJoiner {
             return true;
         }
         return false;
-    }
-
-    private void removeFromMemory(TuplePointer tp) throws HyracksDataException {
-        memoryBuffer.remove(tp);
-        bufferManager.deleteTuple(tp);
     }
 
     private void addToResult(IFrameTupleAccessor accessorLeft, int leftTupleIndex, IFrameTupleAccessor accessorRight,
@@ -297,27 +296,34 @@ public class IntervalMergeJoiner extends AbstractIntervalMergeJoiner {
         // Check against memory (right)
         if (memoryHasTuples()) {
             inputTuple[LEFT_PARTITION].loadTuple();
-            for (int i = memoryBuffer.size() - 1; i > -1; --i) {
-                memoryTuple.setTuple(memoryBuffer.get(i), i == memoryBuffer.size() - 1);
+            Iterator<TuplePointer> memoryIterator = memoryBuffer.iterator();
+            boolean first = true;
+            while (memoryIterator.hasNext()) {
+                TuplePointer tp = memoryIterator.next();
+                memoryTuple.setTuple(tp, first);
                 if (DEBUG) {
-                    System.err.println("MERGE test from stream: " + memoryBuffer.get(i));
+                    System.err.println("MERGE test from stream: " + tp);
                     TuplePrinterUtil.printTuple("    stream: ", inputAccessor[LEFT_PARTITION]);
                     TuplePrinterUtil.printTuple("    memory: ", memoryTuple.getAccessor(), memoryTuple.getTupleIndex());
                 }
                 if (inputTuple[LEFT_PARTITION].compareJoin(memoryTuple)) {
                     // add to result
                     addToResult(inputAccessor[LEFT_PARTITION], inputAccessor[LEFT_PARTITION].getTupleId(),
-                            memoryAccessor, memoryBuffer.get(i).getTupleIndex(), writer);
+                            memoryAccessor, tp.getTupleIndex(), writer);
                 }
                 joinComparisonCount++;
                 if (inputTuple[LEFT_PARTITION].removeFromMemory(memoryTuple)) {
                     if (DEBUG) {
-                        System.err.println("REMOVE from memory: " + memoryBuffer.get(i));
+                        System.err.println("REMOVE from memory: " + tp);
                         TuplePrinterUtil.printTuple("    memory: ", memoryTuple.getAccessor(),
                                 memoryTuple.getTupleIndex());
                     }
                     // remove from memory
-                    removeFromMemory(memoryBuffer.get(i));
+                    bufferManager.deleteTuple(tp);
+                    memoryIterator.remove();
+                } else if (inputTuple[LEFT_PARTITION].checkForEarlyExit(memoryTuple)) {
+                    // No more possible comparisons
+                    break;
                 }
             }
         }
@@ -343,9 +349,9 @@ public class IntervalMergeJoiner extends AbstractIntervalMergeJoiner {
 
     private void freezeAndSpill() throws HyracksDataException {
         //        if (LOGGER.isLoggable(Level.WARNING)) {
-                    System.err.println("freeze snapshot: " + frameCounts[RIGHT_PARTITION] + " right, " + frameCounts[LEFT_PARTITION]
-                            + " left, " + joinComparisonCount + " comparisons, " + joinResultCount + " results, ["
-                            + bufferManager.getNumTuples() + " tuples memory].");
+        System.err.println("freeze snapshot: " + frameCounts[RIGHT_PARTITION] + " right, " + frameCounts[LEFT_PARTITION]
+                + " left, " + joinComparisonCount + " comparisons, " + joinResultCount + " results, ["
+                + bufferManager.getNumTuples() + " tuples memory].");
         //        }
 
         // Mark where to start reading
@@ -384,14 +390,14 @@ public class IntervalMergeJoiner extends AbstractIntervalMergeJoiner {
     private void unfreezeAndContinue(ITupleAccessor accessor) throws HyracksDataException {
         //        if (LOGGER.isLoggable(Level.WARNING)) {
         System.err.println("snapshot: " + frameCounts[RIGHT_PARTITION] + " right, " + frameCounts[LEFT_PARTITION]
-                            + " left, " + joinComparisonCount + " comparisons, " + joinResultCount + " results, ["
-                            + bufferManager.getNumTuples() + " tuples memory, " + spillCount + " spills, "
-                            + (runFileStream.getFileCount() - spillFileCount) + " files, "
-                            + (runFileStream.getWriteCount() - spillWriteCount) + " written, "
-                            + (runFileStream.getReadCount() - spillReadCount) + " read].");
-                    spillFileCount = runFileStream.getFileCount();
-                    spillReadCount = runFileStream.getReadCount();
-                    spillWriteCount = runFileStream.getWriteCount();
+                + " left, " + joinComparisonCount + " comparisons, " + joinResultCount + " results, ["
+                + bufferManager.getNumTuples() + " tuples memory, " + spillCount + " spills, "
+                + (runFileStream.getFileCount() - spillFileCount) + " files, "
+                + (runFileStream.getWriteCount() - spillWriteCount) + " written, "
+                + (runFileStream.getReadCount() - spillReadCount) + " read].");
+        spillFileCount = runFileStream.getFileCount();
+        spillReadCount = runFileStream.getReadCount();
+        spillWriteCount = runFileStream.getWriteCount();
         //        }
 
         // Finish writing
