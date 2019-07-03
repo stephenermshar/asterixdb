@@ -18,12 +18,19 @@
  */
 package org.apache.asterix.lang.common.base;
 
+import java.util.Collection;
 import java.util.List;
 
 import org.apache.asterix.common.exceptions.CompilationException;
+import org.apache.hyracks.api.exceptions.Warning;
 
 public interface IParser {
 
-    public List<Statement> parse() throws CompilationException;
+    List<Statement> parse() throws CompilationException;
 
+    /**
+     * Gets the warnings generated during parsing
+     */
+    default void getWarnings(Collection<? super Warning> outWarnings) {
+    }
 }

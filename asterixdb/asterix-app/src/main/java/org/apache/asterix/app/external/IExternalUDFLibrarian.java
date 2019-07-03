@@ -19,13 +19,12 @@
 package org.apache.asterix.app.external;
 
 import java.io.IOException;
-import java.rmi.RemoteException;
 
-import org.apache.asterix.common.exceptions.ACIDException;
 import org.apache.asterix.common.exceptions.AsterixException;
+import org.apache.http.client.ClientProtocolException;
 
 public interface IExternalUDFLibrarian {
-    public void install(String dvName, String libName, String libPath) throws IOException, Exception;
+    void install(String dataverse, String libName, String libPath) throws Exception;
 
-    public void uninstall(String dvName, String libName) throws RemoteException, AsterixException, ACIDException;
+    void uninstall(String dataverse, String libName) throws IOException, ClientProtocolException, AsterixException;
 }
