@@ -29,6 +29,6 @@ use test;
 select element {'cid':c.cid,'oid':o.oid}
 from  Customers as c,
       Orders as o
-where (c.cid /*+ merge-join [10,1000,10000] */  = o.cid)
+where (c.cid /*+ merge-join */  = o.cid)
 order by c.cid,o.oid
 ;

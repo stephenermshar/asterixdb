@@ -143,6 +143,7 @@ public class MergeJoinPOperator extends AbstractJoinPOperator {
         for (LogicalVariable v : keysLeftBranch) {
             orderLeft.add(new OrderColumn(v, mjcf.isOrderAsc() ? OrderKind.ASC : OrderKind.DESC));
         }
+        // (stephen) LocalOrderProperty adds local sorting property
         ispLeft.add(new LocalOrderProperty(orderLeft));
 
         ArrayList<OrderColumn> orderRight = new ArrayList<>();
@@ -152,6 +153,7 @@ public class MergeJoinPOperator extends AbstractJoinPOperator {
         ispRight.add(new LocalOrderProperty(orderRight));
 
         if (op.getExecutionMode() == AbstractLogicalOperator.ExecutionMode.PARTITIONED) {
+            // (Stephen) make unordered partitioned property
             ppLeft = new OrderedPartitionedProperty(orderLeft, null, leftRangeId, mjcf.getLeftPartitioningType(),
                     rangeMapHint);
             ppRight = new OrderedPartitionedProperty(orderRight, null, rightRangeId, mjcf.getRightPartitioningType(),
