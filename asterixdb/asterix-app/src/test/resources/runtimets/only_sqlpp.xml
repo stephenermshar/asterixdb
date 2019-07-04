@@ -20,8 +20,8 @@
 <test-suite xmlns="urn:xml.testframework.asterix.apache.org" ResultOffsetPath="results" QueryOffsetPath="queries_sqlpp" QueryFileExtension=".sqlpp">
   <test-group name="failed">
     <test-case FilePath="index-join">
-      <compilation-unit name="btree-index-nested-loop-join">
-        <output-dir compare="Text">btree-index-nested-loop-join</output-dir>
+      <compilation-unit name="btree-primary-equi-join">
+        <output-dir compare="Text">btree-primary-equi-join</output-dir>
       </compilation-unit>
     </test-case>
     <test-case FilePath="merge_join">
