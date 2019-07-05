@@ -132,7 +132,7 @@ public class JoinUtils {
             IRangeMap rangeMapHint = mjpo.getRangeMapHint();
 
             IPhysicalOperator physicalOperator = new MergeJoinPOperator(joinKind, sideLeft,
-                    sideRight, memoryJoinSize, mergeJoinCheckerFactory, leftRangeId, rightRangeId, rangeMapHint);
+                    sideRight, memoryJoinSize, mergeJoinCheckerFactory, leftRangeId, rightRangeId);
 
             op.setPhysicalOperator(physicalOperator);
         } else {

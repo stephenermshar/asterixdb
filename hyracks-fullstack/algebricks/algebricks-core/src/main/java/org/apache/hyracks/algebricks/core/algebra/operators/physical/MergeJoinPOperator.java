@@ -62,13 +62,12 @@ public class MergeJoinPOperator extends AbstractJoinPOperator {
     private final IMergeJoinCheckerFactory mjcf;
     private final RangeId leftRangeId;
     private final RangeId rightRangeId;
-    private final IRangeMap rangeMapHint;
 
     private static final Logger LOGGER = Logger.getLogger(MergeJoinPOperator.class.getName());
 
     public MergeJoinPOperator(JoinKind kind, List<LogicalVariable> sideLeft,
             List<LogicalVariable> sideRight, int memSizeInFrames, IMergeJoinCheckerFactory mjcf, RangeId leftRangeId,
-            RangeId rightRangeId, IRangeMap rangeMapHint) {
+            RangeId rightRangeId) {
         // (stephen) Merge Join will never be broadcast (?)
         super(kind, JoinPartitioningType.PAIRWISE);
         this.memSizeInFrames = memSizeInFrames;
@@ -77,7 +76,6 @@ public class MergeJoinPOperator extends AbstractJoinPOperator {
         this.mjcf = mjcf;
         this.leftRangeId = leftRangeId;
         this.rightRangeId = rightRangeId;
-        this.rangeMapHint = rangeMapHint;
 
         LOGGER.fine("MergeJoinPOperator constructed with: JoinKind=" + kind + ", JoinPartitioningType="
                 + partitioningType + ", List<LogicalVariable>=" + keysLeftBranch + ", List<LogicalVariable>="
@@ -103,10 +101,6 @@ public class MergeJoinPOperator extends AbstractJoinPOperator {
 
     public RangeId getRightRangeId() {
         return rightRangeId;
-    }
-
-    public IRangeMap getRangeMapHint() {
-        return rangeMapHint;
     }
 
     @Override
