@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.logging.Logger;
 
 import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
+import org.apache.hyracks.algebricks.common.utils.ListSet;
 import org.apache.hyracks.algebricks.core.algebra.base.IHyracksJobBuilder;
 import org.apache.hyracks.algebricks.core.algebra.base.ILogicalOperator;
 import org.apache.hyracks.algebricks.core.algebra.base.IOptimizationContext;
@@ -31,6 +32,7 @@ import org.apache.hyracks.algebricks.core.algebra.base.PhysicalOperatorTag;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.AbstractBinaryJoinOperator.JoinKind;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.AbstractLogicalOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.IOperatorSchema;
+import org.apache.hyracks.algebricks.core.algebra.operators.logical.OrderOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.OrderOperator.IOrder.OrderKind;
 import org.apache.hyracks.algebricks.core.algebra.properties.ILocalStructuralProperty;
 import org.apache.hyracks.algebricks.core.algebra.properties.IPartitioningProperty;
@@ -41,6 +43,7 @@ import org.apache.hyracks.algebricks.core.algebra.properties.OrderColumn;
 import org.apache.hyracks.algebricks.core.algebra.properties.OrderedPartitionedProperty;
 import org.apache.hyracks.algebricks.core.algebra.properties.PhysicalRequirements;
 import org.apache.hyracks.algebricks.core.algebra.properties.StructuralPropertiesVector;
+import org.apache.hyracks.algebricks.core.algebra.properties.UnorderedPartitionedProperty;
 import org.apache.hyracks.algebricks.core.jobgen.impl.JobGenContext;
 import org.apache.hyracks.algebricks.core.jobgen.impl.JobGenHelper;
 import org.apache.hyracks.api.dataflow.value.IRangeMap;
@@ -63,10 +66,11 @@ public class MergeJoinPOperator extends AbstractJoinPOperator {
 
     private static final Logger LOGGER = Logger.getLogger(MergeJoinPOperator.class.getName());
 
-    public MergeJoinPOperator(JoinKind kind, JoinPartitioningType partitioningType, List<LogicalVariable> sideLeft,
+    public MergeJoinPOperator(JoinKind kind, List<LogicalVariable> sideLeft,
             List<LogicalVariable> sideRight, int memSizeInFrames, IMergeJoinCheckerFactory mjcf, RangeId leftRangeId,
             RangeId rightRangeId, IRangeMap rangeMapHint) {
-        super(kind, partitioningType);
+        // (stephen) Merge Join will never be broadcast (?)
+        super(kind, JoinPartitioningType.PAIRWISE);
         this.memSizeInFrames = memSizeInFrames;
         this.keysLeftBranch = sideLeft;
         this.keysRightBranch = sideRight;
@@ -131,6 +135,8 @@ public class MergeJoinPOperator extends AbstractJoinPOperator {
     @Override
     public PhysicalRequirements getRequiredPropertiesForChildren(ILogicalOperator iop,
             IPhysicalPropertiesVector reqdByParent, IOptimizationContext context) {
+        // (stephen) MergeJoin needs locally ordered partitions that don't need to be ordered globally.
+
         StructuralPropertiesVector[] pv = new StructuralPropertiesVector[2];
         AbstractLogicalOperator op = (AbstractLogicalOperator) iop;
 
@@ -138,6 +144,27 @@ public class MergeJoinPOperator extends AbstractJoinPOperator {
         List<ILocalStructuralProperty> ispLeft = new ArrayList<>();
         IPartitioningProperty ppRight = null;
         List<ILocalStructuralProperty> ispRight = new ArrayList<>();
+
+        // (stephen) I'm assuming this refactor is ok because java passes objects as references (?). So
+        //           setLocalOrderProperty() manipulates isp(Left/Right) which are then used later outside the method.
+        //           Need to double check this.
+        setLocalOrderProperty(ispLeft, ispRight);
+
+        if (op.getExecutionMode() == AbstractLogicalOperator.ExecutionMode.PARTITIONED) {
+            // (stephen) make unordered partitioned property
+            // (stephen) Based on AbstractHashJoinPOperator getRequiredPropertiesForChildren()
+            ppLeft = new UnorderedPartitionedProperty(new ListSet<>(keysLeftBranch), null);
+            ppRight = new UnorderedPartitionedProperty(new ListSet<>(keysRightBranch), null);
+        }
+
+        pv[0] = new StructuralPropertiesVector(ppLeft, ispLeft);
+        pv[1] = new StructuralPropertiesVector(ppRight, ispRight);
+        IPartitioningRequirementsCoordinator prc = IPartitioningRequirementsCoordinator.NO_COORDINATION;
+        return new PhysicalRequirements(pv, prc);
+    }
+
+    private void setLocalOrderProperty(List<ILocalStructuralProperty> ispLeft,
+            List<ILocalStructuralProperty> ispRight) {
 
         ArrayList<OrderColumn> orderLeft = new ArrayList<>();
         for (LogicalVariable v : keysLeftBranch) {
@@ -151,19 +178,6 @@ public class MergeJoinPOperator extends AbstractJoinPOperator {
             orderRight.add(new OrderColumn(v, mjcf.isOrderAsc() ? OrderKind.ASC : OrderKind.DESC));
         }
         ispRight.add(new LocalOrderProperty(orderRight));
-
-        if (op.getExecutionMode() == AbstractLogicalOperator.ExecutionMode.PARTITIONED) {
-            // (Stephen) make unordered partitioned property
-            ppLeft = new OrderedPartitionedProperty(orderLeft, null, leftRangeId, mjcf.getLeftPartitioningType(),
-                    rangeMapHint);
-            ppRight = new OrderedPartitionedProperty(orderRight, null, rightRangeId, mjcf.getRightPartitioningType(),
-                    rangeMapHint);
-        }
-
-        pv[0] = new StructuralPropertiesVector(ppLeft, ispLeft);
-        pv[1] = new StructuralPropertiesVector(ppRight, ispRight);
-        IPartitioningRequirementsCoordinator prc = IPartitioningRequirementsCoordinator.NO_COORDINATION;
-        return new PhysicalRequirements(pv, prc);
     }
 
     @Override
