@@ -100,7 +100,7 @@ public abstract class AbstractHashJoinPOperator extends AbstractJoinPOperator {
         IPartitioningProperty pp1;
         IPartitioningProperty pp2;
         switch (partitioningType) {
-            // (stephen) pairwise computes the paritioning proerty
+            // (stephen) pairwise computes the partitioning property
             case PAIRWISE:
                 pp1 = new UnorderedPartitionedProperty(new ListSet<>(keysLeftBranch),
                         context.getComputationNodeDomain());
