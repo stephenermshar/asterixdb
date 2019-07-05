@@ -20,9 +20,14 @@
 package org.apache.asterix.runtime.operators.joins.intervalforwardsweep;
 
 import java.nio.ByteBuffer;
+import java.util.Comparator;
 import java.util.logging.Logger;
 
 import org.apache.asterix.runtime.operators.joins.IIntervalMergeJoinCheckerFactory;
+import org.apache.asterix.runtime.operators.joins.intervalindex.EndPointIndexItem;
+import org.apache.asterix.runtime.operators.joins.intervalindex.IConsumerFrame;
+import org.apache.asterix.runtime.operators.joins.intervalindex.IStreamJoiner;
+import org.apache.asterix.runtime.operators.joins.intervalindex.ProducerConsumerFrameState;
 import org.apache.hyracks.api.context.IHyracksTaskContext;
 import org.apache.hyracks.api.dataflow.ActivityId;
 import org.apache.hyracks.api.dataflow.IActivity;
@@ -36,15 +41,14 @@ import org.apache.hyracks.api.job.IOperatorDescriptorRegistry;
 import org.apache.hyracks.dataflow.std.base.AbstractActivityNode;
 import org.apache.hyracks.dataflow.std.base.AbstractOperatorDescriptor;
 import org.apache.hyracks.dataflow.std.base.AbstractUnaryInputSinkOperatorNodePushable;
-import org.apache.hyracks.dataflow.std.base.AbstractUnaryInputUnaryOutputOperatorNodePushable;
-import org.apache.hyracks.dataflow.std.join.MergeBranchStatus.Stage;
-import org.apache.hyracks.dataflow.std.join.MergeJoinLocks;
+import org.apache.hyracks.dataflow.std.base.AbstractUnaryOutputSourceOperatorNodePushable;
 
 public class IntervalForwardSweepJoinOperatorDescriptor extends AbstractOperatorDescriptor {
     private static final long serialVersionUID = 1L;
 
     private static final int LEFT_ACTIVITY_ID = 0;
     private static final int RIGHT_ACTIVITY_ID = 1;
+    private static final int JOIN_ACTIVITY_ID = 2;
     private final int[] leftKeys;
     private final int[] rightKeys;
     private final int memoryForJoin;
@@ -52,8 +56,9 @@ public class IntervalForwardSweepJoinOperatorDescriptor extends AbstractOperator
 
     private static final Logger LOGGER = Logger.getLogger(IntervalForwardSweepJoinOperatorDescriptor.class.getName());
 
-    public IntervalForwardSweepJoinOperatorDescriptor(IOperatorDescriptorRegistry spec, int memoryForJoin, int[] leftKeys,
-            int[] rightKeys, RecordDescriptor recordDescriptor, IIntervalMergeJoinCheckerFactory imjcf) {
+    public IntervalForwardSweepJoinOperatorDescriptor(IOperatorDescriptorRegistry spec, int memoryForJoin,
+            int[] leftKeys, int[] rightKeys, RecordDescriptor recordDescriptor,
+            IIntervalMergeJoinCheckerFactory imjcf) {
         super(spec, 2, 1);
         recordDescriptors[0] = recordDescriptor;
         this.leftKeys = leftKeys;
@@ -64,227 +69,147 @@ public class IntervalForwardSweepJoinOperatorDescriptor extends AbstractOperator
 
     @Override
     public void contributeActivities(IActivityGraphBuilder builder) {
-        MergeJoinLocks locks = new MergeJoinLocks();
-
         ActivityId leftAid = new ActivityId(odId, LEFT_ACTIVITY_ID);
         ActivityId rightAid = new ActivityId(odId, RIGHT_ACTIVITY_ID);
+        ActivityId joinAid = new ActivityId(odId, JOIN_ACTIVITY_ID);
+        ActivityId[] dataAids = { leftAid, rightAid };
 
-        IActivity leftAN = new LeftJoinerActivityNode(leftAid, rightAid, locks);
-        IActivity rightAN = new RightDataActivityNode(rightAid, leftAid, locks);
+        IActivity leftAN = new InputDataActivityNode(leftAid);
+        IActivity rightAN = new InputDataActivityNode(rightAid);
+        IActivity joinAN = new JoinerActivityNode(joinAid, dataAids);
 
         builder.addActivity(this, rightAN);
         builder.addSourceEdge(1, rightAN, 0);
 
         builder.addActivity(this, leftAN);
         builder.addSourceEdge(0, leftAN, 0);
-        builder.addTargetEdge(0, leftAN, 0);
+
+        builder.addActivity(this, joinAN);
+        builder.addTargetEdge(0, joinAN, 0);
     }
 
-    private class LeftJoinerActivityNode extends AbstractActivityNode {
+    private class JoinerActivityNode extends AbstractActivityNode {
         private static final long serialVersionUID = 1L;
 
-        private final MergeJoinLocks locks;
+        private final ActivityId[] dataIds;
 
-        public LeftJoinerActivityNode(ActivityId id, ActivityId joinAid, MergeJoinLocks locks) {
+        public JoinerActivityNode(ActivityId id, ActivityId[] dataIds) {
             super(id);
-            this.locks = locks;
+            this.dataIds = dataIds;
         }
 
         @Override
         public IOperatorNodePushable createPushRuntime(IHyracksTaskContext ctx,
                 IRecordDescriptorProvider recordDescProvider, int partition, int nPartitions)
                 throws HyracksDataException {
-            locks.setPartitions(nPartitions);
-            final RecordDescriptor inRecordDesc = recordDescProvider.getInputRecordDescriptor(getActivityId(), 0);
-            return new LeftJoinerOperator(ctx, partition, inRecordDesc);
+            return new JoinerOperator(ctx, partition, dataIds);
         }
 
-        private class LeftJoinerOperator extends AbstractUnaryInputUnaryOutputOperatorNodePushable {
+        private class JoinerOperator extends AbstractUnaryOutputSourceOperatorNodePushable {
 
             private final IHyracksTaskContext ctx;
             private final int partition;
-            private final RecordDescriptor leftRd;
-            private IntervalForwardSweepJoinTaskState state;
-            private boolean first = true;
+            private final ActivityId[] dataIds;
 
-            public LeftJoinerOperator(IHyracksTaskContext ctx, int partition, RecordDescriptor inRecordDesc) {
+            public JoinerOperator(IHyracksTaskContext ctx, int partition, ActivityId[] dataIds)
+                    throws HyracksDataException {
                 this.ctx = ctx;
+                this.dataIds = dataIds;
                 this.partition = partition;
-                this.leftRd = inRecordDesc;
             }
 
             @Override
-            public void open() throws HyracksDataException {
-                locks.getLock(partition).lock();
+            public void initialize() throws HyracksDataException {
+                int sleep = 0;
+                ProducerConsumerFrameState leftState;
+                do {
+                    try {
+                        Thread.sleep((int) Math.pow(sleep++, 2));
+                    } catch (InterruptedException ex) {
+                        Thread.currentThread().interrupt();
+                    }
+                    leftState = (ProducerConsumerFrameState) ctx.getStateObject(new TaskId(dataIds[0], partition));
+                } while (leftState == null);
+                sleep = 0;
+                ProducerConsumerFrameState rightState;
+                do {
+                    try {
+                        Thread.sleep((int) Math.pow(sleep++, 2));
+                    } catch (InterruptedException ex) {
+                        Thread.currentThread().interrupt();
+                    }
+                    rightState = (ProducerConsumerFrameState) ctx.getStateObject(new TaskId(dataIds[1], partition));
+                } while (rightState == null);
+
+                byte point = imjcf.isOrderAsc() ? EndPointIndexItem.START_POINT : EndPointIndexItem.END_POINT;
+                Comparator<EndPointIndexItem> endPointComparator = imjcf.isOrderAsc()
+                        ? EndPointIndexItem.EndPointAscComparator
+                        : EndPointIndexItem.EndPointDescComparator;
+
                 try {
                     writer.open();
-                    state = new IntervalForwardSweepJoinTaskState(ctx.getJobletContext().getJobId(),
-                            new TaskId(getActivityId(), partition));;
-                    state.leftRd = leftRd;
-                    ctx.setStateObject(state);
-                    locks.getRight(partition).signal();
-
-                    do {
-                        // Continue after joiner created in right branch.
-                        if (state.indexJoiner == null) {
-                            locks.getLeft(partition).await();
-                        }
-                    } while (state.indexJoiner == null);
-                    state.status.branch[LEFT_ACTIVITY_ID].setStageOpen();
-                    locks.getRight(partition).signal();
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
+                    IStreamJoiner joiner = new IntervalForwardSweepJoiner(ctx, memoryForJoin, partition, imjcf,
+                            leftKeys, rightKeys, (IConsumerFrame) leftState, (IConsumerFrame) rightState);
+                    joiner.processJoin(writer);
+                } catch (Exception ex) {
+                    writer.fail();
+                    throw new HyracksDataException(ex);
                 } finally {
-                    locks.getLock(partition).unlock();
-                }
-            }
-
-            @Override
-            public void nextFrame(ByteBuffer buffer) throws HyracksDataException {
-                locks.getLock(partition).lock();
-                if (first) {
-                    state.status.branch[LEFT_ACTIVITY_ID].setStageData();
-                    first = false;
-                }
-                try {
-                    state.indexJoiner.setFrame(LEFT_ACTIVITY_ID, buffer);
-                    state.indexJoiner.processLeftFrame(writer);
-                } finally {
-                    locks.getLock(partition).unlock();
-                }
-            }
-
-            @Override
-            public void fail() throws HyracksDataException {
-                locks.getLock(partition).lock();
-                try {
-                    state.failed = true;
-                } finally {
-                    locks.getLock(partition).unlock();
-                }
-            }
-
-            @Override
-            public void close() throws HyracksDataException {
-                locks.getLock(partition).lock();
-                try {
-                    state.status.branch[LEFT_ACTIVITY_ID].noMore();
-                    if (state.failed) {
-                        writer.fail();
-                    } else {
-                        state.indexJoiner.processLeftClose(writer);
-                        writer.close();
-                    }
-                    state.status.branch[LEFT_ACTIVITY_ID].setStageClose();
-                    locks.getRight(partition).signal();
-                } finally {
-                    locks.getLock(partition).unlock();
+                    writer.close();
                 }
             }
         }
     }
 
-    private class RightDataActivityNode extends AbstractActivityNode {
+    private class InputDataActivityNode extends AbstractActivityNode {
         private static final long serialVersionUID = 1L;
 
-        private final ActivityId joinAid;
-        private final MergeJoinLocks locks;
+        private int partition;
 
-        public RightDataActivityNode(ActivityId id, ActivityId joinAid, MergeJoinLocks locks) {
+        public InputDataActivityNode(ActivityId id) {
             super(id);
-            this.joinAid = joinAid;
-            this.locks = locks;
         }
 
         @Override
         public IOperatorNodePushable createPushRuntime(IHyracksTaskContext ctx,
                 IRecordDescriptorProvider recordDescProvider, int partition, int nPartitions)
                 throws HyracksDataException {
-            locks.setPartitions(nPartitions);
-            RecordDescriptor inRecordDesc = recordDescProvider.getInputRecordDescriptor(getActivityId(), 0);
-            return new RightDataOperator(ctx, partition, inRecordDesc);
+            this.partition = partition;
+            RecordDescriptor inRecordDesc = recordDescProvider.getInputRecordDescriptor(id, 0);
+            return new InputDataOperator(ctx, inRecordDesc);
         }
 
-        private class RightDataOperator extends AbstractUnaryInputSinkOperatorNodePushable {
+        private class InputDataOperator extends AbstractUnaryInputSinkOperatorNodePushable {
 
-            private int partition;
             private IHyracksTaskContext ctx;
-            private final RecordDescriptor rightRd;
-            private IntervalForwardSweepJoinTaskState state;
-            private boolean first = true;
+            private final RecordDescriptor recordDescriptor;
+            private ProducerConsumerFrameState state;
 
-            public RightDataOperator(IHyracksTaskContext ctx, int partition, RecordDescriptor inRecordDesc) {
+            public InputDataOperator(IHyracksTaskContext ctx, RecordDescriptor inRecordDesc) {
                 this.ctx = ctx;
-                this.partition = partition;
-                this.rightRd = inRecordDesc;
+                this.recordDescriptor = inRecordDesc;
             }
 
             @Override
             public void open() throws HyracksDataException {
-                locks.getLock(partition).lock();
-                try {
-                    do {
-                        // Wait for the state to be set in the context form Left.
-                        state = (IntervalForwardSweepJoinTaskState) ctx.getStateObject(new TaskId(joinAid, partition));
-                        if (state == null) {
-                            locks.getRight(partition).await();
-                        }
-                    } while (state == null);
-                    state.rightRd = rightRd;
-                    state.indexJoiner = new IntervalForwardSweepJoiner(ctx, memoryForJoin, partition, state.status,
-                            locks, imjcf, leftKeys, rightKeys, state.leftRd, state.rightRd);
-                    state.status.branch[RIGHT_ACTIVITY_ID].setStageOpen();
-                    locks.getLeft(partition).signal();
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                } finally {
-                    locks.getLock(partition).unlock();
-                }
+                state = new ProducerConsumerFrameState(ctx.getJobletContext().getJobId(),
+                        new TaskId(getActivityId(), partition), recordDescriptor);
+                ctx.setStateObject(state);
             }
 
             @Override
             public void nextFrame(ByteBuffer buffer) throws HyracksDataException {
-                locks.getLock(partition).lock();
-                if (first) {
-                    state.status.branch[RIGHT_ACTIVITY_ID].setStageData();
-                    first = false;
-                }
-                try {
-                    while (!state.status.continueRightLoad
-                            && state.status.branch[LEFT_ACTIVITY_ID].getStatus() != Stage.CLOSED) {
-                        // Wait for the state to request right frame unless left has finished.
-                        locks.getRight(partition).await();
-                    }
-                    state.indexJoiner.setFrame(RIGHT_ACTIVITY_ID, buffer);
-                    state.status.continueRightLoad = false;
-                    locks.getLeft(partition).signal();
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                } finally {
-                    locks.getLock(partition).unlock();
-                }
+                state.putFrame(buffer);
             }
 
             @Override
             public void fail() throws HyracksDataException {
-                locks.getLock(partition).lock();
-                try {
-                    state.failed = true;
-                    locks.getLeft(partition).signal();
-                } finally {
-                    locks.getLock(partition).unlock();
-                }
+                state.noMoreFrames();
             }
 
             @Override
             public void close() throws HyracksDataException {
-                locks.getLock(partition).lock();
-                try {
-                    state.status.branch[RIGHT_ACTIVITY_ID].setStageClose();
-                    locks.getLeft(partition).signal();
-                } finally {
-                    locks.getLock(partition).unlock();
-                }
+                state.noMoreFrames();
             }
         }
     }

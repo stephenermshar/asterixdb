@@ -143,7 +143,7 @@ public class IntervalIndexJoinOperatorDescriptor extends AbstractOperatorDescrip
 
                 try {
                     writer.open();
-                    IIndexJoiner indexJoiner = new IntervalIndexJoiner(ctx, memoryForJoin, partition,
+                    IStreamJoiner indexJoiner = new IntervalIndexJoiner(ctx, memoryForJoin, partition,
                             endPointComparator, imjcf, leftKeys, rightKeys, (IConsumerFrame) leftState,
                             (IConsumerFrame) rightState);
                     indexJoiner.processJoin(writer);

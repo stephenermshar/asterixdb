@@ -47,7 +47,7 @@ import org.apache.hyracks.dataflow.std.structures.TuplePointer;
  * The left stream will spill to disk when memory is full.
  * The both right and left use memory to maintain active intervals for the join.
  */
-public class IntervalIndexJoiner extends AbstractIntervalIndexJoiner {
+public class IntervalIndexJoiner extends AbstractStreamJoiner {
 
     private static final Logger LOGGER = Logger.getLogger(IntervalIndexJoiner.class.getName());
 
@@ -172,28 +172,10 @@ public class IntervalIndexJoiner extends AbstractIntervalIndexJoiner {
         return loaded;
     }
 
-    /**
-     * Ensures a frame exists for the right branch, either from memory or the run file.
-     *
-     * @throws HyracksDataException
-     */
-    private TupleStatus loadRightTuple() throws HyracksDataException {
-        return loadTuple(RIGHT_PARTITION);
-    }
-
-    /**
-     * Ensures a frame exists for the left branch, either from memory or the run file.
-     *
-     * @throws HyracksDataException
-     */
-    private TupleStatus loadLeftTuple() throws HyracksDataException {
-        return loadTuple(LEFT_PARTITION);
-    }
-
     @Override
     public void processJoin(IFrameWriter writer) throws HyracksDataException {
-        TupleStatus leftTs = loadLeftTuple();
-        TupleStatus rightTs = loadRightTuple();
+        TupleStatus leftTs = loadTuple(LEFT_PARTITION);
+        TupleStatus rightTs = loadTuple(RIGHT_PARTITION);
         while (checkHasMoreTuples(LEFT_PARTITION) || checkHasMoreTuples(RIGHT_PARTITION)) {
             if (leftTs.isEmpty() || checkToProcessRightTuple()) {
 //                TuplePrinterUtil.printTuple("  >> processing: ", inputAccessor[RIGHT_PARTITION]);
@@ -201,17 +183,14 @@ public class IntervalIndexJoiner extends AbstractIntervalIndexJoiner {
                 processRemoveOldTuples(RIGHT_PARTITION, LEFT_PARTITION, rightKey);
                 addToMemoryAndProcessJoin(RIGHT_PARTITION, LEFT_PARTITION, rightKey, imjc.checkToRemoveRightActive(),
                         false, writer);
-                rightTs = loadRightTuple();
+                rightTs = loadTuple(RIGHT_PARTITION);
             } else {
 //                TuplePrinterUtil.printTuple("  >> processing: ", inputAccessor[LEFT_PARTITION]);
 
                 processRemoveOldTuples(LEFT_PARTITION, RIGHT_PARTITION, leftKey);
                 addToMemoryAndProcessJoin(LEFT_PARTITION, RIGHT_PARTITION, leftKey, imjc.checkToRemoveLeftActive(),
                         true, writer);
-                leftTs = loadLeftTuple();
-            }
-            if (joinComparisonCount > 20000000) {
-                System.err.println("stop");
+                leftTs = loadTuple(LEFT_PARTITION);
             }
         }
 
@@ -292,7 +271,7 @@ public class IntervalIndexJoiner extends AbstractIntervalIndexJoiner {
     private void processRemoveOldTuples(int active, int passive, int key) throws HyracksDataException {
         // Remove from passive that can no longer match with active.
         while (activeManager[passive].hasRecords()
-                && checkToRemove(IntervalJoinUtil.getIntervalStart(inputAccessor[active], key),
+                && imjc.checkToRemoveInMemory(IntervalJoinUtil.getIntervalStart(inputAccessor[active], key),
                         activeManager[passive].getTopPoint())) {
            activeManager[passive].removeTop();
         }
@@ -300,10 +279,6 @@ public class IntervalIndexJoiner extends AbstractIntervalIndexJoiner {
 
     private boolean checkToProcessAdd(long startMemory, long endMemory) {
         return startMemory <= endMemory;
-    }
-
-    private boolean checkToRemove(long startMemory, long endMemory) {
-        return startMemory > endMemory;
     }
 
     private void addToMemoryAndProcessJoin(int active, int passive, int key, boolean removeActive, boolean reversed,

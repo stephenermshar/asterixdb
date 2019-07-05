@@ -146,6 +146,14 @@ public abstract class AbstractIntervalMergeJoinChecker implements IIntervalMerge
      * Left (first argument) interval starts after the Right (second argument) interval ends.
      */
     @Override
+    public boolean checkToRemoveInMemory(long start0, long start1) {
+        return start0 > start1;
+    }
+
+    /**
+     * Left (first argument) interval starts after the Right (second argument) interval ends.
+     */
+    @Override
     public boolean checkIfMoreMatches(IFrameTupleAccessor accessorLeft, int leftTupleIndex,
             IFrameTupleAccessor accessorRight, int rightTupleIndex) throws HyracksDataException {
         long start1 = IntervalJoinUtil.getIntervalStart(accessorRight, rightTupleIndex, idRight);

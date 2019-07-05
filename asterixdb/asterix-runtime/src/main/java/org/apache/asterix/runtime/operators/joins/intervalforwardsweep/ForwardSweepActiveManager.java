@@ -52,8 +52,10 @@ public class ForwardSweepActiveManager {
             if (LOGGER.isLoggable(Level.FINE)) {
                 LOGGER.fine("Add to memory (partition: " + partition + ").");
             }
+//            System.err.println("Add to memory (partition: " + partition + ").");
             return tp;
         }
+        tpPool.giveBack(tp);
         return null;
     }
 

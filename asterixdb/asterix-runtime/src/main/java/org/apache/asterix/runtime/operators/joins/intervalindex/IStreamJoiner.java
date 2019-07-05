@@ -21,7 +21,7 @@ package org.apache.asterix.runtime.operators.joins.intervalindex;
 import org.apache.hyracks.api.comm.IFrameWriter;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 
-public interface IIndexJoiner {
+public interface IStreamJoiner {
 
     void processJoin(IFrameWriter writer) throws HyracksDataException;
 

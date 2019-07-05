@@ -306,12 +306,6 @@ public class IntervalMergeJoiner extends AbstractIntervalMergeJoiner {
                     TuplePrinterUtil.printTuple("    stream: ", inputAccessor[LEFT_PARTITION]);
                     TuplePrinterUtil.printTuple("    memory: ", memoryTuple.getAccessor(), memoryTuple.getTupleIndex());
                 }
-                if (inputTuple[LEFT_PARTITION].compareJoin(memoryTuple)) {
-                    // add to result
-                    addToResult(inputAccessor[LEFT_PARTITION], inputAccessor[LEFT_PARTITION].getTupleId(),
-                            memoryAccessor, tp.getTupleIndex(), writer);
-                }
-                joinComparisonCount++;
                 if (inputTuple[LEFT_PARTITION].removeFromMemory(memoryTuple)) {
                     if (DEBUG) {
                         System.err.println("REMOVE from memory: " + tp);
@@ -321,10 +315,17 @@ public class IntervalMergeJoiner extends AbstractIntervalMergeJoiner {
                     // remove from memory
                     bufferManager.deleteTuple(tp);
                     memoryIterator.remove();
+                    continue;
                 } else if (inputTuple[LEFT_PARTITION].checkForEarlyExit(memoryTuple)) {
                     // No more possible comparisons
                     break;
+                } else if (inputTuple[LEFT_PARTITION].compareJoin(memoryTuple)) {
+                    // add to result
+                    addToResult(inputAccessor[LEFT_PARTITION], inputAccessor[LEFT_PARTITION].getTupleId(),
+                            memoryAccessor, tp.getTupleIndex(), writer);
                 }
+                joinComparisonCount++;
+
             }
         }
         inputAccessor[LEFT_PARTITION].next();

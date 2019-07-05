@@ -47,4 +47,6 @@ public interface IIntervalMergeJoinChecker extends IMergeJoinChecker {
     boolean checkForEarlyExit(IFrameTupleAccessor accessorLeft, int leftTupleIndex, IFrameTupleAccessor accessorRight,
             int rightTupleIndex) throws HyracksDataException;
 
+    boolean checkToRemoveInMemory(long start0, long start1);
+
 }

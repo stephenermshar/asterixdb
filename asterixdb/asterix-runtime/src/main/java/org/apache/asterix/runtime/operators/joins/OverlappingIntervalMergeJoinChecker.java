@@ -69,7 +69,14 @@ public class OverlappingIntervalMergeJoinChecker extends AbstractIntervalMergeJo
         long start0 = IntervalJoinUtil.getIntervalStart(accessorLeft, leftTupleIndex, idLeft);
         long end1 = IntervalJoinUtil.getIntervalEnd(accessorRight, rightTupleIndex, idRight);
         return start0 >= end1;
-
+    }
+    
+    /**
+     * Left (first argument) interval starts after the Right (second argument) interval ends.
+     */
+    @Override
+    public boolean checkToRemoveInMemory(long start0, long end1) {
+        return start0 >= end1;
     }
     
     @Override

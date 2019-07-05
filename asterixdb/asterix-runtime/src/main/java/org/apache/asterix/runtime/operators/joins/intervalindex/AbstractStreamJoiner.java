@@ -29,7 +29,7 @@ import org.apache.hyracks.dataflow.common.comm.io.FrameTupleAppender;
 import org.apache.hyracks.dataflow.std.buffermanager.ITupleAccessor;
 import org.apache.hyracks.dataflow.std.buffermanager.TupleAccessor;
 
-public abstract class AbstractIntervalIndexJoiner implements IIndexJoiner {
+public abstract class AbstractStreamJoiner implements IStreamJoiner {
 
     public enum TupleStatus {
         UNKNOWN,
@@ -64,7 +64,7 @@ public abstract class AbstractIntervalIndexJoiner implements IIndexJoiner {
     protected long[] frameCounts = { 0, 0 };
     protected long[] tupleCounts = { 0, 0 };
 
-    public AbstractIntervalIndexJoiner(IHyracksTaskContext ctx, int partition, IConsumerFrame leftCF,
+    public AbstractStreamJoiner(IHyracksTaskContext ctx, int partition, IConsumerFrame leftCF,
             IConsumerFrame rightCF) throws HyracksDataException {
         this.partition = partition;
 
