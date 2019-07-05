@@ -98,7 +98,7 @@ public class JoinUtils {
         } else if (true) {
             // (Stephen) force merge join for testing
             // (Stephen) I don't know the difference between joinPartitioningTypes, so I'm guessing for now.
-            setMergeJoinOp(op, JoinPartitioningType.BROADCAST, sideLeft, sideRight, context);
+            setMergeJoinOp(op, sideLeft, sideRight, context);
         } else {
             setNestedLoopJoinOp(op);
         }
@@ -116,7 +116,7 @@ public class JoinUtils {
                 context.getPhysicalOptimizationConfig().getFudgeFactor()));
     }
 
-    private static void setMergeJoinOp(AbstractBinaryJoinOperator op, JoinPartitioningType joinPartitioningType,
+    private static void setMergeJoinOp(AbstractBinaryJoinOperator op,
             List<LogicalVariable> sideLeft, List<LogicalVariable> sideRight, IOptimizationContext context) {
         InnerJoinOperator ijo = (InnerJoinOperator) op;
         IPhysicalOperator joinPo = ijo.getPhysicalOperator();
@@ -131,7 +131,7 @@ public class JoinUtils {
             RangeId rightRangeId = mjpo.getRightRangeId();
             IRangeMap rangeMapHint = mjpo.getRangeMapHint();
 
-            IPhysicalOperator physicalOperator = new MergeJoinPOperator(joinKind, joinPartitioningType, sideLeft,
+            IPhysicalOperator physicalOperator = new MergeJoinPOperator(joinKind, sideLeft,
                     sideRight, memoryJoinSize, mergeJoinCheckerFactory, leftRangeId, rightRangeId, rangeMapHint);
 
             op.setPhysicalOperator(physicalOperator);
