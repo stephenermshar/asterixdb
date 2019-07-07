@@ -91,14 +91,15 @@ public class MergeJoinPOperator extends AbstractJoinPOperator {
     public void computeDeliveredProperties(ILogicalOperator iop, IOptimizationContext context) {
         ArrayList<OrderColumn> order = new ArrayList<>();
         for (LogicalVariable v : keysLeftBranch) {
-            order.add(new OrderColumn(v, mjcf.isOrderAsc() ? OrderKind.ASC : OrderKind.DESC));
+            order.add(new OrderColumn(v, OrderKind.ASC));
         }
 
         // (stephen) this is a guess, the AbstractHashJoinPOperator appeared to use one side of the join in deciding
         //           how to pass on the partitioning property. they used an existing property vector though. this might
         //           be better if it reuses ppLeft from getRequiredPropertiesForChildren() somehow.
         //
-        IPartitioningProperty pp = new UnorderedPartitionedProperty(new ListSet<>(keysLeftBranch), null);
+        IPartitioningProperty pp =
+                new UnorderedPartitionedProperty(new ListSet<>(keysLeftBranch), context.getComputationNodeDomain());
         List<ILocalStructuralProperty> propsLocal = new ArrayList<>();
         propsLocal.add(new LocalOrderProperty(order));
         deliveredProperties = new StructuralPropertiesVector(pp, propsLocal);
@@ -125,13 +126,16 @@ public class MergeJoinPOperator extends AbstractJoinPOperator {
         if (op.getExecutionMode() == AbstractLogicalOperator.ExecutionMode.PARTITIONED) {
             // (stephen) make unordered partitioned property
             // (stephen) Based on AbstractHashJoinPOperator getRequiredPropertiesForChildren()
-            ppLeft = new UnorderedPartitionedProperty(new ListSet<>(keysLeftBranch), null);
-            ppRight = new UnorderedPartitionedProperty(new ListSet<>(keysRightBranch), null);
+            ppLeft = new UnorderedPartitionedProperty(new ListSet<>(keysLeftBranch),
+                    context.getComputationNodeDomain());
+            ppRight = new UnorderedPartitionedProperty(new ListSet<>(keysRightBranch),
+                    context.getComputationNodeDomain());
         }
 
         pv[0] = new StructuralPropertiesVector(ppLeft, ispLeft);
         pv[1] = new StructuralPropertiesVector(ppRight, ispRight);
-        IPartitioningRequirementsCoordinator prc = IPartitioningRequirementsCoordinator.NO_COORDINATION;
+        IPartitioningRequirementsCoordinator prc =
+                IPartitioningRequirementsCoordinator.EQCLASS_PARTITIONING_COORDINATOR;
         return new PhysicalRequirements(pv, prc);
     }
 
@@ -140,14 +144,14 @@ public class MergeJoinPOperator extends AbstractJoinPOperator {
 
         ArrayList<OrderColumn> orderLeft = new ArrayList<>();
         for (LogicalVariable v : keysLeftBranch) {
-            orderLeft.add(new OrderColumn(v, mjcf.isOrderAsc() ? OrderKind.ASC : OrderKind.DESC));
+            orderLeft.add(new OrderColumn(v, OrderKind.ASC));
         }
         // (stephen) LocalOrderProperty adds local sorting property
         ispLeft.add(new LocalOrderProperty(orderLeft));
 
         ArrayList<OrderColumn> orderRight = new ArrayList<>();
         for (LogicalVariable v : keysRightBranch) {
-            orderRight.add(new OrderColumn(v, mjcf.isOrderAsc() ? OrderKind.ASC : OrderKind.DESC));
+            orderRight.add(new OrderColumn(v, OrderKind.ASC));
         }
         ispRight.add(new LocalOrderProperty(orderRight));
     }
