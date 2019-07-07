@@ -35,7 +35,6 @@ import org.apache.hyracks.algebricks.core.algebra.operators.logical.IOperatorSch
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.OrderOperator.IOrder.OrderKind;
 import org.apache.hyracks.algebricks.core.algebra.properties.ILocalStructuralProperty;
 import org.apache.hyracks.algebricks.core.algebra.properties.IPartitioningProperty;
-
 import org.apache.hyracks.algebricks.core.algebra.properties.IPartitioningRequirementsCoordinator;
 import org.apache.hyracks.algebricks.core.algebra.properties.IPhysicalPropertiesVector;
 import org.apache.hyracks.algebricks.core.algebra.properties.LocalOrderProperty;
@@ -45,7 +44,6 @@ import org.apache.hyracks.algebricks.core.algebra.properties.StructuralPropertie
 import org.apache.hyracks.algebricks.core.algebra.properties.UnorderedPartitionedProperty;
 import org.apache.hyracks.algebricks.core.jobgen.impl.JobGenContext;
 import org.apache.hyracks.algebricks.core.jobgen.impl.JobGenHelper;
-import org.apache.hyracks.api.dataflow.value.IRangeMap;
 import org.apache.hyracks.api.dataflow.value.RecordDescriptor;
 import org.apache.hyracks.api.job.IOperatorDescriptorRegistry;
 import org.apache.hyracks.dataflow.std.base.RangeId;
@@ -63,9 +61,8 @@ public class MergeJoinPOperator extends AbstractJoinPOperator {
 
     private static final Logger LOGGER = Logger.getLogger(MergeJoinPOperator.class.getName());
 
-    public MergeJoinPOperator(JoinKind kind, List<LogicalVariable> sideLeft,
-            List<LogicalVariable> sideRight, int memSizeInFrames, IMergeJoinCheckerFactory mjcf, RangeId leftRangeId,
-            RangeId rightRangeId) {
+    public MergeJoinPOperator(JoinKind kind, List<LogicalVariable> sideLeft, List<LogicalVariable> sideRight,
+            int memSizeInFrames, IMergeJoinCheckerFactory mjcf, RangeId leftRangeId, RangeId rightRangeId) {
         // (stephen) Merge Join will never be broadcast (?)
         super(kind, JoinPartitioningType.PAIRWISE);
         this.memSizeInFrames = memSizeInFrames;
