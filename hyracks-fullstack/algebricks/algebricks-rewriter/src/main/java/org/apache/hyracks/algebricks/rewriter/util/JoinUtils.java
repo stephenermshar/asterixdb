@@ -63,10 +63,13 @@ public class JoinUtils {
         List<LogicalVariable> sideRight = new LinkedList<>();
         List<LogicalVariable> varsLeft = op.getInputs().get(0).getValue().getSchema();
         List<LogicalVariable> varsRight = op.getInputs().get(1).getValue().getSchema();
-        if (false && isHashJoinCondition(op.getCondition().getValue(), varsLeft, varsRight, sideLeft, sideRight)) {
+        if (isHashJoinCondition(op.getCondition().getValue(), varsLeft, varsRight, sideLeft, sideRight)) {
             // (Stephen) force merge join for testing
             BroadcastSide side = getBroadcastJoinSide(op.getCondition().getValue(), varsLeft, varsRight);
-            if (side == null) {
+            if (true) {
+                // (Stephen) force merge join for testing
+                setMergeJoinOp(op, sideLeft, sideRight, context);
+            } else if (side == null) {
                 setHashJoinOp(op, JoinPartitioningType.PAIRWISE, sideLeft, sideRight, context);
             } else {
                 switch (side) {
@@ -90,9 +93,6 @@ public class JoinUtils {
                         throw new IllegalStateException(side.toString());
                 }
             }
-        } else if (true) {
-            // (Stephen) force merge join for testing
-            setMergeJoinOp(op, sideLeft, sideRight, context);
         } else {
             setNestedLoopJoinOp(op);
         }
