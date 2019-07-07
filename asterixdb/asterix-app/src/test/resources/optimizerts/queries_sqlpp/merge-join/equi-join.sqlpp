@@ -23,6 +23,7 @@
  * Success        : Yes
  */
 
+
 drop  dataverse test if exists;
 create  dataverse test;
 
@@ -30,36 +31,44 @@ use test;
 
 
 create type test.AddressType as
- closed {
-  number : integer,
+{
+  number : bigint,
   street : string,
   city : string
 };
 
-create type test.CustomerTypetmp as
+create type test.CustomerType as
  closed {
-  cid : integer,
+  cid : bigint,
   name : string,
-  age : integer?,
+  cashBack : bigint,
+  age : bigint?,
   address : AddressType?,
   lastorder : {
-      oid : integer,
+      oid : bigint,
       total : float
   }
 
 };
 
-create type test.CustomerType as
- closed {
-  nested : CustomerTypetmp
+create type test.OrderType as
+{
+  oid : bigint,
+  cid : bigint,
+  orderstatus : string,
+  orderpriority : string,
+  clerk : string,
+  total : float,
+  items : [bigint]
 };
 
-create  dataset Customers(CustomerType) primary key nested.cid;
+create  dataset Customers(CustomerType) primary key cid;
 
-/* do we need a .adm output file for an optimizer test? */
-write output to asterix_nc1:"rttest/merge-join_equi-join.adm";
-select element {'customer1':c1.nested,'customer2':c2.nested}
-from  Customers as c1,
-      Customers as c2
-where (c1.nested.cid /*+ merge-join */  = c2.nested.cid)
+create  dataset Orders(OrderType) primary key oid;
+
+select element {'cid':c.cid,'oid':o.oid}
+from  Customers as c,
+      Orders as o
+where (c.cid /*+ merge-join */  = o.cid)
+order by c.cid,o.oid
 ;
