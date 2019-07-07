@@ -46,8 +46,6 @@ import org.apache.hyracks.algebricks.core.jobgen.impl.JobGenContext;
 import org.apache.hyracks.algebricks.core.jobgen.impl.JobGenHelper;
 import org.apache.hyracks.api.dataflow.value.RecordDescriptor;
 import org.apache.hyracks.api.job.IOperatorDescriptorRegistry;
-import org.apache.hyracks.dataflow.std.base.RangeId;
-import org.apache.hyracks.dataflow.std.join.IMergeJoinCheckerFactory;
 import org.apache.hyracks.dataflow.std.join.MergeJoinOperatorDescriptor;
 
 public class MergeJoinPOperator extends AbstractJoinPOperator {
@@ -55,27 +53,20 @@ public class MergeJoinPOperator extends AbstractJoinPOperator {
     private final int memSizeInFrames;
     protected final List<LogicalVariable> keysLeftBranch;
     protected final List<LogicalVariable> keysRightBranch;
-    private final IMergeJoinCheckerFactory mjcf;
-    private final RangeId leftRangeId;
-    private final RangeId rightRangeId;
 
     private static final Logger LOGGER = Logger.getLogger(MergeJoinPOperator.class.getName());
 
     public MergeJoinPOperator(JoinKind kind, List<LogicalVariable> sideLeft, List<LogicalVariable> sideRight,
-            int memSizeInFrames, IMergeJoinCheckerFactory mjcf, RangeId leftRangeId, RangeId rightRangeId) {
+            int memSizeInFrames) {
         // (stephen) Merge Join will never be broadcast (?)
         super(kind, JoinPartitioningType.PAIRWISE);
         this.memSizeInFrames = memSizeInFrames;
         this.keysLeftBranch = sideLeft;
         this.keysRightBranch = sideRight;
-        this.mjcf = mjcf;
-        this.leftRangeId = leftRangeId;
-        this.rightRangeId = rightRangeId;
 
         LOGGER.fine("MergeJoinPOperator constructed with: JoinKind=" + kind + ", JoinPartitioningType="
                 + partitioningType + ", List<LogicalVariable>=" + keysLeftBranch + ", List<LogicalVariable>="
-                + keysRightBranch + ", int memSizeInFrames=" + memSizeInFrames + ", IMergeJoinCheckerFactory mjcf="
-                + mjcf + ", RangeId leftRangeId=" + leftRangeId + ", RangeId rightRangeId=" + rightRangeId + ".");
+                + keysRightBranch + ", int memSizeInFrames=" + memSizeInFrames + ".");
     }
 
     public List<LogicalVariable> getKeysLeftBranch() {
@@ -84,18 +75,6 @@ public class MergeJoinPOperator extends AbstractJoinPOperator {
 
     public List<LogicalVariable> getKeysRightBranch() {
         return keysRightBranch;
-    }
-
-    public IMergeJoinCheckerFactory getMergeJoinCheckerFactory() {
-        return mjcf;
-    }
-
-    public RangeId getLeftRangeId() {
-        return leftRangeId;
-    }
-
-    public RangeId getRightRangeId() {
-        return rightRangeId;
     }
 
     @Override
@@ -185,7 +164,7 @@ public class MergeJoinPOperator extends AbstractJoinPOperator {
                 JobGenHelper.mkRecordDescriptor(context.getTypeEnvironment(op), opSchema, context);
 
         MergeJoinOperatorDescriptor opDesc =
-                new MergeJoinOperatorDescriptor(spec, memSizeInFrames, recordDescriptor, keysLeft, keysRight, mjcf);
+                new MergeJoinOperatorDescriptor(spec, memSizeInFrames, recordDescriptor, keysLeft, keysRight);
         contributeOpDesc(builder, (AbstractLogicalOperator) op, opDesc);
 
         ILogicalOperator src1 = op.getInputs().get(0).getValue();

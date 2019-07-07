@@ -49,11 +49,6 @@ import org.apache.hyracks.algebricks.core.algebra.operators.physical.MergeJoinPO
 import org.apache.hyracks.algebricks.core.algebra.operators.physical.NestedLoopJoinPOperator;
 import org.apache.hyracks.algebricks.core.algebra.properties.ILogicalPropertiesVector;
 import org.apache.hyracks.algebricks.core.config.AlgebricksConfig;
-import org.apache.hyracks.api.dataflow.value.IBinaryComparatorFactory;
-import org.apache.hyracks.data.std.accessors.IntegerBinaryComparatorFactory;
-import org.apache.hyracks.dataflow.std.base.RangeId;
-import org.apache.hyracks.dataflow.std.join.IMergeJoinCheckerFactory;
-import org.apache.hyracks.dataflow.std.join.NaturalMergeJoinCheckerFactory;
 
 public class JoinUtils {
     private JoinUtils() {
@@ -123,20 +118,8 @@ public class JoinUtils {
 
         JoinKind joinKind = op.getJoinKind();
         int memoryJoinSize = context.getPhysicalOptimizationConfig().getMaxFramesForJoin();
-        // (stephen) Not sure what binary comparator to use. This is just a guess, since we want an equi-join
-        //           regardless of data type, but it needs to compare and have information about greater/less than
-        //           so it needs to be an ordered type like a number. in our tests I think the fields being joined
-        //           on are integers, so this should work for now. not sure if there needs to only be one comparator
-        //           in the array or not.
-        IBinaryComparatorFactory binaryComparatorFactory[] = { IntegerBinaryComparatorFactory.INSTANCE };
-        IMergeJoinCheckerFactory mergeJoinCheckerFactory = new NaturalMergeJoinCheckerFactory(binaryComparatorFactory);
 
-        // (stephen) not sure how to set the range id right now.
-        RangeId leftRangeId = null;
-        RangeId rightRangeId = null;
-
-        IPhysicalOperator newPhysicalOperator = new MergeJoinPOperator(joinKind, sideLeft, sideRight, memoryJoinSize,
-                mergeJoinCheckerFactory, leftRangeId, rightRangeId);
+        IPhysicalOperator newPhysicalOperator = new MergeJoinPOperator(joinKind, sideLeft, sideRight, memoryJoinSize);
 
         op.setPhysicalOperator(newPhysicalOperator);
     }

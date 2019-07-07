@@ -52,14 +52,13 @@ public class MergeJoinOperatorDescriptor extends AbstractOperatorDescriptor {
     private final IMergeJoinCheckerFactory mergeJoinCheckerFactory;
 
     public MergeJoinOperatorDescriptor(IOperatorDescriptorRegistry spec, int memoryForJoin,
-            RecordDescriptor recordDescriptor, int[] leftKeys, int[] rightKeys,
-            IMergeJoinCheckerFactory mergeJoinCheckerFactory) {
+            RecordDescriptor recordDescriptor, int[] leftKeys, int[] rightKeys) {
         super(spec, 2, 1);
         outRecDescs[0] = recordDescriptor;
         this.leftKeys = leftKeys;
         this.rightKeys = rightKeys;
         this.memoryForJoin = memoryForJoin;
-        this.mergeJoinCheckerFactory = mergeJoinCheckerFactory;
+        this.mergeJoinCheckerFactory = null;
     }
 
     @Override
