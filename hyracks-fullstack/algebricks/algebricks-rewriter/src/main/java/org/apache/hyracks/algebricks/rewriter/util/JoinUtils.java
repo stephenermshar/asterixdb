@@ -115,36 +115,30 @@ public class JoinUtils {
                 context.getPhysicalOptimizationConfig().getFudgeFactor()));
     }
 
-    private static void setMergeJoinOp(AbstractBinaryJoinOperator op,
-            List<LogicalVariable> sideLeft, List<LogicalVariable> sideRight, IOptimizationContext context) {
+    private static void setMergeJoinOp(AbstractBinaryJoinOperator op, List<LogicalVariable> sideLeft,
+            List<LogicalVariable> sideRight, IOptimizationContext context) {
 
-        InnerJoinOperator ijo = (InnerJoinOperator) op;
-        IPhysicalOperator joinPo = ijo.getPhysicalOperator();
-        if (joinPo.getOperatorTag() == PhysicalOperatorTag.MERGE_JOIN) {
+        //        InnerJoinOperator ijo = (InnerJoinOperator) op;
+        //        IPhysicalOperator joinPo = ijo.getPhysicalOperator();
 
-            JoinKind joinKind = ijo.getJoinKind();
-            int memoryJoinSize = context.getPhysicalOptimizationConfig().getMaxFramesForJoin();
-            // (stephen) Not sure what binary comparator to use. This is just a guess, since we want an equi-join
-            //           regardless of data type, but it needs to compare and have information about greater/less than
-            //           so it needs to be an ordered type like a number. in our tests I think the fields being joined
-            //           on are integers, so this should work for now. not sure if there needs to only be one comparator
-            //           in the array or not.
-            IBinaryComparatorFactory binaryComparatorFactory[] = {IntegerBinaryComparatorFactory.INSTANCE};
-            IMergeJoinCheckerFactory mergeJoinCheckerFactory = new
-                    NaturalMergeJoinCheckerFactory(binaryComparatorFactory);
+        JoinKind joinKind = op.getJoinKind();
+        int memoryJoinSize = context.getPhysicalOptimizationConfig().getMaxFramesForJoin();
+        // (stephen) Not sure what binary comparator to use. This is just a guess, since we want an equi-join
+        //           regardless of data type, but it needs to compare and have information about greater/less than
+        //           so it needs to be an ordered type like a number. in our tests I think the fields being joined
+        //           on are integers, so this should work for now. not sure if there needs to only be one comparator
+        //           in the array or not.
+        IBinaryComparatorFactory binaryComparatorFactory[] = { IntegerBinaryComparatorFactory.INSTANCE };
+        IMergeJoinCheckerFactory mergeJoinCheckerFactory = new NaturalMergeJoinCheckerFactory(binaryComparatorFactory);
 
-            // (stephen) not sure how to set the range id right now.
-            RangeId leftRangeId = null;
-            RangeId rightRangeId = null;
+        // (stephen) not sure how to set the range id right now.
+        RangeId leftRangeId = null;
+        RangeId rightRangeId = null;
 
-            IPhysicalOperator physicalOperator = new MergeJoinPOperator(joinKind, sideLeft,
-                    sideRight, memoryJoinSize, mergeJoinCheckerFactory, leftRangeId, rightRangeId);
+        IPhysicalOperator newPhysicalOperator = new MergeJoinPOperator(joinKind, sideLeft, sideRight, memoryJoinSize,
+                mergeJoinCheckerFactory, leftRangeId, rightRangeId);
 
-            op.setPhysicalOperator(physicalOperator);
-        } else {
-            throw new java.lang.Error(
-                    "(Stephen) the Merge Join Operator did not receive a MERGE_JOIN Physical Operator Tag.");
-        }
+        op.setPhysicalOperator(newPhysicalOperator);
     }
 
     public static boolean hybridToInMemHashJoin(AbstractBinaryJoinOperator op, IOptimizationContext context)
