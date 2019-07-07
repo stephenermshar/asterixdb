@@ -44,11 +44,6 @@
     </dependency>
     <dependency>
       <groupId>org.apache.hyracks</groupId>
-      <artifactId>hyracks-dataflow-std</artifactId>
-      <version>0.3.5-SNAPSHOT</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hyracks</groupId>
       <artifactId>algebricks-core</artifactId>
       <version>${project.version}</version>
     </dependency>
@@ -66,11 +61,6 @@
       <groupId>org.apache.hyracks</groupId>
       <artifactId>hyracks-dataflow-common</artifactId>
       <version>${project.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hyracks</groupId>
-      <artifactId>hyracks-data-std</artifactId>
-      <version>0.3.5-SNAPSHOT</version>
     </dependency>
     <dependency>
       <groupId>org.apache.commons</groupId>
