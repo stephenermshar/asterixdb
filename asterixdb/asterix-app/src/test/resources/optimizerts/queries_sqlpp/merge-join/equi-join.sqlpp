@@ -17,7 +17,7 @@
  * under the License.
  */
 /*
- * Description    : Self-equi joins a dataset, Customers, based on the customer id.
+ * Description    : Equi joins two datasets, Customers and Orders, based on the customer id.
  *                  Given the 'merge-join' hint we expect the join to be transformed
  *                  into a merge-join using Customers' primary index.
  * Success        : Yes
@@ -70,5 +70,4 @@ select element {'cid':c.cid,'oid':o.oid}
 from  Customers as c,
       Orders as o
 where (c.cid /*+ merge-join */  = o.cid)
-order by c.cid,o.oid
 ;

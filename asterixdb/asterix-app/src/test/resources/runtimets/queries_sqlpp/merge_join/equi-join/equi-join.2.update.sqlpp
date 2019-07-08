@@ -18,8 +18,8 @@
  */
 /*
  * Description    : Equi joins two datasets, Customers and Orders, based on the customer id.
- *                  Given the 'indexnl' hint we expect the join to be transformed
- *                  into an indexed nested-loop join using Customers' primary index.
+ *                  Given the 'merge-join' hint we expect the join to be transformed
+ *                  into a merge-join using Customers' primary index.
  * Success        : Yes
  */
 
