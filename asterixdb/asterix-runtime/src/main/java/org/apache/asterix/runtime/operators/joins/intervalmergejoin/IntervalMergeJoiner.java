@@ -325,7 +325,6 @@ public class IntervalMergeJoiner extends AbstractIntervalMergeJoiner {
                             memoryAccessor, tp.getTupleIndex(), writer);
                 }
                 joinComparisonCount++;
-
             }
         }
         inputAccessor[LEFT_PARTITION].next();

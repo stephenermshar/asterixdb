@@ -114,6 +114,10 @@ class IntervalSideTuple {
         return imjc.checkToRemoveInMemory(accessor, tupleIndex, ist.accessor, ist.tupleIndex);
     }
 
+    public boolean checkForEarlyExit(IntervalSideTuple ist) throws HyracksDataException {
+        return imjc.checkForEarlyExit(accessor, tupleIndex, ist.accessor, ist.tupleIndex);
+    }
+
     public boolean startsBefore(IntervalSideTuple ist) {
         return start <= ist.start;
     }
@@ -162,12 +166,11 @@ public class IntervalForwardSweepJoiner extends AbstractStreamJoiner {
     private final LinkedList<TuplePointer> processingGroup = new LinkedList<>();
     private static final LinkedList<TuplePointer> empty = new LinkedList<>();
 
-    private boolean reloadLeftFrame = false;
-
     private final boolean DEBUG = false;
 
-    public IntervalForwardSweepJoiner(IHyracksTaskContext ctx, int memorySize, int partition, IIntervalMergeJoinCheckerFactory imjcf, int[] leftKeys, int[] rightKeys,
-            IConsumerFrame leftCF, IConsumerFrame rightCF) throws HyracksDataException {
+    public IntervalForwardSweepJoiner(IHyracksTaskContext ctx, int memorySize, int partition,
+            IIntervalMergeJoinCheckerFactory imjcf, int[] leftKeys, int[] rightKeys, IConsumerFrame leftCF,
+            IConsumerFrame rightCF) throws HyracksDataException {
         super(ctx, partition, leftCF, rightCF);
         this.partition = partition;
         this.memorySize = memorySize;
@@ -269,7 +272,7 @@ public class IntervalForwardSweepJoiner extends AbstractStreamJoiner {
     public void processJoin(IFrameWriter writer) throws HyracksDataException {
         TupleStatus leftTs = loadTuple(LEFT_PARTITION);
         TupleStatus rightTs = loadTuple(RIGHT_PARTITION);
-        
+
         while ((leftTs.isLoaded() || activeManager[LEFT_PARTITION].hasRecords())
                 && (rightTs.isLoaded() || activeManager[RIGHT_PARTITION].hasRecords())) {
             processNextTuple(writer);
@@ -429,17 +432,13 @@ public class IntervalForwardSweepJoiner extends AbstractStreamJoiner {
 
         // Compare with tuple in memory
         //        if (processingGroup.size() == 1) {
-        if (!reloadLeftFrame) {
-            processSingleWithMemory(other, main, searchTp, writer);
-        }
+        processSingleWithMemory(other, main, searchTp, writer);
         //        } else {
         //            processGroupWithMemory(other, main, searchTp, writer);
         //        }
 
         // Add tuples from the stream.
-        if (!processGroupWithStream(other, main, searchEndTp, writer)) {
-            return;
-        }
+        processGroupWithStream(other, main, searchEndTp, writer);
 
         // Remove search tuple
         if (DEBUG) {
@@ -452,46 +451,45 @@ public class IntervalForwardSweepJoiner extends AbstractStreamJoiner {
         }
     }
 
-//    private TuplePointer buildGroupFor(int groupPartition, int otherPartition, TuplePointer searchTp,
-//            TuplePointer searchEndTp) throws HyracksDataException {
-//        TuplePointer tpRight = activeManager[otherPartition].getFirst();
-//        memoryTuple[otherPartition].setTuple(tpRight);
-//
-//        memoryTuple[groupPartition].setTuple(searchTp);
-//        long searchGroupEnd = memoryTuple[groupPartition].getEnd();
-//
-//        if (DEBUG) {
-//            System.err.println("GROUP init: ");
-//            TuplePrinterUtil.printTuple("    ...: ", memoryAccessor[LEFT_PARTITION], searchTp.getTupleIndex());
-//        }
-//        TupleStatus ts = loadTuple(groupPartition);
-//        processingGroup.clear();
-//        processingGroup.add(searchTp);
-//        while (ts.isLoaded() && addToTupleProcessingGroup(groupPartition, otherPartition)) {
-//            TuplePointer tp = activeManager[groupPartition].addTuple(inputAccessor[groupPartition]);
-//            if (tp == null) {
-//                break;
-//            }
-//            if (DEBUG) {
-//                System.err.println("ADDED (group) tuple for search: " + tp);
-//                TuplePrinterUtil.printTuple("    search value: ", memoryAccessor[groupPartition], tp.getTupleIndex());
-//            }
-//            processingGroup.add(tp);
-//            memoryTuple[groupPartition].setTuple(tp);
-//            if (searchGroupEnd > memoryTuple[groupPartition].getEnd()) {
-//                searchGroupEnd = memoryTuple[groupPartition].getEnd();
-//                searchEndTp = tp;
-//            }
-//
-//            inputAccessor[groupPartition].next();
-//            ts = loadTuple(groupPartition);
-//        }
-//        return searchEndTp;
-//    }
+    //    private TuplePointer buildGroupFor(int groupPartition, int otherPartition, TuplePointer searchTp,
+    //            TuplePointer searchEndTp) throws HyracksDataException {
+    //        TuplePointer tpRight = activeManager[otherPartition].getFirst();
+    //        memoryTuple[otherPartition].setTuple(tpRight);
+    //
+    //        memoryTuple[groupPartition].setTuple(searchTp);
+    //        long searchGroupEnd = memoryTuple[groupPartition].getEnd();
+    //
+    //        if (DEBUG) {
+    //            System.err.println("GROUP init: ");
+    //            TuplePrinterUtil.printTuple("    ...: ", memoryAccessor[LEFT_PARTITION], searchTp.getTupleIndex());
+    //        }
+    //        TupleStatus ts = loadTuple(groupPartition);
+    //        processingGroup.clear();
+    //        processingGroup.add(searchTp);
+    //        while (ts.isLoaded() && addToTupleProcessingGroup(groupPartition, otherPartition)) {
+    //            TuplePointer tp = activeManager[groupPartition].addTuple(inputAccessor[groupPartition]);
+    //            if (tp == null) {
+    //                break;
+    //            }
+    //            if (DEBUG) {
+    //                System.err.println("ADDED (group) tuple for search: " + tp);
+    //                TuplePrinterUtil.printTuple("    search value: ", memoryAccessor[groupPartition], tp.getTupleIndex());
+    //            }
+    //            processingGroup.add(tp);
+    //            memoryTuple[groupPartition].setTuple(tp);
+    //            if (searchGroupEnd > memoryTuple[groupPartition].getEnd()) {
+    //                searchGroupEnd = memoryTuple[groupPartition].getEnd();
+    //                searchEndTp = tp;
+    //            }
+    //
+    //            inputAccessor[groupPartition].next();
+    //            ts = loadTuple(groupPartition);
+    //        }
+    //        return searchEndTp;
+    //    }
 
-    private boolean processGroupWithStream(int outer, int inner, TuplePointer searchEndTp, IFrameWriter writer)
+    private void processGroupWithStream(int outer, int inner, TuplePointer searchEndTp, IFrameWriter writer)
             throws HyracksDataException {
-        reloadLeftFrame = false;
 
         // Add tuples from the stream.
         while (loadTuple(outer).isLoaded()) {
@@ -500,12 +498,12 @@ public class IntervalForwardSweepJoiner extends AbstractStreamJoiner {
             if (!memoryTuple[inner].hasMoreMatches(inputTuple[outer])) {
                 break;
             }
-//            TuplePrinterUtil.printTuple("    outer: ", inputAccessor[outer]);
+            //            TuplePrinterUtil.printTuple("    outer: ", inputAccessor[outer]);
             TuplePointer tp = activeManager[outer].addTuple(inputAccessor[outer]);
             if (tp != null) {
                 memoryTuple[outer].setTuple(tp);
-//                TuplePrinterUtil.printTuple("    outer-memory: ", memoryAccessor[outer], tp.getTupleIndex());
-                
+                //                TuplePrinterUtil.printTuple("    outer-memory: ", memoryAccessor[outer], tp.getTupleIndex());
+
                 if (DEBUG) {
                     System.err.println("ADDED from stream: " + tp);
                     TuplePrinterUtil.printTuple("    stream: ", memoryAccessor[outer], tp.getTupleIndex());
@@ -515,10 +513,10 @@ public class IntervalForwardSweepJoiner extends AbstractStreamJoiner {
                     TuplePointer groupTp = groupIterator.next();
                     memoryTuple[inner].setTuple(groupTp);
 
-//                    TuplePrinterUtil.printTuple("    inner: ", memoryAccessor[inner], groupTp.getTupleIndex());
-//                    TuplePrinterUtil.printTuple("    left: ", memoryTuple[LEFT_PARTITION].getAccessor(), memoryTuple[LEFT_PARTITION].getTupleIndex());
-//                    TuplePrinterUtil.printTuple("    right: ", memoryTuple[RIGHT_PARTITION].getAccessor(), memoryTuple[RIGHT_PARTITION].getTupleIndex());
-                    
+                    //                    TuplePrinterUtil.printTuple("    inner: ", memoryAccessor[inner], groupTp.getTupleIndex());
+                    //                    TuplePrinterUtil.printTuple("    left: ", memoryTuple[LEFT_PARTITION].getAccessor(), memoryTuple[LEFT_PARTITION].getTupleIndex());
+                    //                    TuplePrinterUtil.printTuple("    right: ", memoryTuple[RIGHT_PARTITION].getAccessor(), memoryTuple[RIGHT_PARTITION].getTupleIndex());
+
                     // Add to result if matched.
                     if (memoryTuple[LEFT_PARTITION].compareJoin(memoryTuple[RIGHT_PARTITION])) {
                         //                      memoryAccessor[LEFT_PARTITION].reset(groupTp);
@@ -542,57 +540,51 @@ public class IntervalForwardSweepJoiner extends AbstractStreamJoiner {
                 //                TuplePrinterUtil.printTuple("    left: ", memoryAccessor[LEFT_PARTITION], searchTp.getTupleIndex());
                 //                activeManager[LEFT_PARTITION].remove(searchTp);
                 //                freezeAndClearMemory(writer);
-                return false;
             }
             inputAccessor[outer].next();
         }
-        if (!loadTuple(LEFT_PARTITION).isKnown()) {
-            reloadLeftFrame = true;
-            return false;
-        }
-        return true;
     }
 
-//    private void processGroupWithMemory(int outer, int inner, TuplePointer searchTp, IFrameWriter writer)
-//            throws HyracksDataException {
-//        // Compare with tuple in memory
-//        for (Iterator<TuplePointer> iterator = activeManager[outer].getIterator(); iterator.hasNext();) {
-//            TuplePointer matchTp = iterator.next();
-//            memoryTuple[outer].setTuple(matchTp);
-//
-//            // Search group.
-//            for (Iterator<TuplePointer> groupIterator = processingGroup.iterator(); groupIterator.hasNext();) {
-//                TuplePointer groupTp = groupIterator.next();
-//                memoryTuple[inner].setTuple(groupTp);
-//
-//                // Add to result if matched.
-//                //if (imjc.checkToSaveInResult(startGroup, endGroup, startOuter, endOuter, false)) {
-//                if (memoryTuple[LEFT_PARTITION].compareJoin(memoryTuple[RIGHT_PARTITION])) {
-//                    addToResult(memoryTuple[LEFT_PARTITION].getAccessor(), memoryTuple[LEFT_PARTITION].getTupleIndex(),
-//                            memoryTuple[RIGHT_PARTITION].getAccessor(), memoryTuple[RIGHT_PARTITION].getTupleIndex(),
-//                            false, writer);
-//                    if (DEBUG) {
-//                        System.err.println("MATCH (group) in memory match: " + groupTp + " " + matchTp);
-//                        TuplePrinterUtil.printTuple("    left: ", memoryTuple[LEFT_PARTITION].getAccessor(),
-//                                memoryTuple[LEFT_PARTITION].getTupleIndex());
-//                        TuplePrinterUtil.printTuple("    right: ", memoryTuple[RIGHT_PARTITION].getAccessor(),
-//                                memoryTuple[RIGHT_PARTITION].getTupleIndex());
-//                    }
-//                }
-//                joinComparisonCount++;
-//            }
-//
-//            // Remove if the tuple no long matches.
-//            memoryTuple[inner].setTuple(searchTp);
-//            if (memoryTuple[inner].removeFromMemory(memoryTuple[outer])) {
-//                if (DEBUG) {
-//                    System.err.println("REMOVE (group) tuple: " + matchTp);
-//                    TuplePrinterUtil.printTuple("    : ", memoryAccessor[outer], matchTp.getTupleIndex());
-//                }
-//                activeManager[outer].remove(iterator, matchTp);
-//            }
-//        }
-//    }
+    //    private void processGroupWithMemory(int outer, int inner, TuplePointer searchTp, IFrameWriter writer)
+    //            throws HyracksDataException {
+    //        // Compare with tuple in memory
+    //        for (Iterator<TuplePointer> iterator = activeManager[outer].getIterator(); iterator.hasNext();) {
+    //            TuplePointer matchTp = iterator.next();
+    //            memoryTuple[outer].setTuple(matchTp);
+    //
+    //            // Search group.
+    //            for (Iterator<TuplePointer> groupIterator = processingGroup.iterator(); groupIterator.hasNext();) {
+    //                TuplePointer groupTp = groupIterator.next();
+    //                memoryTuple[inner].setTuple(groupTp);
+    //
+    //                // Add to result if matched.
+    //                //if (imjc.checkToSaveInResult(startGroup, endGroup, startOuter, endOuter, false)) {
+    //                if (memoryTuple[LEFT_PARTITION].compareJoin(memoryTuple[RIGHT_PARTITION])) {
+    //                    addToResult(memoryTuple[LEFT_PARTITION].getAccessor(), memoryTuple[LEFT_PARTITION].getTupleIndex(),
+    //                            memoryTuple[RIGHT_PARTITION].getAccessor(), memoryTuple[RIGHT_PARTITION].getTupleIndex(),
+    //                            false, writer);
+    //                    if (DEBUG) {
+    //                        System.err.println("MATCH (group) in memory match: " + groupTp + " " + matchTp);
+    //                        TuplePrinterUtil.printTuple("    left: ", memoryTuple[LEFT_PARTITION].getAccessor(),
+    //                                memoryTuple[LEFT_PARTITION].getTupleIndex());
+    //                        TuplePrinterUtil.printTuple("    right: ", memoryTuple[RIGHT_PARTITION].getAccessor(),
+    //                                memoryTuple[RIGHT_PARTITION].getTupleIndex());
+    //                    }
+    //                }
+    //                joinComparisonCount++;
+    //            }
+    //
+    //            // Remove if the tuple no long matches.
+    //            memoryTuple[inner].setTuple(searchTp);
+    //            if (memoryTuple[inner].removeFromMemory(memoryTuple[outer])) {
+    //                if (DEBUG) {
+    //                    System.err.println("REMOVE (group) tuple: " + matchTp);
+    //                    TuplePrinterUtil.printTuple("    : ", memoryAccessor[outer], matchTp.getTupleIndex());
+    //                }
+    //                activeManager[outer].remove(iterator, matchTp);
+    //            }
+    //        }
+    //    }
 
     private void processSingleWithMemory(int outer, int inner, TuplePointer searchTp, IFrameWriter writer)
             throws HyracksDataException {
@@ -603,12 +595,22 @@ public class IntervalForwardSweepJoiner extends AbstractStreamJoiner {
             TuplePointer matchTp = iterator.next();
             memoryTuple[outer].setTuple(matchTp);
 
-            // Add to result if matched.
-            //if (imjc.checkToSaveInResult(startGroup, endGroup, startOuter, endOuter, false)) {
-            if (memoryTuple[LEFT_PARTITION].compareJoin(memoryTuple[RIGHT_PARTITION])) {
+            if (memoryTuple[inner].removeFromMemory(memoryTuple[outer])) {
+                // Remove if the tuple no long matches.
+                if (DEBUG) {
+                    System.err.println("REMOVE tuple: " + matchTp);
+                    TuplePrinterUtil.printTuple("    right: ", memoryAccessor[RIGHT_PARTITION],
+                            matchTp.getTupleIndex());
+                }
+                activeManager[outer].remove(iterator, matchTp);
+            } else if (memoryTuple[inner].checkForEarlyExit(memoryTuple[outer])) {
+                // No more possible comparisons
+                break;
+            } else if (memoryTuple[LEFT_PARTITION].compareJoin(memoryTuple[RIGHT_PARTITION])) {
                 addToResult(memoryTuple[LEFT_PARTITION].getAccessor(), memoryTuple[LEFT_PARTITION].getTupleIndex(),
                         memoryTuple[RIGHT_PARTITION].getAccessor(), memoryTuple[RIGHT_PARTITION].getTupleIndex(), false,
                         writer);
+                // Add to result if matched.
                 if (DEBUG) {
                     System.err.println("MATCH in memory: " + searchTp + " " + matchTp);
                     TuplePrinterUtil.printTuple("    left: ", memoryTuple[LEFT_PARTITION].getAccessor(),
@@ -619,15 +621,6 @@ public class IntervalForwardSweepJoiner extends AbstractStreamJoiner {
             }
             joinComparisonCount++;
 
-            // Remove if the tuple no long matches.
-            if (memoryTuple[inner].removeFromMemory(memoryTuple[outer])) {
-                if (DEBUG) {
-                    System.err.println("REMOVE tuple: " + matchTp);
-                    TuplePrinterUtil.printTuple("    right: ", memoryAccessor[RIGHT_PARTITION],
-                            matchTp.getTupleIndex());
-                }
-                activeManager[outer].remove(iterator, matchTp);
-            }
         }
     }
 
@@ -667,8 +660,19 @@ public class IntervalForwardSweepJoiner extends AbstractStreamJoiner {
                         memoryTuple[inner].getTupleIndex());
             }
 
-            // Add to result if matched.
-            if (testTuple.compareJoin(memoryTuple[inner])) {
+            if (testTuple.removeFromMemory(memoryTuple[inner])) {
+                // Remove if the tuple no long matches.
+                if (DEBUG) {
+                    System.err.println("REMOVE tuple: " + innerTp);
+                    TuplePrinterUtil.printTuple("    ...: ", memoryTuple[inner].getAccessor(),
+                            memoryTuple[inner].getTupleIndex());
+                }
+                activeManager[inner].remove(innerIterator, innerTp);
+            } else if (!testTuple.hasMoreMatches(memoryTuple[inner])) {
+                // Exit if no more possible matches
+                break;
+            } else if (testTuple.compareJoin(memoryTuple[inner])) {
+                // Add to result if matched.
                 addToResult(testTuple.getAccessor(), testTuple.getTupleIndex(), memoryTuple[inner].getAccessor(),
                         memoryTuple[inner].getTupleIndex(), reversed, writer);
                 if (DEBUG) {
@@ -679,19 +683,6 @@ public class IntervalForwardSweepJoiner extends AbstractStreamJoiner {
                 }
             }
             joinComparisonCount++;
-            // Remove if the tuple no long matches.
-            if (testTuple.removeFromMemory(memoryTuple[inner])) {
-                if (DEBUG) {
-                    System.err.println("REMOVE tuple: " + innerTp);
-                    TuplePrinterUtil.printTuple("    ...: ", memoryTuple[inner].getAccessor(),
-                            memoryTuple[inner].getTupleIndex());
-                }
-                activeManager[inner].remove(innerIterator, innerTp);
-            }
-            // Exit if no more possible matches
-            if (!testTuple.hasMoreMatches(memoryTuple[inner])) {
-                break;
-            }
         }
     }
 
