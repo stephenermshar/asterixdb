@@ -64,7 +64,6 @@ public class JoinUtils {
         List<LogicalVariable> varsLeft = op.getInputs().get(0).getValue().getSchema();
         List<LogicalVariable> varsRight = op.getInputs().get(1).getValue().getSchema();
         if (isHashJoinCondition(op.getCondition().getValue(), varsLeft, varsRight, sideLeft, sideRight)) {
-            // (Stephen) force merge join for testing
             BroadcastSide side = getBroadcastJoinSide(op.getCondition().getValue(), varsLeft, varsRight);
             if (true) {
                 // (Stephen) force merge join for testing
@@ -112,9 +111,6 @@ public class JoinUtils {
 
     private static void setMergeJoinOp(AbstractBinaryJoinOperator op, List<LogicalVariable> sideLeft,
             List<LogicalVariable> sideRight, IOptimizationContext context) {
-
-        //        InnerJoinOperator ijo = (InnerJoinOperator) op;
-        //        IPhysicalOperator joinPo = ijo.getPhysicalOperator();
 
         JoinKind joinKind = op.getJoinKind();
         int memoryJoinSize = context.getPhysicalOptimizationConfig().getMaxFramesForJoin();
