@@ -118,10 +118,8 @@ public class MergeJoinPOperator extends AbstractJoinPOperator {
         IPartitioningProperty ppRight = null;
         List<ILocalStructuralProperty> ispRight = new ArrayList<>();
 
-        // (stephen) I'm assuming this refactor is ok because java passes objects as references (?). So
-        //           setRequiredLocalOrderProperty() manipulates isp(Left/Right) which are then used later outside the method.
-        //           Need to double check this.
-        setRequiredLocalOrderProperty(ispLeft, ispRight);
+        setRequiredLocalOrderProperty(ispLeft);
+        setRequiredLocalOrderProperty(ispRight);
 
         if (op.getExecutionMode() == AbstractLogicalOperator.ExecutionMode.PARTITIONED) {
             // (stephen) make unordered partitioned property
@@ -139,21 +137,14 @@ public class MergeJoinPOperator extends AbstractJoinPOperator {
         return new PhysicalRequirements(pv, prc);
     }
 
-    private void setRequiredLocalOrderProperty(List<ILocalStructuralProperty> ispLeft,
-            List<ILocalStructuralProperty> ispRight) {
+    private void setRequiredLocalOrderProperty(List<ILocalStructuralProperty> localStructuralProperties) {
 
-        ArrayList<OrderColumn> orderLeft = new ArrayList<>();
+        ArrayList<OrderColumn> order = new ArrayList<>();
         for (LogicalVariable v : keysLeftBranch) {
-            orderLeft.add(new OrderColumn(v, OrderKind.ASC));
+            order.add(new OrderColumn(v, OrderKind.ASC));
         }
         // (stephen) LocalOrderProperty adds local sorting property
-        ispLeft.add(new LocalOrderProperty(orderLeft));
-
-        ArrayList<OrderColumn> orderRight = new ArrayList<>();
-        for (LogicalVariable v : keysRightBranch) {
-            orderRight.add(new OrderColumn(v, OrderKind.ASC));
-        }
-        ispRight.add(new LocalOrderProperty(orderRight));
+        localStructuralProperties.add(new LocalOrderProperty(order));
     }
 
     @Override
