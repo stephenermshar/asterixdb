@@ -17,13 +17,11 @@
  * under the License.
  */
 
-package org.apache.asterix.runtime.operators.joins.intervalindex;
+package org.apache.hyracks.dataflow.std.join;
 
 import java.nio.ByteBuffer;
-import java.util.Comparator;
 import java.util.logging.Logger;
 
-import org.apache.asterix.runtime.operators.joins.IIntervalMergeJoinCheckerFactory;
 import org.apache.hyracks.api.context.IHyracksTaskContext;
 import org.apache.hyracks.api.dataflow.ActivityId;
 import org.apache.hyracks.api.dataflow.IActivity;
@@ -48,18 +46,18 @@ public class IntervalIndexJoinOperatorDescriptor extends AbstractOperatorDescrip
     private final int[] leftKeys;
     private final int[] rightKeys;
     private final int memoryForJoin;
-    private final IIntervalMergeJoinCheckerFactory imjcf;
+    private final IMergeJoinCheckerFactory mjcf;
 
     private static final Logger LOGGER = Logger.getLogger(IntervalIndexJoinOperatorDescriptor.class.getName());
 
     public IntervalIndexJoinOperatorDescriptor(IOperatorDescriptorRegistry spec, int memoryForJoin, int[] leftKeys,
-            int[] rightKeys, RecordDescriptor recordDescriptor, IIntervalMergeJoinCheckerFactory imjcf) {
+            int[] rightKeys, RecordDescriptor recordDescriptor, IMergeJoinCheckerFactory mjcf) {
         super(spec, 2, 1);
-        recordDescriptors[0] = recordDescriptor;
+        outRecDescs[0] = recordDescriptor;
         this.leftKeys = leftKeys;
         this.rightKeys = rightKeys;
         this.memoryForJoin = memoryForJoin;
-        this.imjcf = imjcf;
+        this.mjcf = mjcf;
     }
 
     @Override
@@ -115,44 +113,40 @@ public class IntervalIndexJoinOperatorDescriptor extends AbstractOperatorDescrip
 
             @Override
             public void initialize() throws HyracksDataException {
-                int sleep = 0;
-                ProducerConsumerFrameState leftState;
-                do {
-                    try {
-                        Thread.sleep((int) Math.pow(sleep++, 2));
-                    } catch (InterruptedException ex) {
-                        Thread.currentThread().interrupt();
-                    }
-                    leftState = (ProducerConsumerFrameState) ctx.getStateObject(new TaskId(dataIds[0], partition));
-                } while (leftState == null);
-                sleep = 0;
-                ProducerConsumerFrameState rightState;
-                do {
-                    try {
-                        Thread.sleep((int) Math.pow(sleep++, 2));
-                    } catch (InterruptedException ex) {
-                        Thread.currentThread().interrupt();
-                    }
-                    rightState = (ProducerConsumerFrameState) ctx.getStateObject(new TaskId(dataIds[1], partition));
-                } while (rightState == null);
+                ProducerConsumerFrameState leftState = getPCFrameState(0);
+                ProducerConsumerFrameState rightState = getPCFrameState(1);
 
-                byte point = imjcf.isOrderAsc() ? EndPointIndexItem.START_POINT : EndPointIndexItem.END_POINT;
-                Comparator<EndPointIndexItem> endPointComparator = imjcf.isOrderAsc()
+                Comparator<EndPointIndexItem> endPointComparator = mjcf.isOrderAsc()
                         ? EndPointIndexItem.EndPointAscComparator
                         : EndPointIndexItem.EndPointDescComparator;
 
                 try {
                     writer.open();
-                    IStreamJoiner indexJoiner = new IntervalIndexJoiner(ctx, memoryForJoin, partition,
-                            endPointComparator, imjcf, leftKeys, rightKeys, (IConsumerFrame) leftState,
-                            (IConsumerFrame) rightState);
-                    indexJoiner.processJoin(writer);
+                    // (stephen) is IStreamJoiner in interval_join_symmetric, but I'm making it IMergeJoiner for now so
+                    //           I can refactor everything together.
+                    IStreamJoiner joiner = new IntervalIndexJoiner(ctx, memoryForJoin, partition, endPointComparator, mjcf,
+                            leftKeys, rightKeys, (IConsumerFrame) leftState, (IConsumerFrame) rightState);
+                    joiner.processJoin(writer);
                 } catch (Exception ex) {
                     writer.fail();
-                    throw new HyracksDataException(ex);
+                    throw new HyracksDataException(ex.getMessage());
                 } finally {
                     writer.close();
                 }
+            }
+
+            private ProducerConsumerFrameState getPCFrameState(int dataId) {
+                int sleep = 0;
+                ProducerConsumerFrameState state;
+                do {
+                    try {
+                        Thread.sleep((int) Math.pow(sleep++, 2));
+                    } catch (InterruptedException ex) {
+                        Thread.currentThread().interrupt();
+                    }
+                    state = (ProducerConsumerFrameState) ctx.getStateObject(new TaskId(dataIds[dataId], partition));
+                } while (state == null);
+                return state;
             }
         }
     }
