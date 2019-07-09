@@ -19,27 +19,23 @@
 package org.apache.hyracks.dataflow.std.join;
 
 import org.apache.hyracks.api.context.IHyracksTaskContext;
-import org.apache.hyracks.api.dataflow.value.IBinaryComparator;
-import org.apache.hyracks.api.dataflow.value.IBinaryComparatorFactory;
 import org.apache.hyracks.api.dataflow.value.IRangePartitionType.RangePartitioningType;
-import org.apache.hyracks.dataflow.std.util.FrameTuplePairComparator;
+import org.apache.hyracks.api.dataflow.value.ITuplePairComparatorFactory;
+import org.apache.hyracks.api.exceptions.HyracksDataException;
 
 public class NaturalMergeJoinCheckerFactory implements IMergeJoinCheckerFactory {
     private static final long serialVersionUID = 1L;
-    private IBinaryComparatorFactory[] comparatorFactories;
+    private ITuplePairComparatorFactory comparatorFactory;
 
-    public NaturalMergeJoinCheckerFactory(IBinaryComparatorFactory[] comparatorFactories) {
-        this.comparatorFactories = comparatorFactories;
+    public NaturalMergeJoinCheckerFactory(ITuplePairComparatorFactory comparatorFactory) {
+        this.comparatorFactory = comparatorFactory;
     }
 
     @Override
-    public IMergeJoinChecker createMergeJoinChecker(int[] keys0, int[] keys1, IHyracksTaskContext ctx) {
-        final IBinaryComparator[] comparators = new IBinaryComparator[comparatorFactories.length];
-        for (int i = 0; i < comparatorFactories.length; ++i) {
-            comparators[i] = comparatorFactories[i].createBinaryComparator();
-        }
-        FrameTuplePairComparator ftp = new FrameTuplePairComparator(keys0, keys1, comparators);
-        return new NaturalMergeJoinChecker(ftp);
+    public IMergeJoinChecker createMergeJoinChecker(int[] keys0, int[] keys1, IHyracksTaskContext ctx)
+            throws HyracksDataException {
+
+        return new NaturalMergeJoinChecker(comparatorFactory.createTuplePairComparator(ctx));
     }
 
     @Override

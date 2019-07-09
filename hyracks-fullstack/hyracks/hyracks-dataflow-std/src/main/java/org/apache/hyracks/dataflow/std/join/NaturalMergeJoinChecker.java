@@ -19,15 +19,15 @@
 package org.apache.hyracks.dataflow.std.join;
 
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
+import org.apache.hyracks.api.dataflow.value.ITuplePairComparator;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.dataflow.std.buffermanager.ITupleAccessor;
-import org.apache.hyracks.dataflow.std.util.FrameTuplePairComparator;
 
 public class NaturalMergeJoinChecker implements IMergeJoinChecker {
     private static final long serialVersionUID = 1L;
-    private final FrameTuplePairComparator comparator;
+    private final ITuplePairComparator comparator;
 
-    public NaturalMergeJoinChecker(FrameTuplePairComparator comparator) {
+    public NaturalMergeJoinChecker(ITuplePairComparator comparator) {
         this.comparator = comparator;
     }
 
