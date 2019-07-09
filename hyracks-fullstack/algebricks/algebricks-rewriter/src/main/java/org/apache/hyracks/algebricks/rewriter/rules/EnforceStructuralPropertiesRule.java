@@ -274,6 +274,9 @@ public class EnforceStructuralPropertiesRule implements IAlgebraicRewriteRule {
         if (op.hasNestedPlans()) {
             AbstractOperatorWithNestedPlans nested = (AbstractOperatorWithNestedPlans) op;
             for (ILogicalPlan p : nested.getNestedPlans()) {
+                // (stephen) this appears to be the only place that nestPlan will be true and the only case where
+                //           the sort will be MICRO_STABLE_SORT. The MergeJoin sort can probably be regular stable sort
+                //           since I don't know of any nested plans in the merge join operator.
                 if (physOptimizePlan(p, required, true, context)) {
                     changed = true;
                 }

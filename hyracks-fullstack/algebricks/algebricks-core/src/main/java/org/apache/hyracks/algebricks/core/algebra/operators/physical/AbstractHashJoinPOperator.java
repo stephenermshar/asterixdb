@@ -100,6 +100,7 @@ public abstract class AbstractHashJoinPOperator extends AbstractJoinPOperator {
         IPartitioningProperty pp1;
         IPartitioningProperty pp2;
         switch (partitioningType) {
+            // (stephen) pairwise computes the partitioning property
             case PAIRWISE:
                 pp1 = new UnorderedPartitionedProperty(new ListSet<>(keysLeftBranch),
                         context.getComputationNodeDomain());
@@ -123,6 +124,7 @@ public abstract class AbstractHashJoinPOperator extends AbstractJoinPOperator {
         IPartitioningRequirementsCoordinator prc;
         switch (kind) {
             case INNER: {
+                // (stephen) brings mathcing tuples to the same nodes
                 prc = IPartitioningRequirementsCoordinator.EQCLASS_PARTITIONING_COORDINATOR;
                 break;
             }
