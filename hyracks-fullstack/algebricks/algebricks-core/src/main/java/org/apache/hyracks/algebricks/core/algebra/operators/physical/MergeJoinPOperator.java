@@ -118,8 +118,8 @@ public class MergeJoinPOperator extends AbstractJoinPOperator {
         IPartitioningProperty ppRight = null;
         List<ILocalStructuralProperty> ispRight = new ArrayList<>();
 
-        setRequiredLocalOrderProperty(ispLeft);
-        setRequiredLocalOrderProperty(ispRight);
+        setRequiredLocalOrderProperty(ispLeft, keysLeftBranch);
+        setRequiredLocalOrderProperty(ispRight, keysRightBranch);
 
         if (op.getExecutionMode() == AbstractLogicalOperator.ExecutionMode.PARTITIONED) {
             // (stephen) make unordered partitioned property
@@ -137,10 +137,11 @@ public class MergeJoinPOperator extends AbstractJoinPOperator {
         return new PhysicalRequirements(pv, prc);
     }
 
-    private void setRequiredLocalOrderProperty(List<ILocalStructuralProperty> localStructuralProperties) {
+    private void setRequiredLocalOrderProperty(List<ILocalStructuralProperty> localStructuralProperties,
+            List<LogicalVariable> keysBranch) {
 
         ArrayList<OrderColumn> order = new ArrayList<>();
-        for (LogicalVariable v : keysLeftBranch) {
+        for (LogicalVariable v : keysBranch) {
             order.add(new OrderColumn(v, OrderKind.ASC));
         }
         // (stephen) LocalOrderProperty adds local sorting property
