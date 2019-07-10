@@ -22,6 +22,7 @@ package org.apache.hyracks.dataflow.std.join;
 import java.nio.ByteBuffer;
 import java.util.logging.Logger;
 
+import org.apache.hyracks.api.comm.IFrameWriter;
 import org.apache.hyracks.api.context.IHyracksTaskContext;
 import org.apache.hyracks.api.dataflow.ActivityId;
 import org.apache.hyracks.api.dataflow.IActivity;
@@ -35,7 +36,9 @@ import org.apache.hyracks.api.job.IOperatorDescriptorRegistry;
 import org.apache.hyracks.dataflow.std.base.AbstractActivityNode;
 import org.apache.hyracks.dataflow.std.base.AbstractOperatorDescriptor;
 import org.apache.hyracks.dataflow.std.base.AbstractUnaryInputSinkOperatorNodePushable;
+import org.apache.hyracks.dataflow.std.base.AbstractUnaryOutputOperatorNodePushable;
 import org.apache.hyracks.dataflow.std.base.AbstractUnaryOutputSourceOperatorNodePushable;
+import org.apache.hyracks.dataflow.std.union.UnionAllOperatorDescriptor;
 
 public class IntervalIndexJoinOperatorDescriptor extends AbstractOperatorDescriptor {
     private static final long serialVersionUID = 1L;
@@ -62,70 +65,65 @@ public class IntervalIndexJoinOperatorDescriptor extends AbstractOperatorDescrip
 
     @Override
     public void contributeActivities(IActivityGraphBuilder builder) {
-        ActivityId leftAid = new ActivityId(odId, LEFT_ACTIVITY_ID);
-        ActivityId rightAid = new ActivityId(odId, RIGHT_ACTIVITY_ID);
-        ActivityId joinAid = new ActivityId(odId, JOIN_ACTIVITY_ID);
-        ActivityId[] dataAids = { leftAid, rightAid };
 
-        IActivity leftAN = new InputDataActivityNode(leftAid);
-        IActivity rightAN = new InputDataActivityNode(rightAid);
-        IActivity joinAN = new JoinerActivityNode(joinAid, dataAids);
+        int joinInputs = 2;
 
-        builder.addActivity(this, rightAN);
-        builder.addSourceEdge(1, rightAN, 0);
-
-        builder.addActivity(this, leftAN);
-        builder.addSourceEdge(0, leftAN, 0);
-
-        builder.addActivity(this, joinAN);
-        builder.addTargetEdge(0, joinAN, 0);
+        JoinerActivityNode joinerNode = new JoinerActivityNode(new ActivityId(getOperatorId(), 0), joinInputs);
+        builder.addActivity(this, joinerNode);
+        for (int i = 0; i < joinInputs; i++) {
+            builder.addSourceEdge(i, joinerNode, i);
+        }
+        builder.addTargetEdge(0, joinerNode, 0);
     }
 
     private class JoinerActivityNode extends AbstractActivityNode {
         private static final long serialVersionUID = 1L;
+        private final int numJoinInputs;
 
-        private final ActivityId[] dataIds;
-
-        public JoinerActivityNode(ActivityId id, ActivityId[] dataIds) {
+        public JoinerActivityNode(ActivityId id, int numJoinInputs) {
             super(id);
-            this.dataIds = dataIds;
+            this.numJoinInputs = numJoinInputs;
         }
 
         @Override
         public IOperatorNodePushable createPushRuntime(IHyracksTaskContext ctx,
                 IRecordDescriptorProvider recordDescProvider, int partition, int nPartitions)
                 throws HyracksDataException {
-            return new JoinerOperator(ctx, partition, dataIds);
+            RecordDescriptor inRecordDesc = recordDescProvider.getInputRecordDescriptor(id, 0);
+            return new JoinerOperator(ctx, partition, numJoinInputs, inRecordDesc);
         }
 
-        private class JoinerOperator extends AbstractUnaryOutputSourceOperatorNodePushable {
+        private class JoinerOperator extends AbstractUnaryOutputOperatorNodePushable {
 
             private final IHyracksTaskContext ctx;
             private final int partition;
-            private final ActivityId[] dataIds;
+            private final int numJoinInputs;
+            private final RecordDescriptor recordDescriptor;
+            private ProducerConsumerFrameState state;
 
-            public JoinerOperator(IHyracksTaskContext ctx, int partition, ActivityId[] dataIds)
-                    throws HyracksDataException {
+            public JoinerOperator(IHyracksTaskContext ctx, int partition, int numJoinInputs,
+                    RecordDescriptor inRecordDesc) {
+
                 this.ctx = ctx;
-                this.dataIds = dataIds;
                 this.partition = partition;
+                this.numJoinInputs = numJoinInputs;
+                this.recordDescriptor = inRecordDesc;
             }
+
+            @Override
+            public int getInputArity() { return numJoinInputs; }
 
             @Override
             public void initialize() throws HyracksDataException {
                 ProducerConsumerFrameState leftState = getPCFrameState(0);
                 ProducerConsumerFrameState rightState = getPCFrameState(1);
 
-                Comparator<EndPointIndexItem> endPointComparator = mjcf.isOrderAsc()
-                        ? EndPointIndexItem.EndPointAscComparator
-                        : EndPointIndexItem.EndPointDescComparator;
-
                 try {
                     writer.open();
                     // (stephen) is IStreamJoiner in interval_join_symmetric, but I'm making it IMergeJoiner for now so
                     //           I can refactor everything together.
-                    IStreamJoiner joiner = new IntervalIndexJoiner(ctx, memoryForJoin, partition, endPointComparator, mjcf,
-                            leftKeys, rightKeys, (IConsumerFrame) leftState, (IConsumerFrame) rightState);
+                    IStreamJoiner joiner = new IntervalIndexJoiner(ctx, memoryForJoin, partition, mjcf,
+                            leftKeys, rightKeys, leftState, rightState);
                     joiner.processJoin(writer);
                 } catch (Exception ex) {
                     writer.fail();
@@ -144,63 +142,38 @@ public class IntervalIndexJoinOperatorDescriptor extends AbstractOperatorDescrip
                     } catch (InterruptedException ex) {
                         Thread.currentThread().interrupt();
                     }
-                    state = (ProducerConsumerFrameState) ctx.getStateObject(new TaskId(dataIds[dataId], partition));
+                    state = (ProducerConsumerFrameState) ctx.getStateObject(new TaskId(0, partition));
                 } while (state == null);
                 return state;
             }
-        }
-    }
-
-    private class InputDataActivityNode extends AbstractActivityNode {
-        private static final long serialVersionUID = 1L;
-
-        private int partition;
-
-        public InputDataActivityNode(ActivityId id) {
-            super(id);
-        }
-
-        @Override
-        public IOperatorNodePushable createPushRuntime(IHyracksTaskContext ctx,
-                IRecordDescriptorProvider recordDescProvider, int partition, int nPartitions)
-                throws HyracksDataException {
-            this.partition = partition;
-            RecordDescriptor inRecordDesc = recordDescProvider.getInputRecordDescriptor(id, 0);
-            return new InputDataOperator(ctx, inRecordDesc);
-        }
-
-        private class InputDataOperator extends AbstractUnaryInputSinkOperatorNodePushable {
-
-            private IHyracksTaskContext ctx;
-            private final RecordDescriptor recordDescriptor;
-            private ProducerConsumerFrameState state;
-
-            public InputDataOperator(IHyracksTaskContext ctx, RecordDescriptor inRecordDesc) {
-                this.ctx = ctx;
-                this.recordDescriptor = inRecordDesc;
-            }
 
             @Override
-            public void open() throws HyracksDataException {
-                state = new ProducerConsumerFrameState(ctx.getJobletContext().getJobId(),
-                        new TaskId(getActivityId(), partition), recordDescriptor);
-                ctx.setStateObject(state);
-            }
+            public IFrameWriter getInputFrameWriter(int index) {
+                    return new IFrameWriter() {
+                        @Override
+                        public void open() throws HyracksDataException {
+                            state = new ProducerConsumerFrameState(ctx.getJobletContext().getJobId(),
+                                    new TaskId(getActivityId(), partition), recordDescriptor);
+                            ctx.setStateObject(state);
+                        }
 
-            @Override
-            public void nextFrame(ByteBuffer buffer) throws HyracksDataException {
-                state.putFrame(buffer);
-            }
+                        @Override
+                        public void nextFrame(ByteBuffer buffer) throws HyracksDataException {
+                            state.putFrame(buffer);
+                        }
 
-            @Override
-            public void fail() throws HyracksDataException {
-                state.noMoreFrames();
-            }
+                        @Override
+                        public void fail() throws HyracksDataException {
+                            state.noMoreFrames();
+                        }
 
-            @Override
-            public void close() throws HyracksDataException {
-                state.noMoreFrames();
-            }
+                        @Override
+                        public void close() throws HyracksDataException {
+                            state.noMoreFrames();
+                        }
+                    };
+                }
+
         }
     }
 }

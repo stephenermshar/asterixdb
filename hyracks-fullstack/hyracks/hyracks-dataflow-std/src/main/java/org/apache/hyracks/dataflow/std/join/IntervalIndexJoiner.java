@@ -16,7 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.asterix.runtime.operators.joins.intervalindex;
+package org.apache.hyracks.dataflow.std.join;
 
 import java.util.Comparator;
 import java.util.List;
@@ -29,11 +29,8 @@ import org.apache.hyracks.api.context.IHyracksTaskContext;
 import org.apache.hyracks.api.dataflow.value.RecordDescriptor;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.dataflow.common.comm.util.FrameUtils;
-import org.apache.hyracks.dataflow.std.buffermanager.IPartitionedDeletableTupleBufferManager;
 import org.apache.hyracks.dataflow.std.buffermanager.ITupleAccessor;
 import org.apache.hyracks.dataflow.std.buffermanager.TupleAccessor;
-import org.apache.hyracks.dataflow.std.buffermanager.VPartitionDeletableTupleBufferManager;
-import org.apache.hyracks.dataflow.std.join.RunFileStream;
 import org.apache.hyracks.dataflow.std.structures.RunFilePointer;
 import org.apache.hyracks.dataflow.std.structures.TuplePointer;
 
@@ -74,9 +71,10 @@ public class IntervalIndexJoiner extends AbstractStreamJoiner {
     private final int partition;
     private final int memorySize;
 
-    public IntervalIndexJoiner(IHyracksTaskContext ctx, int memorySize, int partition,
-            Comparator<EndPointIndexItem> endPointComparator, IIntervalMergeJoinCheckerFactory imjcf, int[] leftKeys,
-            int[] rightKeys, IConsumerFrame leftCF, IConsumerFrame rightCF) throws HyracksDataException {
+    public IntervalIndexJoiner(IHyracksTaskContext ctx, int memorySize, int partition, IMergeJoinCheckerFactory mjcf,
+            int[] leftKeys, int[] rightKeys, IConsumerFrame leftCF,
+            IConsumerFrame rightCF) throws HyracksDataException {
+
         super(ctx, partition, leftCF, rightCF);
         this.partition = partition;
         this.memorySize = memorySize;

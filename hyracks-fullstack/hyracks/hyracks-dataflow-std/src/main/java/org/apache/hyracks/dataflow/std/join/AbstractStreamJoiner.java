@@ -16,11 +16,10 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.asterix.runtime.operators.joins.intervalindex;
+package org.apache.hyracks.dataflow.std.join;
 
 import java.nio.ByteBuffer;
 
-import org.apache.asterix.runtime.operators.joins.intervalmergejoin.IntervalMergeBranchStatus;
 import org.apache.hyracks.api.comm.IFrame;
 import org.apache.hyracks.api.comm.VSizeFrame;
 import org.apache.hyracks.api.context.IHyracksTaskContext;
