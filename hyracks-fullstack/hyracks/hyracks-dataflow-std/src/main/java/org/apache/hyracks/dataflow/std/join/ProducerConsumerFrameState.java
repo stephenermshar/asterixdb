@@ -23,12 +23,9 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-import org.apache.hyracks.api.dataflow.TaskId;
 import org.apache.hyracks.api.dataflow.value.RecordDescriptor;
-import org.apache.hyracks.api.job.JobId;
-import org.apache.hyracks.dataflow.std.base.AbstractStateObject;
 
-public class ProducerConsumerFrameState extends AbstractStateObject implements IConsumerFrame {
+public class ProducerConsumerFrameState implements IConsumerFrame {
 
     private final RecordDescriptor recordDescriptor;
     private ByteBuffer buffer;
@@ -37,8 +34,7 @@ public class ProducerConsumerFrameState extends AbstractStateObject implements I
     private Condition frameAvailable = this.lock.newCondition();
     private Condition frameProcessed = this.lock.newCondition();
 
-    public ProducerConsumerFrameState(JobId jobId, TaskId taskId, RecordDescriptor recordDescriptor) {
-        super(jobId, taskId);
+    public ProducerConsumerFrameState(RecordDescriptor recordDescriptor) {
         this.recordDescriptor = recordDescriptor;
     }
 
@@ -82,7 +78,6 @@ public class ProducerConsumerFrameState extends AbstractStateObject implements I
         this.buffer.put(original);
         original.rewind();
         this.buffer.flip();
-
 
         this.buffer.position(original.position());
         this.buffer.limit(original.limit());

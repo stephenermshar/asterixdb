@@ -23,6 +23,7 @@ import org.apache.hyracks.api.exceptions.HyracksDataException;
 
 public interface IStreamJoiner {
 
-    void processJoin(IFrameWriter writer) throws HyracksDataException;
+    void processJoin() throws HyracksDataException;
 
+    boolean getNextFrame(int branch) throws HyracksDataException;
 }
