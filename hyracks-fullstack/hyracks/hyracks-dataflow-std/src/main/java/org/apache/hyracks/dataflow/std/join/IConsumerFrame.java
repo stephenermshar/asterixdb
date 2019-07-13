@@ -16,10 +16,18 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+package org.apache.hyracks.dataflow.std.join;
 
-/*
-* Description  : Testing different input list types
-* Expected Res : Error due to processing different list types
-*/
+import java.nio.ByteBuffer;
 
-select array_union([3,5,1], [2,1], {{3, 1}});
+import org.apache.hyracks.api.dataflow.value.RecordDescriptor;
+
+public interface IConsumerFrame {
+
+    public RecordDescriptor getRecordDescriptor();
+
+    public ByteBuffer getFrame();
+
+    public boolean hasMoreFrames();
+
+}

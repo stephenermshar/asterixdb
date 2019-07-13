@@ -16,10 +16,13 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+package org.apache.hyracks.dataflow.std.join;
 
-/*
-* Description  : Testing different input list types
-* Expected Res : Error due to processing different list types
-*/
+import org.apache.hyracks.api.exceptions.HyracksDataException;
 
-select array_symdiffn([3,5,1], [2,1], {{3, 1}});
+public interface IStreamJoiner {
+
+    void processJoin() throws HyracksDataException;
+
+    boolean getNextFrame(int branch) throws HyracksDataException;
+}
