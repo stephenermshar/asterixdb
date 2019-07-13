@@ -180,8 +180,8 @@ public class MergeJoinPOperator extends AbstractJoinPOperator {
 
         IMergeJoinCheckerFactory mjcf = new NaturalMergeJoinCheckerFactory(comparatorFactory);
 
-        MergeJoinOperatorDescriptor opDesc = new MergeJoinOperatorDescriptor(spec, memSizeInFrames,
-                keysLeft, keysRight, recordDescriptor, mjcf);
+        MergeJoinOperatorDescriptor opDesc =
+                new MergeJoinOperatorDescriptor(spec, memSizeInFrames, keysLeft, keysRight, recordDescriptor, mjcf);
 
         contributeOpDesc(builder, (AbstractLogicalOperator) op, opDesc);
 

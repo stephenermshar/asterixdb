@@ -120,8 +120,8 @@ public class MergeJoinOperatorDescriptor extends AbstractOperatorDescriptor {
                 sleepUntilStateIsReady(RIGHT_INPUT_INDEX);
                 try {
                     writer.open();
-                    IStreamJoiner joiner = new MergeJoiner(ctx, inputStates[LEFT_INPUT_INDEX],
-                            inputStates[RIGHT_INPUT_INDEX], writer);
+                    IStreamJoiner joiner =
+                            new MergeJoiner(ctx, inputStates[LEFT_INPUT_INDEX], inputStates[RIGHT_INPUT_INDEX], writer);
                     joiner.processJoin();
                 } catch (Exception ex) {
                     writer.fail();

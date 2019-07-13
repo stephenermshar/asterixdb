@@ -18,7 +18,6 @@
  */
 package org.apache.hyracks.dataflow.std.join;
 
-import org.apache.hyracks.api.comm.IFrameWriter;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 
 public interface IStreamJoiner {

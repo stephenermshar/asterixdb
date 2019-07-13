@@ -20,15 +20,13 @@ package org.apache.hyracks.dataflow.std.join;
 
 import org.apache.hyracks.api.comm.IFrameWriter;
 import org.apache.hyracks.api.context.IHyracksTaskContext;
-import org.apache.hyracks.api.dataflow.value.RecordDescriptor;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
-import org.apache.hyracks.dataflow.common.comm.util.FrameUtils;
 
 public class MergeJoiner extends AbstractStreamJoiner {
     IFrameWriter writer;
 
-    public MergeJoiner(IHyracksTaskContext ctx, IConsumerFrame leftCF, IConsumerFrame rightCF,
-            IFrameWriter writer) throws HyracksDataException {
+    public MergeJoiner(IHyracksTaskContext ctx, IConsumerFrame leftCF, IConsumerFrame rightCF, IFrameWriter writer)
+            throws HyracksDataException {
         super(ctx, leftCF, rightCF);
         this.writer = writer;
     }
@@ -37,15 +35,18 @@ public class MergeJoiner extends AbstractStreamJoiner {
     public void processJoin() throws HyracksDataException {
         // (stephen) blindly joins tuples until one side runs out.
 
-        if (!getNextFrame(LEFT_PARTITION)) { return; }
-        if (!getNextFrame(RIGHT_PARTITION)) { return; }
+        if (!getNextFrame(LEFT_PARTITION)) {
+            return;
+        }
+        if (!getNextFrame(RIGHT_PARTITION)) {
+            return;
+        }
         if (inputAccessor[RIGHT_PARTITION].getTupleCount() == 0) {
             return;
         }
 
         for (int i = 0; i < inputAccessor[LEFT_PARTITION].getTupleCount(); i++) {
-            addToResult(inputAccessor[LEFT_PARTITION], i, inputAccessor[RIGHT_PARTITION], 0, false,
-                    writer);
+            addToResult(inputAccessor[LEFT_PARTITION], i, inputAccessor[RIGHT_PARTITION], 0, false, writer);
         }
         closeJoin(writer);
     }
