@@ -31,77 +31,10 @@ import org.apache.hyracks.dataflow.std.buffermanager.TupleAccessor;
 
 import java.nio.ByteBuffer;
 
-public abstract class AbstractTupleStreamJoiner implements IStreamJoiner {
-
-    protected static final int JOIN_PARTITIONS = 2;
-    protected static final int LEFT_PARTITION = 0;
-    protected static final int RIGHT_PARTITION = 1;
-
-    private final MergeBranchStatus[] branchStatus;
-    private final IConsumerFrame[] consumerFrames;
-    private final FrameTupleAppender resultAppender;
-
-    protected final IFrame[] inputBuffer;
-    protected final ITupleAccessor[] inputAccessor;
-
-    protected long[] frameCounts = { 0, 0 };
-    protected long[] tupleCounts = { 0, 0 };
+public abstract class AbstractTupleStreamJoiner extends AbstractFrameStreamJoiner {
 
     public AbstractTupleStreamJoiner(IHyracksTaskContext ctx, IConsumerFrame leftCF, IConsumerFrame rightCF)
             throws HyracksDataException {
-
-        inputAccessor = new TupleAccessor[JOIN_PARTITIONS];
-        inputAccessor[LEFT_PARTITION] = new TupleAccessor(leftCF.getRecordDescriptor());
-        inputAccessor[RIGHT_PARTITION] = new TupleAccessor(rightCF.getRecordDescriptor());
-
-        inputBuffer = new IFrame[JOIN_PARTITIONS];
-        inputBuffer[LEFT_PARTITION] = new VSizeFrame(ctx);
-        inputBuffer[RIGHT_PARTITION] = new VSizeFrame(ctx);
-
-        branchStatus = new MergeBranchStatus[JOIN_PARTITIONS];
-        branchStatus[LEFT_PARTITION] = new MergeBranchStatus();
-        branchStatus[RIGHT_PARTITION] = new MergeBranchStatus();
-
-        consumerFrames = new IConsumerFrame[JOIN_PARTITIONS];
-        consumerFrames[LEFT_PARTITION] = leftCF;
-        consumerFrames[RIGHT_PARTITION] = rightCF;
-
-        // Result
-        resultAppender = new FrameTupleAppender(new VSizeFrame(ctx));
+        super(ctx, leftCF, rightCF);
     }
-
-    @Override
-    public boolean getNextFrame(int branch) throws HyracksDataException {
-        if (consumerFrames[branch].hasMoreFrames()) {
-            setFrame(branch, consumerFrames[branch].getFrame());
-            return true;
-        }
-        return false;
-    }
-
-    private void setFrame(int branch, ByteBuffer buffer) throws HyracksDataException {
-        inputBuffer[branch].getBuffer().clear();
-        if (inputBuffer[branch].getFrameSize() < buffer.capacity()) {
-            inputBuffer[branch].resize(buffer.capacity());
-        }
-        inputBuffer[branch].getBuffer().put(buffer.array(), 0, buffer.capacity());
-        inputAccessor[branch].reset(inputBuffer[branch].getBuffer());
-        inputAccessor[branch].next();
-        frameCounts[branch]++;
-        tupleCounts[branch] += inputAccessor[branch].getTupleCount();
-    }
-
-    protected void addToResult(IFrameTupleAccessor accessor1, int index1, IFrameTupleAccessor accessor2, int index2,
-            boolean reversed, IFrameWriter writer) throws HyracksDataException {
-        if (reversed) {
-            FrameUtils.appendConcatToWriter(writer, resultAppender, accessor2, index2, accessor1, index1);
-        } else {
-            FrameUtils.appendConcatToWriter(writer, resultAppender, accessor1, index1, accessor2, index2);
-        }
-    }
-
-    protected void closeJoin(IFrameWriter writer) throws HyracksDataException {
-        resultAppender.write(writer, true);
-    }
-
 }
