@@ -31,7 +31,7 @@ import org.apache.hyracks.dataflow.common.comm.util.FrameUtils;
 import org.apache.hyracks.dataflow.std.buffermanager.ITupleAccessor;
 import org.apache.hyracks.dataflow.std.buffermanager.TupleAccessor;
 
-public abstract class AbstractStreamJoiner implements IStreamJoiner {
+public abstract class AbstractFrameStreamJoiner implements IStreamJoiner {
 
     protected static final int JOIN_PARTITIONS = 2;
     protected static final int LEFT_PARTITION = 0;
@@ -47,7 +47,7 @@ public abstract class AbstractStreamJoiner implements IStreamJoiner {
     protected long[] frameCounts = { 0, 0 };
     protected long[] tupleCounts = { 0, 0 };
 
-    public AbstractStreamJoiner(IHyracksTaskContext ctx, IConsumerFrame leftCF, IConsumerFrame rightCF)
+    public AbstractFrameStreamJoiner(IHyracksTaskContext ctx, IConsumerFrame leftCF, IConsumerFrame rightCF)
             throws HyracksDataException {
 
         inputAccessor = new TupleAccessor[JOIN_PARTITIONS];

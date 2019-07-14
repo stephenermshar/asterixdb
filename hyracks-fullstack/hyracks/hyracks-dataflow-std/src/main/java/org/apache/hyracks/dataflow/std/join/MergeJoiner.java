@@ -22,7 +22,7 @@ import org.apache.hyracks.api.comm.IFrameWriter;
 import org.apache.hyracks.api.context.IHyracksTaskContext;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 
-public class MergeJoiner extends AbstractStreamJoiner {
+public class MergeJoiner extends AbstractFrameStreamJoiner {
     IFrameWriter writer;
 
     public MergeJoiner(IHyracksTaskContext ctx, IConsumerFrame leftCF, IConsumerFrame rightCF, IFrameWriter writer)
