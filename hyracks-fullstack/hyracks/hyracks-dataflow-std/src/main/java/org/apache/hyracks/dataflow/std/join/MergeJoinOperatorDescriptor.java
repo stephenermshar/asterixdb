@@ -29,6 +29,8 @@ import org.apache.hyracks.api.dataflow.IActivity;
 import org.apache.hyracks.api.dataflow.IActivityGraphBuilder;
 import org.apache.hyracks.api.dataflow.IOperatorNodePushable;
 import org.apache.hyracks.api.dataflow.value.IRecordDescriptorProvider;
+import org.apache.hyracks.api.dataflow.value.ITuplePairComparator;
+import org.apache.hyracks.api.dataflow.value.ITuplePairComparatorFactory;
 import org.apache.hyracks.api.dataflow.value.RecordDescriptor;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.api.job.IOperatorDescriptorRegistry;
@@ -41,24 +43,20 @@ public class MergeJoinOperatorDescriptor extends AbstractOperatorDescriptor {
 
     private final int LEFT_INPUT_INDEX;
     private final int RIGHT_INPUT_INDEX;
-    private final int[] leftKeys;
-    private final int[] rightKeys;
-    private final int memoryForJoin;
-    private final IMergeJoinCheckerFactory mjcf;
+    private final int memoryForJoinInFrames;
+    private final ITuplePairComparatorFactory comparatorFactory;
 
     private static final Logger LOGGER = Logger.getLogger(MergeJoinOperatorDescriptor.class.getName());
 
-    public MergeJoinOperatorDescriptor(IOperatorDescriptorRegistry spec, int memoryForJoin, int[] leftKeys,
-            int[] rightKeys, RecordDescriptor recordDescriptor, IMergeJoinCheckerFactory mjcf) {
+    public MergeJoinOperatorDescriptor(IOperatorDescriptorRegistry spec, int memoryInFrames, int[] leftKeys,
+            int[] rightKeys, RecordDescriptor recordDescriptor, ITuplePairComparatorFactory comparatorFactory) {
         super(spec, 2, 1);
         outRecDescs[0] = recordDescriptor;
 
         this.LEFT_INPUT_INDEX = 0;
         this.RIGHT_INPUT_INDEX = 1;
-        this.leftKeys = leftKeys;
-        this.rightKeys = rightKeys;
-        this.memoryForJoin = memoryForJoin;
-        this.mjcf = mjcf;
+        this.memoryForJoinInFrames = memoryInFrames;
+        this.comparatorFactory = comparatorFactory;
     }
 
     @Override
@@ -119,9 +117,11 @@ public class MergeJoinOperatorDescriptor extends AbstractOperatorDescriptor {
                 sleepUntilStateIsReady(LEFT_INPUT_INDEX);
                 sleepUntilStateIsReady(RIGHT_INPUT_INDEX);
                 try {
+                    ITuplePairComparator comparator = comparatorFactory.createTuplePairComparator(ctx);
                     writer.open();
                     IStreamJoiner joiner =
-                            new MergeJoiner(ctx, inputStates[LEFT_INPUT_INDEX], inputStates[RIGHT_INPUT_INDEX], writer);
+                            new MergeJoiner(ctx, inputStates[LEFT_INPUT_INDEX], inputStates[RIGHT_INPUT_INDEX], writer,
+                                    memoryForJoinInFrames, comparator);
                     joiner.processJoin();
                 } catch (Exception ex) {
                     writer.fail();

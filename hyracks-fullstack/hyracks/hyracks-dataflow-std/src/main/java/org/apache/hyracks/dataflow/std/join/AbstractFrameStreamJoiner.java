@@ -33,22 +33,32 @@ import org.apache.hyracks.dataflow.std.buffermanager.TupleAccessor;
 
 public abstract class AbstractFrameStreamJoiner implements IStreamJoiner {
 
+    protected final int availableMemoryForJoinInFrames;
+
     protected static final int JOIN_PARTITIONS = 2;
     protected static final int LEFT_PARTITION = 0;
     protected static final int RIGHT_PARTITION = 1;
 
+    // (stephen) indicates whether each branch is ready to accept more tuples from the input writer
     private final MergeBranchStatus[] branchStatus;
-    private final IConsumerFrame[] consumerFrames;
+    // (stephen) used for synchronizing when the input writer gets written to and read from.
+    protected final IConsumerFrame[] consumerFrames;
+    // (stephen) used for writing a frame to output
     private final FrameTupleAppender resultAppender;
 
+    // (stephen) stores a copy of the data that comes in through the input writer
     protected final IFrame[] inputBuffer;
+    // (stephen) used for accessing tuples from the inputBuffer
     protected final ITupleAccessor[] inputAccessor;
 
+    // (stephen) counts used for logging
     protected long[] frameCounts = { 0, 0 };
     protected long[] tupleCounts = { 0, 0 };
 
-    public AbstractFrameStreamJoiner(IHyracksTaskContext ctx, IConsumerFrame leftCF, IConsumerFrame rightCF)
+    public AbstractFrameStreamJoiner(IHyracksTaskContext ctx, IConsumerFrame leftCF, IConsumerFrame rightCF, int availableMemoryForJoinInFrames)
             throws HyracksDataException {
+
+        this.availableMemoryForJoinInFrames = availableMemoryForJoinInFrames;
 
         inputAccessor = new TupleAccessor[JOIN_PARTITIONS];
         inputAccessor[LEFT_PARTITION] = new TupleAccessor(leftCF.getRecordDescriptor());

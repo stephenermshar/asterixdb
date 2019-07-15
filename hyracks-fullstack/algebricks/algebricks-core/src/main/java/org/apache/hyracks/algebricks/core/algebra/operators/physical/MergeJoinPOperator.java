@@ -178,10 +178,8 @@ public class MergeJoinPOperator extends AbstractJoinPOperator {
         ITuplePairComparatorFactory comparatorFactory =
                 new TuplePairEvaluatorFactory(cond, false, context.getBinaryBooleanInspectorFactory());
 
-        IMergeJoinCheckerFactory mjcf = new NaturalMergeJoinCheckerFactory(comparatorFactory);
-
         MergeJoinOperatorDescriptor opDesc =
-                new MergeJoinOperatorDescriptor(spec, memSizeInFrames, keysLeft, keysRight, recordDescriptor, mjcf);
+                new MergeJoinOperatorDescriptor(spec, memSizeInFrames, keysLeft, keysRight, recordDescriptor, comparatorFactory);
 
         contributeOpDesc(builder, (AbstractLogicalOperator) op, opDesc);
 

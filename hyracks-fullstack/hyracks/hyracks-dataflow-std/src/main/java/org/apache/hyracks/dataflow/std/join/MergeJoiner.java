@@ -20,20 +20,20 @@ package org.apache.hyracks.dataflow.std.join;
 
 import org.apache.hyracks.api.comm.IFrameWriter;
 import org.apache.hyracks.api.context.IHyracksTaskContext;
+import org.apache.hyracks.api.dataflow.value.ITuplePairComparator;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 
 public class MergeJoiner extends AbstractTupleStreamJoiner {
     IFrameWriter writer;
 
-    public MergeJoiner(IHyracksTaskContext ctx, IConsumerFrame leftCF, IConsumerFrame rightCF, IFrameWriter writer)
-            throws HyracksDataException {
-        super(ctx, leftCF, rightCF);
+    public MergeJoiner(IHyracksTaskContext ctx, IConsumerFrame leftCF, IConsumerFrame rightCF, IFrameWriter writer,
+            int memoryForJoinInFrames, ITuplePairComparator comparator) throws HyracksDataException {
+        super(ctx, leftCF, rightCF, memoryForJoinInFrames - JOIN_PARTITIONS - 1, comparator);
         this.writer = writer;
     }
 
     @Override
     public void processJoin() throws HyracksDataException {
-        // (stephen) blindly joins tuples until one side runs out.
 
         if (!getNextFrame(LEFT_PARTITION)) {
             return;
