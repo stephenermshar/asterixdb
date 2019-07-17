@@ -34,51 +34,17 @@ public class MergeJoiner extends AbstractTupleStreamJoiner {
 
     @Override
     public void processJoin() throws HyracksDataException {
+        // initialize the join by getting the first tuples
+        getNextTuple(LEFT_PARTITION);
+        getNextTuple(LEFT_PARTITION);
 
-        // get both side's tuples. print, increment whichever is smaller (repeat). if equal
-
-
-        while (getNextTuple(LEFT) || getNextTuple(RIGHT)) {
-            int c = compareTuples(LEFT, RIGHT);
-            if (c < 0) {
-                getNextTuple(LEFT);
-            } else if (c > 0) {
-                getNextTuple(RIGHT);
+        while (moreTuples(LEFT_PARTITION)) {
+            if (moreTuples(RIGHT_PARTITION)) {
+                joinStreams(LEFT_PARTITION, RIGHT_PARTITION);
             } else {
-
+                joinStreamWithBuffer(LEFT_PARTITION, RIGHT_PARTITION);
             }
         }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        if (!getNextFrame(LEFT)) {
-            return;
-        }
-        if (!getNextFrame(RIGHT)) {
-            return;
-        }
-        if (inputAccessor[RIGHT].getTupleCount() == 0) {
-            return;
-        }
-
-        for (int i = 0; i < inputAccessor[LEFT].getTupleCount(); i++) {
-            addToResult(inputAccessor[LEFT], i, inputAccessor[RIGHT], 0, false, writer);
-        }
-        closeJoin(writer);
     }
 
 }
