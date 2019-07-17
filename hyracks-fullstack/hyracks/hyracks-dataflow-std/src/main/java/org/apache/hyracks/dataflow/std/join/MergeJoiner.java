@@ -28,25 +28,55 @@ public class MergeJoiner extends AbstractTupleStreamJoiner {
 
     public MergeJoiner(IHyracksTaskContext ctx, IConsumerFrame leftCF, IConsumerFrame rightCF, IFrameWriter writer,
             int memoryForJoinInFrames, ITuplePairComparator comparator) throws HyracksDataException {
-        super(ctx, leftCF, rightCF, memoryForJoinInFrames - JOIN_PARTITIONS - 1, comparator);
+        super(ctx, leftCF, rightCF, memoryForJoinInFrames - JOIN_PARTITIONS, comparator);
         this.writer = writer;
     }
 
     @Override
     public void processJoin() throws HyracksDataException {
 
-        if (!getNextFrame(LEFT_PARTITION)) {
+        // get both side's tuples. print, increment whichever is smaller (repeat). if equal
+
+
+        while (getNextTuple(LEFT) || getNextTuple(RIGHT)) {
+            int c = compareTuples(LEFT, RIGHT);
+            if (c < 0) {
+                getNextTuple(LEFT);
+            } else if (c > 0) {
+                getNextTuple(RIGHT);
+            } else {
+
+            }
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        if (!getNextFrame(LEFT)) {
             return;
         }
-        if (!getNextFrame(RIGHT_PARTITION)) {
+        if (!getNextFrame(RIGHT)) {
             return;
         }
-        if (inputAccessor[RIGHT_PARTITION].getTupleCount() == 0) {
+        if (inputAccessor[RIGHT].getTupleCount() == 0) {
             return;
         }
 
-        for (int i = 0; i < inputAccessor[LEFT_PARTITION].getTupleCount(); i++) {
-            addToResult(inputAccessor[LEFT_PARTITION], i, inputAccessor[RIGHT_PARTITION], 0, false, writer);
+        for (int i = 0; i < inputAccessor[LEFT].getTupleCount(); i++) {
+            addToResult(inputAccessor[LEFT], i, inputAccessor[RIGHT], 0, false, writer);
         }
         closeJoin(writer);
     }
