@@ -41,10 +41,10 @@ public abstract class AbstractTupleStreamJoiner extends AbstractFrameStreamJoine
 
     IFrameWriter writer;
 
-    int index[];
+    //    int index[];
 
     private static TuplePointer tempPtr = new TuplePointer(); // (stephen) for method signature, see OptimizedHybridHashJoin
-    private boolean[] more;
+    //    private boolean[] more;
 
     public AbstractTupleStreamJoiner(IHyracksTaskContext ctx, IConsumerFrame leftCF, IConsumerFrame rightCF,
             int availableMemoryForJoinInFrames, ITuplePairComparator comparator, IFrameWriter writer)
@@ -65,13 +65,13 @@ public abstract class AbstractTupleStreamJoiner extends AbstractFrameStreamJoine
         secondaryTupleBufferAccessor = secondaryTupleBufferManager
                 .getTuplePointerAccessor(consumerFrames[RIGHT_PARTITION].getRecordDescriptor());
 
-        index = new int[JOIN_PARTITIONS];
-        index[LEFT_PARTITION] = -1;
-        index[RIGHT_PARTITION] = -1;
+        //        index = new int[JOIN_PARTITIONS];
+        //        index[LEFT_PARTITION] = -1;
+        //        index[RIGHT_PARTITION] = -1;
 
-        more = new boolean[2];
-        more[LEFT_PARTITION] = false;
-        more[RIGHT_PARTITION] = false;
+        //        more = new boolean[2];
+        //        more[LEFT_PARTITION] = false;
+        //        more[RIGHT_PARTITION] = false;
     }
 
     // need to implement branch lists, and use branch identifiers instead of accessors and indexes. also, indexes need
@@ -88,7 +88,7 @@ public abstract class AbstractTupleStreamJoiner extends AbstractFrameStreamJoine
             throw new RuntimeException(
                     "(stephen) There is currently only one buffer branch. It's for the right side, so its ID is RIGHT_PARTITION");
         }
-        secondaryTupleBufferManager.insertTuple(0, inputAccessor[BRANCH], index[BRANCH], tempPtr);
+        secondaryTupleBufferManager.insertTuple(0, inputAccessor[BRANCH], inputAccessor[BRANCH].getTupleId(), tempPtr);
     }
 
     protected void clearSavedBuffer(int BRANCH) throws HyracksDataException {
@@ -100,12 +100,13 @@ public abstract class AbstractTupleStreamJoiner extends AbstractFrameStreamJoine
     }
 
     protected void getNextTuple(int BRANCH) throws HyracksDataException {
-        index[BRANCH] += 1;
-        if (index[BRANCH] >= inputAccessor[BRANCH].getTupleCount()) {
-            index[BRANCH] = 0;
-            more[BRANCH] = getNextFrame(BRANCH);
-        }
-        more[BRANCH] = true;
+        //        index[BRANCH] += 1;
+        //        if (index[BRANCH] >= inputAccessor[BRANCH].getTupleCount()) {
+        //            index[BRANCH] = 0;
+        //            more[BRANCH] = getNextFrame(BRANCH);
+        //        }
+        //        more[BRANCH] = true;
+        inputAccessor[BRANCH].next();
     }
 
     protected int compareTuples(IFrameTupleAccessor accessor0, int index0, IFrameTupleAccessor accessor1, int index1)
@@ -114,7 +115,8 @@ public abstract class AbstractTupleStreamJoiner extends AbstractFrameStreamJoine
     }
 
     protected int compareStreamTuples(int BRANCH_0, int BRANCH_1) throws HyracksDataException {
-        return compareTuples(inputAccessor[BRANCH_0], index[BRANCH_0], inputAccessor[BRANCH_1], index[BRANCH_1]);
+        return compareTuples(inputAccessor[BRANCH_0], inputAccessor[BRANCH_0].getTupleId(), inputAccessor[BRANCH_1],
+                inputAccessor[BRANCH_1].getTupleId());
     }
 
     protected int compareTuplesStreamWithBuffer(int STREAM_BRANCH, int BUFFER_BRANCH) throws HyracksDataException {
@@ -124,11 +126,14 @@ public abstract class AbstractTupleStreamJoiner extends AbstractFrameStreamJoine
         }
         // (stephen) compare the current STREAM_BRANCH tuple with the first item in the buffer, since the buffer should
         //           only contain multiple equivalent items.
-        return compareTuples(inputAccessor[STREAM_BRANCH], index[STREAM_BRANCH], secondaryTupleBufferAccessor, 0);
+        return compareTuples(inputAccessor[STREAM_BRANCH], inputAccessor[STREAM_BRANCH].getTupleId(),
+                secondaryTupleBufferAccessor, 0);
     }
 
     protected boolean moreTuples(int BRANCH) {
-        return more[BRANCH];
+        //        return more[BRANCH];
+        //        return inputAccessor[BRANCH].hasNext();
+        return inputAccessor[BRANCH].exists();
     }
 
     // TODO (stephen) joinStreamWithBuffer is called inside an infinite loop.
@@ -151,7 +156,8 @@ public abstract class AbstractTupleStreamJoiner extends AbstractFrameStreamJoine
                 clearSavedBuffer(BUFFER_BRANCH);
             } else {
                 for (int i = 0; i < secondaryTupleBufferManager.getNumTuples(0); i++) {
-                    joinTuples(inputAccessor[STREAM_BRANCH], index[STREAM_BRANCH], secondaryTupleBufferAccessor, i);
+                    joinTuples(inputAccessor[STREAM_BRANCH], inputAccessor[STREAM_BRANCH].getTupleId(),
+                            secondaryTupleBufferAccessor, i);
                 }
                 getNextTuple(STREAM_BRANCH);
             }
@@ -170,8 +176,8 @@ public abstract class AbstractTupleStreamJoiner extends AbstractFrameStreamJoine
         } else if (c > 0) {
             getNextTuple(RIGHT_BRANCH);
         } else {
-            joinTuples(inputAccessor[LEFT_BRANCH], index[LEFT_BRANCH], inputAccessor[RIGHT_BRANCH],
-                    index[RIGHT_BRANCH]);
+            joinTuples(inputAccessor[LEFT_BRANCH], inputAccessor[LEFT_BRANCH].getTupleId(), inputAccessor[RIGHT_BRANCH],
+                    inputAccessor[RIGHT_BRANCH].getTupleId());
             saveToBuffer(RIGHT_BRANCH);
             getNextTuple(RIGHT_BRANCH);
         }
