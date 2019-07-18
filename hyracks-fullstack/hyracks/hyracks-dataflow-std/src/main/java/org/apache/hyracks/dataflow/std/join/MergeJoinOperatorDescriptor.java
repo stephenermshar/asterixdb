@@ -119,9 +119,8 @@ public class MergeJoinOperatorDescriptor extends AbstractOperatorDescriptor {
                 try {
                     ITuplePairComparator comparator = comparatorFactory.createTuplePairComparator(ctx);
                     writer.open();
-                    IStreamJoiner joiner =
-                            new MergeJoiner(ctx, inputStates[LEFT_INPUT_INDEX], inputStates[RIGHT_INPUT_INDEX], writer,
-                                    memoryForJoinInFrames, comparator);
+                    IStreamJoiner joiner = new MergeJoiner(ctx, inputStates[LEFT_INPUT_INDEX],
+                            inputStates[RIGHT_INPUT_INDEX], writer, memoryForJoinInFrames, comparator);
                     joiner.processJoin();
                 } catch (Exception ex) {
                     writer.fail();

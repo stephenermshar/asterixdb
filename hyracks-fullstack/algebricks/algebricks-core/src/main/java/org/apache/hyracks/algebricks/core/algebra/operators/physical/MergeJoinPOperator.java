@@ -51,9 +51,7 @@ import org.apache.hyracks.algebricks.runtime.evaluators.TuplePairEvaluatorFactor
 import org.apache.hyracks.api.dataflow.value.ITuplePairComparatorFactory;
 import org.apache.hyracks.api.dataflow.value.RecordDescriptor;
 import org.apache.hyracks.api.job.IOperatorDescriptorRegistry;
-import org.apache.hyracks.dataflow.std.join.IMergeJoinCheckerFactory;
 import org.apache.hyracks.dataflow.std.join.MergeJoinOperatorDescriptor;
-import org.apache.hyracks.dataflow.std.join.NaturalMergeJoinCheckerFactory;
 
 public class MergeJoinPOperator extends AbstractJoinPOperator {
 
@@ -178,8 +176,8 @@ public class MergeJoinPOperator extends AbstractJoinPOperator {
         ITuplePairComparatorFactory comparatorFactory =
                 new TuplePairEvaluatorFactory(cond, false, context.getBinaryBooleanInspectorFactory());
 
-        MergeJoinOperatorDescriptor opDesc =
-                new MergeJoinOperatorDescriptor(spec, memSizeInFrames, keysLeft, keysRight, recordDescriptor, comparatorFactory);
+        MergeJoinOperatorDescriptor opDesc = new MergeJoinOperatorDescriptor(spec, memSizeInFrames, keysLeft, keysRight,
+                recordDescriptor, comparatorFactory);
 
         contributeOpDesc(builder, (AbstractLogicalOperator) op, opDesc);
 

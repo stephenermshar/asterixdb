@@ -55,8 +55,8 @@ public abstract class AbstractFrameStreamJoiner implements IStreamJoiner {
     protected long[] frameCounts = { 0, 0 };
     protected long[] tupleCounts = { 0, 0 };
 
-    public AbstractFrameStreamJoiner(IHyracksTaskContext ctx, IConsumerFrame leftCF, IConsumerFrame rightCF, int availableMemoryForJoinInFrames)
-            throws HyracksDataException {
+    public AbstractFrameStreamJoiner(IHyracksTaskContext ctx, IConsumerFrame leftCF, IConsumerFrame rightCF,
+            int availableMemoryForJoinInFrames) throws HyracksDataException {
 
         this.availableMemoryForJoinInFrames = availableMemoryForJoinInFrames;
 
