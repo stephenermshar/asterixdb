@@ -34,9 +34,6 @@ public class MergeJoiner extends AbstractTupleStreamJoiner {
     public void processJoin() throws HyracksDataException {
         // initialize the join by getting the first tuples
 
-        getNextFrame(LEFT_PARTITION);
-        getNextFrame(RIGHT_PARTITION);
-
         getNextTuple(LEFT_PARTITION);
         getNextTuple(RIGHT_PARTITION);
 

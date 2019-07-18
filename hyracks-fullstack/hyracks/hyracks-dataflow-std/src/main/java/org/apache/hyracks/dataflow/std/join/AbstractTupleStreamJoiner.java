@@ -99,14 +99,28 @@ public abstract class AbstractTupleStreamJoiner extends AbstractFrameStreamJoine
         secondaryTupleBufferManager.clearPartition(0);
     }
 
-    protected void getNextTuple(int BRANCH) throws HyracksDataException {
+    protected boolean getNextTuple(int BRANCH) throws HyracksDataException {
         //        index[BRANCH] += 1;
         //        if (index[BRANCH] >= inputAccessor[BRANCH].getTupleCount()) {
         //            index[BRANCH] = 0;
         //            more[BRANCH] = getNextFrame(BRANCH);
         //        }
         //        more[BRANCH] = true;
-        inputAccessor[BRANCH].next();
+
+        boolean exists = inputAccessor[BRANCH].exists();
+        boolean hasNext = inputAccessor[BRANCH].hasNext();
+
+        if (inputAccessor[BRANCH].exists()) {
+            if (inputAccessor[BRANCH].hasNext()) {
+                inputAccessor[BRANCH].next();
+                return true;
+            } else {
+                return getNextFrame(BRANCH);
+            }
+        } else {
+            return false;
+        }
+
     }
 
     protected int compareTuples(IFrameTupleAccessor accessor0, int index0, IFrameTupleAccessor accessor1, int index1)
@@ -133,7 +147,7 @@ public abstract class AbstractTupleStreamJoiner extends AbstractFrameStreamJoine
     protected boolean moreTuples(int BRANCH) {
         //        return more[BRANCH];
         //        return inputAccessor[BRANCH].hasNext();
-        return inputAccessor[BRANCH].exists();
+        return inputAccessor[BRANCH].exists() || consumerFrames[BRANCH].hasMoreFrames();
     }
 
     // TODO (stephen) joinStreamWithBuffer is called inside an infinite loop.
