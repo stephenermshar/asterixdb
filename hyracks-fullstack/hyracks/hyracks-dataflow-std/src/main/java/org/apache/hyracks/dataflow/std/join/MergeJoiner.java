@@ -37,6 +37,8 @@ public class MergeJoiner extends AbstractTupleStreamJoiner {
         getNextTuple(LEFT_PARTITION);
         getNextTuple(RIGHT_PARTITION);
 
+
+        // always have a new tuple on at least one side at the start of this loop
         while (moreTuples(LEFT_PARTITION)) {
             if (moreTuples(RIGHT_PARTITION)) {
                 joinStreams(LEFT_PARTITION, RIGHT_PARTITION);

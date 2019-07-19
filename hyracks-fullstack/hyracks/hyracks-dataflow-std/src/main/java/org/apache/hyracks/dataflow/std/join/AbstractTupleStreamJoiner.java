@@ -100,13 +100,6 @@ public abstract class AbstractTupleStreamJoiner extends AbstractFrameStreamJoine
     }
 
     protected boolean getNextTuple(int BRANCH) throws HyracksDataException {
-        //        index[BRANCH] += 1;
-        //        if (index[BRANCH] >= inputAccessor[BRANCH].getTupleCount()) {
-        //            index[BRANCH] = 0;
-        //            more[BRANCH] = getNextFrame(BRANCH);
-        //        }
-        //        more[BRANCH] = true;
-
         boolean exists = inputAccessor[BRANCH].exists();
         boolean hasNext = inputAccessor[BRANCH].hasNext();
 
@@ -152,7 +145,9 @@ public abstract class AbstractTupleStreamJoiner extends AbstractFrameStreamJoine
 
     // TODO (stephen) joinStreamWithBuffer is called inside an infinite loop.
     /**
-     * Attempts to join the tuple at the current index of the STREAM_BRANCH, with all the tuples in the BUFFER_BRANCH.
+     * Attempts to join the tuple at the next index of the STREAM_BRANCH, with all the tuples in the BUFFER_BRANCH.
+     * If this method is called it means that a join has already been attempted at the current index of STREAM_BRANCH,
+     * so the next tuple is used to prevent duplicate joins.
      * @param STREAM_BRANCH
      * @param BUFFER_BRANCH
      */
@@ -196,6 +191,4 @@ public abstract class AbstractTupleStreamJoiner extends AbstractFrameStreamJoine
             getNextTuple(RIGHT_BRANCH);
         }
     }
-
-    // (stephen) consider a getNextMatchingTuple().
 }
