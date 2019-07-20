@@ -30,11 +30,13 @@ import org.apache.hyracks.dataflow.std.buffermanager.TupleAccessor;
 public class MergeJoiner extends AbstractTupleStreamJoiner {
 
     private boolean[] ready;
+    private TupleAccessor secondaryTupleBufferDirectAccessor;
 
     public MergeJoiner(IHyracksTaskContext ctx, IConsumerFrame leftCF, IConsumerFrame rightCF, IFrameWriter writer,
             int memoryForJoinInFrames, ITuplePairComparator comparator) throws HyracksDataException {
         super(ctx, leftCF, rightCF, memoryForJoinInFrames - JOIN_PARTITIONS, comparator, writer);
         ready = new boolean[2];
+        secondaryTupleBufferDirectAccessor = new TupleAccessor(consumerFrames[RIGHT_PARTITION].getRecordDescriptor());
     }
 
     private void getNextTuple(int branch) throws HyracksDataException {
@@ -52,8 +54,6 @@ public class MergeJoiner extends AbstractTupleStreamJoiner {
 
     private void join() throws HyracksDataException {
         ByteBuffer secondaryTupleBuffer = secondaryTupleBufferAccessor.getBuffer();
-        TupleAccessor secondaryTupleBufferDirectAccessor =
-                new TupleAccessor(consumerFrames[RIGHT_PARTITION].getRecordDescriptor());
         secondaryTupleBufferDirectAccessor.reset(secondaryTupleBuffer);
 
         for (int i = 0; i < secondaryTupleBufferDirectAccessor.getTupleCount(); i++) {
