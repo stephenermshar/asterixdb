@@ -22,6 +22,10 @@ import org.apache.hyracks.api.exceptions.HyracksDataException;
 
 public interface IStreamJoiner {
 
+    /**
+     * Begin the join process.
+     * @throws HyracksDataException
+     */
     void processJoin() throws HyracksDataException;
 
     boolean getNextFrame(int branch) throws HyracksDataException;
