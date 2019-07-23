@@ -16,19 +16,31 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.hyracks.dataflow.std.join;
 
-import java.nio.ByteBuffer;
+drop  dataverse test if exists;
+create  dataverse test;
 
-import org.apache.hyracks.api.comm.IFrameWriter;
-import org.apache.hyracks.api.exceptions.HyracksDataException;
+use test;
 
-public interface IMergeJoiner {
 
-    void processLeftFrame(IFrameWriter writer) throws HyracksDataException;
+create type test.Schema as
+ closed {
+  unique1 : bigint,
+  unique2 : bigint,
+  two : bigint,
+  four : bigint,
+  ten : bigint,
+  twenty : bigint,
+  onePercent : bigint,
+  tenPercent : bigint,
+  twentyPercent : bigint,
+  fiftyPercent : bigint,
+  unique3 : bigint,
+  evenOnePercent : bigint,
+  oddOnePercent : bigint,
+  stringu1 : string,
+  stringu2 : string,
+  string4 : string
+};
 
-    void processLeftClose(IFrameWriter writer) throws HyracksDataException;
-
-    void setFrame(int partition, ByteBuffer buffer) throws HyracksDataException;
-
-}
+create  dataset onektup(Schema) primary key unique2;

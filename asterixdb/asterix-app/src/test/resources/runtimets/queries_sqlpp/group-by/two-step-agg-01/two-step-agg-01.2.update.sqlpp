@@ -16,17 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.hyracks.dataflow.std.join;
 
-import org.apache.hyracks.api.exceptions.HyracksDataException;
+use test;
 
-public interface IStreamJoiner {
-
-    /**
-     * Begin the join process.
-     * @throws HyracksDataException
-     */
-    void processJoin() throws HyracksDataException;
-
-    boolean getNextFrame(int branch) throws HyracksDataException;
-}
+load  dataset onektup using localfs ((`path`=`asterix_nc1://data/wisc/onektup.adm`),(`format`=`delimited-text`),(`delimiter`=`|`)) pre-sorted;

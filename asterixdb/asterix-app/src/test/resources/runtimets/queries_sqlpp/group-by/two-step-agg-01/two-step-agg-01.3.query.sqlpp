@@ -16,22 +16,14 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.hyracks.dataflow.std.join;
 
-import org.apache.hyracks.api.dataflow.TaskId;
-import org.apache.hyracks.api.dataflow.value.RecordDescriptor;
-import org.apache.hyracks.api.job.JobId;
-import org.apache.hyracks.dataflow.std.base.AbstractStateObject;
+use test;
 
-public class MergeJoinTaskState extends AbstractStateObject {
-    public MergeStatus status;
-    public IMergeJoiner joiner;
-    public boolean failed;
-    public RecordDescriptor leftRd;
-    public RecordDescriptor rightRd;
+select m, array_count((from g select value g.t.unique1 limit 3)) cnt
+from onektup t
+group by unique2 % 2 as m group as g
+order by m
+;
 
-    public MergeJoinTaskState(JobId jobId, TaskId taskId) {
-        super(jobId, taskId);
-        status = new MergeStatus();
-    }
-}
+
+
