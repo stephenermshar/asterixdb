@@ -20,12 +20,12 @@ package org.apache.hyracks.dataflow.std.join;
 
 import java.util.BitSet;
 
-import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.comm.IFrameWriter;
 import org.apache.hyracks.api.context.IHyracksTaskContext;
 import org.apache.hyracks.api.dataflow.value.ITuplePairComparator;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.dataflow.std.buffermanager.IPartitionedMemoryConstrain;
+import org.apache.hyracks.dataflow.std.buffermanager.ITupleAccessor;
 import org.apache.hyracks.dataflow.std.buffermanager.PreferToSpillFullyOccupiedFramePolicy;
 import org.apache.hyracks.dataflow.std.buffermanager.VPartitionTupleBufferManager;
 import org.apache.hyracks.dataflow.std.structures.TuplePointer;
@@ -36,7 +36,7 @@ import org.apache.hyracks.dataflow.std.structures.TuplePointer;
 public abstract class AbstractTupleStreamJoiner extends AbstractFrameStreamJoiner {
 
     VPartitionTupleBufferManager secondaryTupleBufferManager;
-    IFrameTupleAccessor secondaryTupleBufferAccessor;
+    ITupleAccessor secondaryTupleBufferAccessor;
     ITuplePairComparator comparator;
 
     IFrameWriter writer;
@@ -58,8 +58,9 @@ public abstract class AbstractTupleStreamJoiner extends AbstractFrameStreamJoine
                 PreferToSpillFullyOccupiedFramePolicy.createAtMostOneFrameForSpilledPartitionConstrain(spilledStatus);
         secondaryTupleBufferManager =
                 new VPartitionTupleBufferManager(ctx, memoryConstraint, partitions, availableMemoryForJoinInBytes);
-
+        secondaryTupleBufferManager.reset();
         secondaryTupleBufferAccessor = secondaryTupleBufferManager
-                .getTuplePointerAccessor(consumerFrames[RIGHT_PARTITION].getRecordDescriptor());
+                .createPartitionTupleAccessor(consumerFrames[RIGHT_PARTITION].getRecordDescriptor(), 0);
+        // (stephen) both manager and accessor have no buffers at this point
     }
 }

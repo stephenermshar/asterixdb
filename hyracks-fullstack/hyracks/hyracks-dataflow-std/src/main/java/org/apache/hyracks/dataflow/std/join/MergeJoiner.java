@@ -18,25 +18,19 @@
  */
 package org.apache.hyracks.dataflow.std.join;
 
-import java.nio.ByteBuffer;
-
 import org.apache.hyracks.api.comm.IFrameWriter;
 import org.apache.hyracks.api.context.IHyracksTaskContext;
 import org.apache.hyracks.api.dataflow.value.ITuplePairComparator;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
-import org.apache.hyracks.dataflow.std.buffermanager.ITuplePointerAccessor;
-import org.apache.hyracks.dataflow.std.buffermanager.TupleAccessor;
 
 public class MergeJoiner extends AbstractTupleStreamJoiner {
 
     private boolean[] ready;
-    private TupleAccessor secondaryTupleBufferDirectAccessor;
 
     public MergeJoiner(IHyracksTaskContext ctx, IConsumerFrame leftCF, IConsumerFrame rightCF, IFrameWriter writer,
             int memoryForJoinInFrames, ITuplePairComparator comparator) throws HyracksDataException {
         super(ctx, leftCF, rightCF, memoryForJoinInFrames - JOIN_PARTITIONS, comparator, writer);
         ready = new boolean[2];
-        secondaryTupleBufferDirectAccessor = new TupleAccessor(consumerFrames[RIGHT_PARTITION].getRecordDescriptor());
     }
 
     /**
@@ -49,11 +43,7 @@ public class MergeJoiner extends AbstractTupleStreamJoiner {
             inputAccessor[branch].next();
             ready[branch] = true;
         } else {
-            if (getNextFrame(branch)) {
-                ready[branch] = true;
-            } else {
-                ready[branch] = false;
-            }
+            ready[branch] = getNextFrame(branch);
         }
     }
 
@@ -62,12 +52,21 @@ public class MergeJoiner extends AbstractTupleStreamJoiner {
      * @throws HyracksDataException
      */
     private void join() throws HyracksDataException {
-        ByteBuffer secondaryTupleBuffer = secondaryTupleBufferAccessor.getBuffer();
-        secondaryTupleBufferDirectAccessor.reset(secondaryTupleBuffer);
 
-        for (int i = 0; i < secondaryTupleBufferDirectAccessor.getTupleCount(); i++) {
+        if (secondaryTupleBufferManager.getNumTuples(0) <= 0) {
+            return;
+        }
+        // (stephen) make sure the tupleId and frameId are initialized
+        secondaryTupleBufferAccessor.reset(); // (stephen) sets tupleId to INITIALIZED, frameId to 0, resets inner acc.
+        // (stephen) increments the tupleId to the next (first in this case) tuple ????????
+        //        secondaryTupleBufferAccessor.next();
+        // (stephen) sets the tempPtr to the current (first in this case) tuple
+        secondaryTupleBufferAccessor.getTuplePointer(tempPtr);
+
+        while (secondaryTupleBufferAccessor.hasNext()) {
+            secondaryTupleBufferAccessor.next();
             addToResult(inputAccessor[LEFT_PARTITION], inputAccessor[LEFT_PARTITION].getTupleId(),
-                    secondaryTupleBufferDirectAccessor, i, false, writer);
+                    secondaryTupleBufferAccessor, secondaryTupleBufferAccessor.getTupleId(), false, writer);
         }
     }
 
@@ -91,8 +90,7 @@ public class MergeJoiner extends AbstractTupleStreamJoiner {
         }
         secondaryTupleBufferManager.insertTuple(0, inputAccessor[RIGHT_PARTITION],
                 inputAccessor[RIGHT_PARTITION].getTupleId(), tempPtr);
-
-        ((ITuplePointerAccessor) secondaryTupleBufferAccessor).reset(tempPtr);
+        secondaryTupleBufferAccessor.reset(tempPtr);
     }
 
     /**
@@ -112,8 +110,12 @@ public class MergeJoiner extends AbstractTupleStreamJoiner {
      * @throws HyracksDataException
      */
     private boolean compareTupleWithBuffer() throws HyracksDataException {
-        if (secondaryTupleBufferAccessor.getBuffer() == null) {
+        if (secondaryTupleBufferManager.getNumTuples(0) <= 0) {
             return false;
+        }
+
+        if (secondaryTupleBufferAccessor.getBuffer() == null) {
+            secondaryTupleBufferAccessor.reset(tempPtr);
         }
         return 0 == comparator.compare(inputAccessor[LEFT_PARTITION], inputAccessor[LEFT_PARTITION].getTupleId(),
                 secondaryTupleBufferAccessor, tempPtr.getTupleIndex());
