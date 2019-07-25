@@ -40,7 +40,7 @@ public abstract class AbstractFrameStreamJoiner implements IStreamJoiner {
     protected static final int RIGHT_PARTITION = 1;
 
     // (stephen) indicates whether each branch is ready to accept more tuples from the input writer
-    private final MergeBranchStatus[] branchStatus;
+    protected final MergeBranchStatus[] branchStatus;
     // (stephen) used for synchronizing when the input writer gets written to and read from.
     protected final IConsumerFrame[] consumerFrames;
     // (stephen) used for writing a frame to output

@@ -18,9 +18,6 @@
  */
 package org.apache.hyracks.dataflow.std.join;
 
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
 import org.apache.commons.io.FileUtils;
 import org.apache.hyracks.api.comm.IFrame;
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
@@ -33,6 +30,10 @@ import org.apache.hyracks.dataflow.common.comm.io.FrameTupleAppender;
 import org.apache.hyracks.dataflow.common.io.RunFileReader;
 import org.apache.hyracks.dataflow.common.io.RunFileWriter;
 import org.apache.hyracks.dataflow.std.buffermanager.ITupleAccessor;
+
+import java.nio.ByteBuffer;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class RunFileStream {
 
@@ -201,4 +202,7 @@ public class RunFileStream {
         return status.isRunFileWriting();
     }
 
+    public ByteBuffer getAppenderBuffer() {
+        return runFileAppender.getBuffer();
+    }
 }
