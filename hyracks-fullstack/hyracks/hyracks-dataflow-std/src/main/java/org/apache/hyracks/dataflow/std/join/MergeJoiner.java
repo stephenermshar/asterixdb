@@ -18,6 +18,8 @@
  */
 package org.apache.hyracks.dataflow.std.join;
 
+import org.apache.commons.lang3.NotImplementedException;
+import org.apache.hyracks.api.client.HyracksClientInterfaceFunctions;
 import org.apache.hyracks.api.comm.IFrameWriter;
 import org.apache.hyracks.api.context.IHyracksTaskContext;
 import org.apache.hyracks.api.dataflow.value.ITuplePairComparator;
@@ -56,11 +58,7 @@ public class MergeJoiner extends AbstractTupleStreamJoiner {
         if (secondaryTupleBufferManager.getNumTuples(0) <= 0) {
             return;
         }
-        // (stephen) make sure the tupleId and frameId are initialized
-        secondaryTupleBufferAccessor.reset(); // (stephen) sets tupleId to INITIALIZED, frameId to 0, resets inner acc.
-        // (stephen) increments the tupleId to the next (first in this case) tuple ????????
-        //        secondaryTupleBufferAccessor.next();
-        // (stephen) sets the tempPtr to the current (first in this case) tuple
+        secondaryTupleBufferAccessor.reset();
         secondaryTupleBufferAccessor.getTuplePointer(tempPtr);
 
         while (secondaryTupleBufferAccessor.hasNext()) {
@@ -82,15 +80,32 @@ public class MergeJoiner extends AbstractTupleStreamJoiner {
     /**
      * Save the current tuple from the right stream into the buffer.
      * @param clear if true, clear the right buffer before inserting the tuple.
+     * @return true if the current tuple was added to the buffer.
      * @throws HyracksDataException
      */
-    private void saveRight(boolean clear) throws HyracksDataException {
+    private boolean saveRight(boolean clear) throws HyracksDataException {
         if (clear) {
             clearSavedRight();
         }
-        secondaryTupleBufferManager.insertTuple(0, inputAccessor[RIGHT_PARTITION],
-                inputAccessor[RIGHT_PARTITION].getTupleId(), tempPtr);
-        secondaryTupleBufferAccessor.reset(tempPtr);
+
+        // (stephen) if insertTuple returns false, then do not get next RIGHT tuple, instead, begin reading all LEFT,
+        //           including current left to run file. once all left of current key are in run file begin run file
+        //           join once run file join is complete return to beginning of main while loop. do not get new left or
+        //           right after completing run file join, since the current left and right haven't been joined with
+        //           anything because they were fetched in order to determine when to stop saving to the run file or
+        //           buffer.
+
+        if (secondaryTupleBufferManager.insertTuple(0, inputAccessor[RIGHT_PARTITION],
+                inputAccessor[RIGHT_PARTITION].getTupleId(), tempPtr)) {
+            // (stephen) sets the accessor to point to the tempPtr. Using the temp pointer because it's guaranteed to be
+            //           pointing to a valid tuple that was just inserted.
+            secondaryTupleBufferAccessor.reset(tempPtr);
+            return true;
+        } else {
+            // (stephen) begin run file join
+            processRunFileJoin();
+            return false;
+        }
     }
 
     /**
@@ -121,6 +136,86 @@ public class MergeJoiner extends AbstractTupleStreamJoiner {
                 secondaryTupleBufferAccessor, tempPtr.getTupleIndex());
     }
 
+    /**
+     * loads all matching left tuples of the current key into the run file. Since it runs until it finds a tuple that
+     * doesn't match or there are no more tuples in the stream, then when it finishes either the left stream's current
+     * tuple has not been processed, or ready[LEFT] is false.
+     */
+    private void loadAllLeftIntoRunFile() throws HyracksDataException {
+        // make sure the runFile is empty (this may be guaranteed naturally)
+
+        // add current left to runFile, we know it matches the right buffer because this function is indirectly called
+        // from the equal else branch in process join
+        int c = 0; // don't replace this with a comparison, it's actually supposed to start out as 0, not a dummy init.
+
+        do {
+            getNextTuple(LEFT_PARTITION);
+            c = 0; // replace with comparison between current left and left in runFile
+            if (c == 0) {
+                // add it to the run file
+            } else {
+                return; // current left will need to be compared by someone else
+            }
+        } while(ready[LEFT_PARTITION] && c == 0); // c==0 will always be true here, else function returns first.
+    }
+
+    /**
+     * clears the right buffer and then
+     * loads as many tuples of the current key as possible into memory. since it runs until it finds a tuple that
+     * doesn't match or there are no more tuples in the stream, then when it finishes either the right stream's current
+     * tuple has not been processed, or ready[RIGHT] is false.
+     * @return true if it stops because the buffer is full,
+     *         false if it stops because there was a new key or there were no more right tuples in the stream.
+     */
+    private boolean loadAllRightIntoBuffer() throws HyracksDataException{
+        // the current right tuple has not been added to the buffer or compared to anything at this point
+        clearSavedRight();
+        // compare the current right tuple to the run file key
+        // if it matches then add it to the buffer, if not return false
+        // assuming it has been added to the buffer get the next right tuple and continue comparing until there is one
+        //      that doesn't match, at that point do not get the next right tuple, it will be compared by someone else,
+        //      probably with the current left tuple rather than the run file.
+        // insert the current right tuple into the buffer, since it hasn't been processed yet, but
+
+        boolean bufferIsFull = false;
+
+        do {
+            int c = 0; // replace with comparison between current right and run file key
+            if (c == 0) {
+                // add it to the buffer, update bufferIsFull flag
+                // get the next right tuple
+            } else {
+                return false;
+            }
+        } while (ready[RIGHT_PARTITION] && !bufferIsFull);
+        return true;
+    }
+
+    private void clearRunFile() {
+
+    }
+
+    /**
+     * for each item in the left run file, join it with all the items in the right buffer
+     */
+    private void runFileJoin() {
+        
+    }
+
+    private void processRunFileJoin() throws HyracksDataException {
+        // the current right tuple has not been added to the buffer because it was full
+        loadAllLeftIntoRunFile();
+        boolean bufferIsFull = true;
+        while(bufferIsFull) {
+            runFileJoin();
+            bufferIsFull = loadAllRightIntoBuffer();
+        }
+        // (stephen) join remaining tuples from the partially filled buffer.
+        runFileJoin();
+        clearRunFile();
+        clearSavedRight();
+    }
+
     @Override
     public void processJoin() throws HyracksDataException {
         getNextTuple(LEFT_PARTITION);
@@ -149,8 +244,9 @@ public class MergeJoiner extends AbstractTupleStreamJoiner {
                     //           in the next iteration of the loop.
                     //
                     //           if the new tuple is different than those in the buffer, the buffer should be cleared.
-                    saveRight(!compareTupleWithBuffer());
-                    getNextTuple(RIGHT_PARTITION);
+                    if (saveRight(!compareTupleWithBuffer())) {
+                        getNextTuple(RIGHT_PARTITION);
+                    }
                 }
             } else {
                 // (stephen) the remaining left tuples could still match with the right buffer.

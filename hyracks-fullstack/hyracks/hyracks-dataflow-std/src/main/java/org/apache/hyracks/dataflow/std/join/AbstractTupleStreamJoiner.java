@@ -61,6 +61,5 @@ public abstract class AbstractTupleStreamJoiner extends AbstractFrameStreamJoine
         secondaryTupleBufferManager.reset();
         secondaryTupleBufferAccessor = secondaryTupleBufferManager
                 .createPartitionTupleAccessor(consumerFrames[RIGHT_PARTITION].getRecordDescriptor(), 0);
-        // (stephen) both manager and accessor have no buffers at this point
     }
 }
