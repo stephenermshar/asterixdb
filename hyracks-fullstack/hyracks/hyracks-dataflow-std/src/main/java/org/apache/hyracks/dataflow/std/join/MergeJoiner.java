@@ -39,8 +39,7 @@ public class MergeJoiner extends AbstractTupleStreamJoiner {
         runFileStream = new RunFileStream(ctx, "left", branchStatus[LEFT_PARTITION]);
 
         // (stephen) ----------- POTENTIAL PROBLEM AREA -------------
-        runFileAppenderBufferAccessor =
-                new TupleAccessor(consumerFrames[LEFT_PARTITION].getRecordDescriptor());
+        runFileAppenderBufferAccessor = new TupleAccessor(consumerFrames[LEFT_PARTITION].getRecordDescriptor());
         runFileAppenderBufferAccessorTupleId = 0;
         // ----------------------------------------------------------
     }
@@ -185,7 +184,7 @@ public class MergeJoiner extends AbstractTupleStreamJoiner {
                 runFileStream.flushRunFile();
                 return; // current left will need to be compared by the caller (or their caller etc.)
             }
-        } while(ready[LEFT_PARTITION]); // c==0 will always be true here, else function returns first.
+        } while (ready[LEFT_PARTITION]); // c==0 will always be true here, else function returns first.
 
         runFileStream.flushRunFile();
 
@@ -205,7 +204,7 @@ public class MergeJoiner extends AbstractTupleStreamJoiner {
      * @return true if it stops because the buffer is full,
      *         false if it stops because there was a new key or there were no more right tuples in the stream.
      */
-    private boolean loadAllRightIntoBuffer() throws HyracksDataException{
+    private boolean loadAllRightIntoBuffer() throws HyracksDataException {
         // the current right tuple has not been added to the buffer or compared to anything at this point
         clearSavedRight();
         // compare the current right tuple to the run file key
@@ -255,7 +254,7 @@ public class MergeJoiner extends AbstractTupleStreamJoiner {
         // the current right tuple has not been added to the buffer because it was full
         loadAllLeftIntoRunFile();
         boolean bufferIsFull = true;
-        while(bufferIsFull) {
+        while (bufferIsFull) {
             runFileJoin();
             bufferIsFull = loadAllRightIntoBuffer();
         }
