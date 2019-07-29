@@ -1,0 +1,15 @@
+{ "rid": 0, "sid": 10, "data": 0 }
+{ "rid": 1, "sid": 10, "data": 0 }
+{ "rid": 2, "sid": 10, "data": 0 }
+{ "rid": 3, "sid": 6, "data": 4 }
+{ "rid": 3, "sid": 8, "data": 4 }
+{ "rid": 4, "sid": 1, "data": 9 }
+{ "rid": 4, "sid": 2, "data": 9 }
+{ "rid": 5, "sid": 0, "data": 5 }
+{ "rid": 7, "sid": 1, "data": 9 }
+{ "rid": 7, "sid": 2, "data": 9 }
+{ "rid": 8, "sid": 6, "data": 4 }
+{ "rid": 8, "sid": 8, "data": 4 }
+{ "rid": 9, "sid": 0, "data": 5 }
+{ "rid": 10, "sid": 6, "data": 4 }
+{ "rid": 10, "sid": 8, "data": 4 }

@@ -16,25 +16,24 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-/*
- * Description    : Equi joins two datasets, Customers and Orders, based on the customer id.
- *                  Given the 'merge-join' hint we expect the join to be transformed
- *                  into a merge-join using Customers' primary index.
- * Success        : Yes
- */
 
 use test;
 
-insert into R
-let f = repeat('i',971)
-select r as id,
-       to_bigint(floor(10*random(0))) as data,
-       f as filler
-from range(0,100) as r;
+load dataset R using localfs
+  ((`path`=`asterix_nc1://data/nontagged/spillingDataR.adm`),(`format`=`adm`));
+load dataset S using localfs
+  ((`path`=`asterix_nc1://data/nontagged/spillingDataS.adm`),(`format`=`adm`));
 
-insert into S
-let f = repeat('i',971)
-select r as id,
-       to_bigint(floor(10*random(0))) as data,
-       f as filler
-from range(0,100) as r;
+upsert into R
+select
+  r.id as id,
+  r.data as data,
+  repeat('i',10) as filler
+from R as r;
+
+upsert into S
+select
+  s.id as id,
+  s.data as data,
+  repeat('i',10) as filler
+from S as s;

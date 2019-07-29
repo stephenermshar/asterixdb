@@ -16,17 +16,17 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-/*
- * Description    : Equi joins two datasets, Customers and Orders, based on the customer id.
- *                  Given the 'merge-join' hint we expect the join to be transformed
- *                  into a merge-join using Customers' primary index.
- * Success        : Yes
- */
 
 use test;
+
+/*
+select element {'rid': r.id, 'data':r.data} from R as r order by data;
+select element {'sid': s.id, 'data':s.data} from S as s order by data;
+*/
 
 select element {'rid': r.id,'sid':s.id, 'data': r.data}
 from  R as r,
       S as s
 where (r.data /*+ merge-join */  = s.data)
+order by data, rid, sid
 ;
