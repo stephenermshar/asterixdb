@@ -37,18 +37,18 @@ public abstract class AbstractTupleStreamJoiner extends AbstractFrameStreamJoine
 
     VPartitionTupleBufferManager secondaryTupleBufferManager;
     ITupleAccessor secondaryTupleBufferAccessor;
-    ITuplePairComparator comparator;
+    ITuplePairComparator[] comparators;
 
     IFrameWriter writer;
 
     protected static TuplePointer tempPtr = new TuplePointer(); // (stephen) for method signature, see OptimizedHybridHashJoin
 
     public AbstractTupleStreamJoiner(IHyracksTaskContext ctx, IConsumerFrame leftCF, IConsumerFrame rightCF,
-            int availableMemoryForJoinInFrames, ITuplePairComparator comparator, IFrameWriter writer)
+            int availableMemoryForJoinInFrames, ITuplePairComparator[] comparators, IFrameWriter writer)
             throws HyracksDataException {
         super(ctx, leftCF, rightCF, availableMemoryForJoinInFrames);
 
-        this.comparator = comparator;
+        this.comparators = comparators;
         this.writer = writer;
 
         final int availableMemoryForJoinInBytes = availableMemoryForJoinInFrames * ctx.getInitialFrameSize();
