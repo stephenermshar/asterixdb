@@ -127,6 +127,9 @@ public class MergeJoiner extends AbstractTupleStreamJoiner {
             // secondaryTupleBufferAccessor.reset(tempPtr);
 
             secondaryTupleBufferAccessor.reset();
+            secondaryTupleBufferAccessor.reset(tempPtr);
+            secondaryTupleBufferAccessor.next();
+
             return true;
         } else {
             // (stephen) begin run file join, unless this is being called from inside a run file join
@@ -140,7 +143,12 @@ public class MergeJoiner extends AbstractTupleStreamJoiner {
     private int compare(IFrameTupleAccessor leftAccessor, int leftIndex, IFrameTupleAccessor rightAccessor,
             int rightIndex) throws HyracksDataException {
         for (ITuplePairComparator comparator : comparators) {
-            int c = comparator.compare(leftAccessor, leftIndex, rightAccessor, rightIndex);
+            int c;
+            try {
+                c = comparator.compare(leftAccessor, leftIndex, rightAccessor, rightIndex);
+            } catch (Exception ex) {
+                throw ex;
+            }
             if (c != 0) {
                 return c;
             }
@@ -169,13 +177,12 @@ public class MergeJoiner extends AbstractTupleStreamJoiner {
             return false;
         }
 
-        // consider using ITupleAccessor.exists() here
-
-        if (secondaryTupleBufferAccessor.getBuffer() == null) {
-            secondaryTupleBufferAccessor.reset(tempPtr);
+        if (!secondaryTupleBufferAccessor.exists()) {
+            throw new RuntimeException("secondaryTupleBufferAccessor tuple at tupleId does not exist");
         }
+
         return 0 == compare(inputAccessor[LEFT_PARTITION], inputAccessor[LEFT_PARTITION].getTupleId(),
-                secondaryTupleBufferAccessor, tempPtr.getTupleIndex());
+                secondaryTupleBufferAccessor, secondaryTupleBufferAccessor.getTupleId());
     }
 
     /**
@@ -275,6 +282,7 @@ public class MergeJoiner extends AbstractTupleStreamJoiner {
     }
 
     private void processRunFileJoin() throws HyracksDataException {
+        System.err.println("--- Entering Unverified Code ---");
         // the current right tuple has not been added to the buffer because it was full
         loadAllLeftIntoRunFile();
         boolean bufferIsFull = true;
@@ -293,8 +301,8 @@ public class MergeJoiner extends AbstractTupleStreamJoiner {
         getNextTuple(LEFT_PARTITION);
         getNextTuple(RIGHT_PARTITION);
 
-        while (ready[LEFT_PARTITION]) {
-            if (ready[RIGHT_PARTITION]) {
+        while (/*inputAccessor[LEFT_PARTITION].exists()*/ready[LEFT_PARTITION]) {
+            if (/*inputAccessor[RIGHT_PARTITION].exists()*/ready[RIGHT_PARTITION]) {
                 int c = compareTuplesInStream();
                 if (c < 0) {
                     // (stephen) if there are tuples in the buffer from the last while loop and right has gotten ahead,
