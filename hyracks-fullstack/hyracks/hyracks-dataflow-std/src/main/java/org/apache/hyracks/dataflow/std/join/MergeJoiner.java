@@ -60,10 +60,16 @@ public class MergeJoiner extends AbstractTupleStreamJoiner {
         if (inputAccessor[branch].hasNext()) {
             inputAccessor[branch].next();
             ready[branch] = true;
-        } else {
-            ready[branch] = getNextFrame(branch);
+        } else if (!getNextFrame(branch)) {
+            // we tried to get the next frame but failed, call next tuple to cause exists() to return false
+            inputAccessor[branch].next();
         }
-        currentTuple[branch] = TuplePrinterUtil.printTuple("b:" + branch, inputAccessor[branch]);
+        //        currentTuple[branch] = TuplePrinterUtil.printTuple("b:" + branch, inputAccessor[branch]);
+        //        if (inputAccessor[branch].hasNext()) {
+        //            inputAccessor[branch].next();
+        //        } else {
+        //            getNextFrame(branch);
+        //        }
     }
 
     /**
@@ -78,8 +84,10 @@ public class MergeJoiner extends AbstractTupleStreamJoiner {
         if (secondaryTupleBufferManager.getNumTuples(0) <= 0) {
             return;
         }
+
         secondaryTupleBufferAccessor.reset();
-        secondaryTupleBufferAccessor.getTuplePointer(tempPtr);
+        // commenting out because I don't think it's actually needed
+        //        secondaryTupleBufferAccessor.getTuplePointer(tempPtr);
 
         while (secondaryTupleBufferAccessor.hasNext()) {
             secondaryTupleBufferAccessor.next();
@@ -127,7 +135,7 @@ public class MergeJoiner extends AbstractTupleStreamJoiner {
             // secondaryTupleBufferAccessor.reset(tempPtr);
 
             secondaryTupleBufferAccessor.reset();
-            secondaryTupleBufferAccessor.reset(tempPtr);
+            //            secondaryTupleBufferAccessor.reset(tempPtr);
             secondaryTupleBufferAccessor.next();
 
             return true;
@@ -178,7 +186,8 @@ public class MergeJoiner extends AbstractTupleStreamJoiner {
         }
 
         if (!secondaryTupleBufferAccessor.exists()) {
-            throw new RuntimeException("secondaryTupleBufferAccessor tuple at tupleId does not exist");
+            System.err.println("secondaryTupleBufferAccessor tuple at tupleId does not exist");
+            return false;
         }
 
         return 0 == compare(inputAccessor[LEFT_PARTITION], inputAccessor[LEFT_PARTITION].getTupleId(),
@@ -282,22 +291,24 @@ public class MergeJoiner extends AbstractTupleStreamJoiner {
     }
 
     private void processRunFileJoin() throws HyracksDataException {
-        System.err.println("--- Entering Unverified Code ---");
-        // the current right tuple has not been added to the buffer because it was full
-        loadAllLeftIntoRunFile();
-        boolean bufferIsFull = true;
-        while (bufferIsFull) {
-            runFileJoin();
-            bufferIsFull = loadAllRightIntoBuffer();
-        }
-        // (stephen) join remaining tuples from the partially filled buffer.
-        runFileJoin();
-        clearRunFile();
-        clearSavedRight();
+        System.err.println("--- Skipping Unverified Code ---");
+        return;
+        //        System.err.println("--- Entering Unverified Code ---");
+        //        // the current right tuple has not been added to the buffer because it was full
+        //        loadAllLeftIntoRunFile();
+        //        boolean bufferIsFull = true;
+        //        while (bufferIsFull) {
+        //            runFileJoin();
+        //            bufferIsFull = loadAllRightIntoBuffer();
+        //        }
+        //        // (stephen) join remaining tuples from the partially filled buffer.
+        //        runFileJoin();
+        //        clearRunFile();
+        //        clearSavedRight();
     }
 
-    @Override
-    public void processJoin() throws HyracksDataException {
+    //@Override
+    public void processJoinOld() throws HyracksDataException {
         getNextTuple(LEFT_PARTITION);
         getNextTuple(RIGHT_PARTITION);
 
@@ -307,24 +318,38 @@ public class MergeJoiner extends AbstractTupleStreamJoiner {
                 if (c < 0) {
                     // (stephen) if there are tuples in the buffer from the last while loop and right has gotten ahead,
                     //           then they must match the current left tuple so they may be joined.
+
+                    // WHAT IF LEFT is 1 and RIGHT is 5 and RIGHT_BUFFER is 1, then we join and get next LEFT, then
+                    //         LEFT is 2 and RIGHT is 5 and RIGHT_BUFFER is 1, then we join and have joined a 1 with a 2
+
+                    // WELL
+                    //
+                    // WHEN    LEFT is 1 and RIGHT is 1 and RIGHT_BUFFER is 1, then we get next RIGHT because we just
+                    //                                                         saved the new right tuple. then
+                    //         LEFT is 1 and RIGHT is 5 and RIGHT_BUFFER is 1, then we validly join and get next LEFT,
+                    //         LEFT is 2 and RIGHT is 5 and RIGHT_BUFFER is 1, then we join and it's invalid!!!
+
                     //
                     //           if the right buffer is empty, then this won't join anything and it will just attempt to
                     //           catch the left side up with the right side.
-                    join();
+                    if (compareTupleWithBuffer()) {
+                        join();
+                    }
                     getNextTuple(LEFT_PARTITION);
                 } else if (c > 0) {
                     // (stephen) if the right has gotten behind the left, then the tuples in the right buffer can no
                     //           longer match anything so they may be cleared.
                     //
                     //           Then this attempts to catch the right side up with the left side.
-                    getNextTuple(RIGHT_PARTITION);
                     clearSavedRight();
+                    getNextTuple(RIGHT_PARTITION);
                 } else {
                     // (stephen) if the left and right sides match, then the right tuple should be saved to be handled
                     //           in the next iteration of the loop.
                     //
                     //           if the new tuple is different than those in the buffer, the buffer should be cleared.
                     if (saveRight(!compareTupleWithBuffer())) {
+                        // TODO Move getNextTuple(RIGHT) into saveRight()
                         getNextTuple(RIGHT_PARTITION);
                     }
                 }
@@ -334,6 +359,122 @@ public class MergeJoiner extends AbstractTupleStreamJoiner {
                     join();
                 }
                 getNextTuple(LEFT_PARTITION);
+            }
+        }
+        secondaryTupleBufferManager.close();
+        closeJoin(writer);
+    }
+
+    public boolean loadAllRightIntoBufferNew() throws HyracksDataException {
+        // PRE:  the current right tuple represents the unique key for which all matching right tuples should be saved
+        //       the current left and right accessor tupleIds point to valid tuples
+        // POST: all right tuples with the same key as the current right tuple when the function was called have been
+        //       added to the buffer OR the buffer has been filled to capacity with right tuples of that same key.
+        //
+        // RETURN: TRUE  if all right tuples of the desired key have been added.
+        //         FALSE if the tupleId of the right accessor refers to the next tuple of the desired key that has not
+        //         been added to the buffer.
+
+        // untested expectation: the right buffer tupleId points to a valid tuple and the buffer is not null.
+        boolean saveSuccessful = saveRight(true);
+        int c = 0;
+
+        while (saveSuccessful) { // if save was successful try another,
+            getNextTuple(RIGHT_PARTITION);
+            if (inputAccessor[RIGHT_PARTITION].exists()) {
+                c = compare(inputAccessor[RIGHT_PARTITION], inputAccessor[RIGHT_PARTITION].getTupleId(),
+                        secondaryTupleBufferAccessor, secondaryTupleBufferAccessor.getTupleId());
+                if (c != 0) {
+                    return true; // all matches have been added, this tupleId doesn't match, we done
+                } else { // this tuple matches, try saving it
+                    saveSuccessful = saveRight(false);
+                    if (!saveSuccessful) {
+                        // the tuple matches but save was unsuccessful, return false
+                        return false;
+                        // this is the only time this function should return false, this while loop could use true
+                        // as its condition without changing anything (I think, I hope I'm not wrong, it's late)
+                    }
+                }
+            } else {
+                return true; // all matches have been added, we out of tuples, we done
+            }
+            // only get here is save was successful, so we may continue and get the next tuple at the start of the loop
+
+            //            if (!inputAccessor[RIGHT_PARTITION].exists()) {
+            //                return true;
+            //                // this matches the return condition that all matching tuples have been added to the buffer, the current
+            //                // tuple is a new unique (invalid) key
+            //            }
+            //            c = compare(inputAccessor[RIGHT_PARTITION], inputAccessor[RIGHT_PARTITION].getTupleId(),
+            //                    secondaryTupleBufferAccessor, secondaryTupleBufferAccessor.getTupleId());
+            //            if (c == 0) { // if it don't match, don't even try, leave it be, be gone, get thee hence
+            //                saveSuccessful = saveRight(false);
+            //            } else {
+            //                return true; // this matches the return condition, since the most recent tuple didn't match, so all
+            //                // matching tuples have been added, we didn't even try adding the non matching tuple, so we all good
+
+        }
+        // we're here because the last tuple we tried to add matched but wasn't added. if it didn't match it would have
+        // returned already
+        return false;
+        /*
+        if (c != 0 && saveSuccessful) {
+            // if c != 0 then we didn't try to save last round, so we've added all the matching right tuples to the
+            // right buffer and can safely reutnr true
+        } else if (c == 0 && !saveSuccessful) {
+            // say c == 0, and we tried and failed to save it, so we'd return false because there's still
+            // a match left at tupleId
+            System.err.println("There's still a matching tuple in the right stream");
+        } else if (c != 0 && !saveSuccessful) {
+            // if c != 0 then we didn't try to save in the last round, so we've added all the matching right tuples to
+            // the right buffer and can safely return true
+        } else {
+            // well this is awkward...
+        }
+        
+        // so really we only care whether c==0, thus
+        return c != 0;
+        */
+    }
+
+    @Override
+    public void processJoin() throws HyracksDataException {
+        getNextTuple(LEFT_PARTITION);
+        getNextTuple(RIGHT_PARTITION);
+
+        while (inputAccessor[LEFT_PARTITION].exists() && inputAccessor[RIGHT_PARTITION].exists()) {
+            int c = compareTuplesInStream();
+            if (c < 0) {
+                getNextTuple(LEFT_PARTITION);
+            } else if (c > 0) {
+                getNextTuple(RIGHT_PARTITION);
+            } else {
+                boolean spillCase = !loadAllRightIntoBufferNew();
+                if (spillCase) {
+                    throw new RuntimeException("The Spilling case hasn't been setup yet!");
+                } else {
+                    boolean cb = compareTupleWithBuffer();
+                    while (cb == true) {
+                        join();
+                        getNextTuple(LEFT_PARTITION);
+                        if (inputAccessor[LEFT_PARTITION].exists()) {
+                            cb = compareTupleWithBuffer();
+                        } else {
+                            cb = false;
+                        }
+                        //                    }
+                        //
+                        //
+                        //                    join();
+                        //                    getNextTuple(LEFT_PARTITION);
+                        //                    boolean cb = compareTupleWithBuffer();
+                        //                    while (cb == true) {
+                        //                        join();
+                        //                        getNextTuple(LEFT_PARTITION);
+                        //                        cb = compareTupleWithBuffer();
+                    } // when finished current LEFT  tupleId points to the next unique key in the LEFT stream
+                }
+                //                c = compareTuplesInStream();
             }
         }
         secondaryTupleBufferManager.close();
