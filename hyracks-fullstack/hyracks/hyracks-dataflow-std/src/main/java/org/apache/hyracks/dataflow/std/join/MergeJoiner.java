@@ -64,12 +64,27 @@ public class MergeJoiner extends AbstractTupleStreamJoiner {
             // we tried to get the next frame but failed, call next tuple to cause exists() to return false
             inputAccessor[branch].next();
         }
-        //        currentTuple[branch] = TuplePrinterUtil.printTuple("b:" + branch, inputAccessor[branch]);
+
+        //        byte[] cid775 = ByteBuffer.allocate(9).putInt(775).array();
+        //        cid775[0] = 4;
+        //        String cid775Str = Arrays.toString(cid775);
+        String cid775Str = "[4, 0, 0, 0, 0, 0, 0, 3, 7]";
+
+        currentTuple[branch] = TuplePrinterUtil.printTuple("b:" + branch, inputAccessor[branch]);
+
+        if (currentTuple[branch].length > 0) {
+            String currentTupleCid = currentTuple[branch][branch == 0 ? 0 : 1];
+            if (currentTupleCid.compareTo(cid775Str) == 0) {
+                System.err.println("Found 775");
+            }
+        }
+
         //        if (inputAccessor[branch].hasNext()) {
         //            inputAccessor[branch].next();
         //        } else {
         //            getNextFrame(branch);
         //        }
+
     }
 
     /**
@@ -135,9 +150,8 @@ public class MergeJoiner extends AbstractTupleStreamJoiner {
             // secondaryTupleBufferAccessor.reset(tempPtr);
 
             secondaryTupleBufferAccessor.reset();
-            //            secondaryTupleBufferAccessor.reset(tempPtr);
+            // secondaryTupleBufferAccessor.reset(tempPtr);
             secondaryTupleBufferAccessor.next();
-
             return true;
         } else {
             // (stephen) begin run file join, unless this is being called from inside a run file join
@@ -153,7 +167,7 @@ public class MergeJoiner extends AbstractTupleStreamJoiner {
         for (ITuplePairComparator comparator : comparators) {
             int c;
             try {
-                c = comparator.compare(leftAccessor, leftIndex, rightAccessor, rightIndex);
+                c = comparators[0].compare(leftAccessor, leftIndex, rightAccessor, rightIndex);
             } catch (Exception ex) {
                 throw ex;
             }
@@ -308,62 +322,62 @@ public class MergeJoiner extends AbstractTupleStreamJoiner {
     }
 
     //@Override
-    public void processJoinOld() throws HyracksDataException {
-        getNextTuple(LEFT_PARTITION);
-        getNextTuple(RIGHT_PARTITION);
-
-        while (/*inputAccessor[LEFT_PARTITION].exists()*/ready[LEFT_PARTITION]) {
-            if (/*inputAccessor[RIGHT_PARTITION].exists()*/ready[RIGHT_PARTITION]) {
-                int c = compareTuplesInStream();
-                if (c < 0) {
-                    // (stephen) if there are tuples in the buffer from the last while loop and right has gotten ahead,
-                    //           then they must match the current left tuple so they may be joined.
-
-                    // WHAT IF LEFT is 1 and RIGHT is 5 and RIGHT_BUFFER is 1, then we join and get next LEFT, then
-                    //         LEFT is 2 and RIGHT is 5 and RIGHT_BUFFER is 1, then we join and have joined a 1 with a 2
-
-                    // WELL
-                    //
-                    // WHEN    LEFT is 1 and RIGHT is 1 and RIGHT_BUFFER is 1, then we get next RIGHT because we just
-                    //                                                         saved the new right tuple. then
-                    //         LEFT is 1 and RIGHT is 5 and RIGHT_BUFFER is 1, then we validly join and get next LEFT,
-                    //         LEFT is 2 and RIGHT is 5 and RIGHT_BUFFER is 1, then we join and it's invalid!!!
-
-                    //
-                    //           if the right buffer is empty, then this won't join anything and it will just attempt to
-                    //           catch the left side up with the right side.
-                    if (compareTupleWithBuffer()) {
-                        join();
-                    }
-                    getNextTuple(LEFT_PARTITION);
-                } else if (c > 0) {
-                    // (stephen) if the right has gotten behind the left, then the tuples in the right buffer can no
-                    //           longer match anything so they may be cleared.
-                    //
-                    //           Then this attempts to catch the right side up with the left side.
-                    clearSavedRight();
-                    getNextTuple(RIGHT_PARTITION);
-                } else {
-                    // (stephen) if the left and right sides match, then the right tuple should be saved to be handled
-                    //           in the next iteration of the loop.
-                    //
-                    //           if the new tuple is different than those in the buffer, the buffer should be cleared.
-                    if (saveRight(!compareTupleWithBuffer())) {
-                        // TODO Move getNextTuple(RIGHT) into saveRight()
-                        getNextTuple(RIGHT_PARTITION);
-                    }
-                }
-            } else {
-                // (stephen) the remaining left tuples could still match with the right buffer.
-                if (compareTupleWithBuffer()) {
-                    join();
-                }
-                getNextTuple(LEFT_PARTITION);
-            }
-        }
-        secondaryTupleBufferManager.close();
-        closeJoin(writer);
-    }
+    //    public void processJoinOld() throws HyracksDataException {
+    //        getNextTuple(LEFT_PARTITION);
+    //        getNextTuple(RIGHT_PARTITION);
+    //
+    //        while (/*inputAccessor[LEFT_PARTITION].exists()*/ready[LEFT_PARTITION]) {
+    //            if (/*inputAccessor[RIGHT_PARTITION].exists()*/ready[RIGHT_PARTITION]) {
+    //                int c = compareTuplesInStream();
+    //                if (c < 0) {
+    //                    // (stephen) if there are tuples in the buffer from the last while loop and right has gotten ahead,
+    //                    //           then they must match the current left tuple so they may be joined.
+    //
+    //                    // WHAT IF LEFT is 1 and RIGHT is 5 and RIGHT_BUFFER is 1, then we join and get next LEFT, then
+    //                    //         LEFT is 2 and RIGHT is 5 and RIGHT_BUFFER is 1, then we join and have joined a 1 with a 2
+    //
+    //                    // WELL
+    //                    //
+    //                    // WHEN    LEFT is 1 and RIGHT is 1 and RIGHT_BUFFER is 1, then we get next RIGHT because we just
+    //                    //                                                         saved the new right tuple. then
+    //                    //         LEFT is 1 and RIGHT is 5 and RIGHT_BUFFER is 1, then we validly join and get next LEFT,
+    //                    //         LEFT is 2 and RIGHT is 5 and RIGHT_BUFFER is 1, then we join and it's invalid!!!
+    //
+    //                    //
+    //                    //           if the right buffer is empty, then this won't join anything and it will just attempt to
+    //                    //           catch the left side up with the right side.
+    //                    if (compareTupleWithBuffer()) {
+    //                        join();
+    //                    }
+    //                    getNextTuple(LEFT_PARTITION);
+    //                } else if (c > 0) {
+    //                    // (stephen) if the right has gotten behind the left, then the tuples in the right buffer can no
+    //                    //           longer match anything so they may be cleared.
+    //                    //
+    //                    //           Then this attempts to catch the right side up with the left side.
+    //                    clearSavedRight();
+    //                    getNextTuple(RIGHT_PARTITION);
+    //                } else {
+    //                    // (stephen) if the left and right sides match, then the right tuple should be saved to be handled
+    //                    //           in the next iteration of the loop.
+    //                    //
+    //                    //           if the new tuple is different than those in the buffer, the buffer should be cleared.
+    //                    if (saveRight(!compareTupleWithBuffer())) {
+    //                        // TODO Move getNextTuple(RIGHT) into saveRight()
+    //                        getNextTuple(RIGHT_PARTITION);
+    //                    }
+    //                }
+    //            } else {
+    //                // (stephen) the remaining left tuples could still match with the right buffer.
+    //                if (compareTupleWithBuffer()) {
+    //                    join();
+    //                }
+    //                getNextTuple(LEFT_PARTITION);
+    //            }
+    //        }
+    //        secondaryTupleBufferManager.close();
+    //        closeJoin(writer);
+    //    }
 
     public boolean loadAllRightIntoBufferNew() throws HyracksDataException {
         // PRE:  the current right tuple represents the unique key for which all matching right tuples should be saved
@@ -379,106 +393,254 @@ public class MergeJoiner extends AbstractTupleStreamJoiner {
         boolean saveSuccessful = saveRight(true);
         int c = 0;
 
-        while (saveSuccessful) { // if save was successful try another,
+        while (saveSuccessful) {
             getNextTuple(RIGHT_PARTITION);
             if (inputAccessor[RIGHT_PARTITION].exists()) {
-                c = compare(inputAccessor[RIGHT_PARTITION], inputAccessor[RIGHT_PARTITION].getTupleId(),
+                // we'd like to do this
+                // c = compare(inputAccessor[RIGHT_PARTITION], inputAccessor[RIGHT_PARTITION].getTupleId(),
+                //          secondaryTupleBufferAccessor, secondaryTupleBufferAccessor.getTupleId());
+                //
+                // but the comparator expects the left argument to come from the left stream, so inputAccessor[RIGHT]
+                // and secondaryTupleBufferAccessor can't be compared since they both come from the right stream.
+                // but, since when loading all Right into buffer we haven't incremented the left stream tupleId from
+                // the time we compared it to enter this function, its key should be equivalent to inputAccessor[RIGHT]
+                // and it can be used instead.
+                c = compare(inputAccessor[LEFT_PARTITION], inputAccessor[LEFT_PARTITION].getTupleId(),
                         secondaryTupleBufferAccessor, secondaryTupleBufferAccessor.getTupleId());
                 if (c != 0) {
-                    return true; // all matches have been added, this tupleId doesn't match, we done
-                } else { // this tuple matches, try saving it
+                    return true;
+                } else {
                     saveSuccessful = saveRight(false);
                     if (!saveSuccessful) {
-                        // the tuple matches but save was unsuccessful, return false
                         return false;
-                        // this is the only time this function should return false, this while loop could use true
-                        // as its condition without changing anything (I think, I hope I'm not wrong, it's late)
                     }
                 }
             } else {
-                return true; // all matches have been added, we out of tuples, we done
+                return true;
             }
-            // only get here is save was successful, so we may continue and get the next tuple at the start of the loop
-
-            //            if (!inputAccessor[RIGHT_PARTITION].exists()) {
-            //                return true;
-            //                // this matches the return condition that all matching tuples have been added to the buffer, the current
-            //                // tuple is a new unique (invalid) key
-            //            }
-            //            c = compare(inputAccessor[RIGHT_PARTITION], inputAccessor[RIGHT_PARTITION].getTupleId(),
-            //                    secondaryTupleBufferAccessor, secondaryTupleBufferAccessor.getTupleId());
-            //            if (c == 0) { // if it don't match, don't even try, leave it be, be gone, get thee hence
-            //                saveSuccessful = saveRight(false);
-            //            } else {
-            //                return true; // this matches the return condition, since the most recent tuple didn't match, so all
-            //                // matching tuples have been added, we didn't even try adding the non matching tuple, so we all good
-
         }
-        // we're here because the last tuple we tried to add matched but wasn't added. if it didn't match it would have
-        // returned already
         return false;
-        /*
-        if (c != 0 && saveSuccessful) {
-            // if c != 0 then we didn't try to save last round, so we've added all the matching right tuples to the
-            // right buffer and can safely reutnr true
-        } else if (c == 0 && !saveSuccessful) {
-            // say c == 0, and we tried and failed to save it, so we'd return false because there's still
-            // a match left at tupleId
-            System.err.println("There's still a matching tuple in the right stream");
-        } else if (c != 0 && !saveSuccessful) {
-            // if c != 0 then we didn't try to save in the last round, so we've added all the matching right tuples to
-            // the right buffer and can safely return true
-        } else {
-            // well this is awkward...
-        }
-        
-        // so really we only care whether c==0, thus
-        return c != 0;
-        */
     }
 
-    @Override
-    public void processJoin() throws HyracksDataException {
-        getNextTuple(LEFT_PARTITION);
-        getNextTuple(RIGHT_PARTITION);
+    //    public void processJoinSemiNew() throws HyracksDataException {
+    //        getNextTuple(LEFT_PARTITION);
+    //        getNextTuple(RIGHT_PARTITION);
+    //
+    //        while (inputAccessor[LEFT_PARTITION].exists() && inputAccessor[RIGHT_PARTITION].exists()) {
+    //            int c = compareTuplesInStream();
+    //            if (c < 0) {
+    //                getNextTuple(LEFT_PARTITION);
+    //            } else if (c > 0) {
+    //                getNextTuple(RIGHT_PARTITION);
+    //            } else {
+    //                boolean spillCase = !loadAllRightIntoBufferNew();
+    //                if (spillCase) {
+    //                    throw new RuntimeException("The Spilling case hasn't been setup yet!");
+    //                } else {
+    //                    boolean cb = compareTupleWithBuffer();
+    //                    while (cb == true) {
+    //                        join();
+    //                        getNextTuple(LEFT_PARTITION);
+    //                        if (inputAccessor[LEFT_PARTITION].exists()) {
+    //                            cb = compareTupleWithBuffer();
+    //                        } else {
+    //                            cb = false;
+    //                        }
+    //                        //                    }
+    //                        //
+    //                        //
+    //                        //                    join();
+    //                        //                    getNextTuple(LEFT_PARTITION);
+    //                        //                    boolean cb = compareTupleWithBuffer();
+    //                        //                    while (cb == true) {
+    //                        //                        join();
+    //                        //                        getNextTuple(LEFT_PARTITION);
+    //                        //                        cb = compareTupleWithBuffer();
+    //                    } // when finished current LEFT  tupleId points to the next unique key in the LEFT stream
+    //                }
+    //            }
+    //        }
+    //        secondaryTupleBufferManager.close();
+    //        closeJoin(writer);
+    //    }
 
+    public void joinAllMatchingLeftWithMatchingRightBuffer() throws HyracksDataException {
+
+        while (inputAccessor[LEFT_PARTITION].exists() && secondaryTupleBufferAccessor.exists()
+                && compareTupleWithBuffer()) {
+
+            join();
+            getNextTuple(LEFT_PARTITION);
+        }
+        clearSavedRight();
+    }
+
+    public boolean makeStreamsEven() throws HyracksDataException {
         while (inputAccessor[LEFT_PARTITION].exists() && inputAccessor[RIGHT_PARTITION].exists()) {
             int c = compareTuplesInStream();
+
             if (c < 0) {
                 getNextTuple(LEFT_PARTITION);
             } else if (c > 0) {
                 getNextTuple(RIGHT_PARTITION);
             } else {
-                boolean spillCase = !loadAllRightIntoBufferNew();
-                if (spillCase) {
-                    throw new RuntimeException("The Spilling case hasn't been setup yet!");
-                } else {
-                    boolean cb = compareTupleWithBuffer();
-                    while (cb == true) {
-                        join();
-                        getNextTuple(LEFT_PARTITION);
-                        if (inputAccessor[LEFT_PARTITION].exists()) {
-                            cb = compareTupleWithBuffer();
-                        } else {
-                            cb = false;
-                        }
-                        //                    }
-                        //
-                        //
-                        //                    join();
-                        //                    getNextTuple(LEFT_PARTITION);
-                        //                    boolean cb = compareTupleWithBuffer();
-                        //                    while (cb == true) {
-                        //                        join();
-                        //                        getNextTuple(LEFT_PARTITION);
-                        //                        cb = compareTupleWithBuffer();
-                    } // when finished current LEFT  tupleId points to the next unique key in the LEFT stream
-                }
-                //                c = compareTuplesInStream();
+                return true;
             }
+        }
+        return false;
+    }
+
+    public void loadAllRight() throws HyracksDataException {
+        loadAllRightIntoBufferNew();
+    }
+
+    public void joinAllLeft() throws HyracksDataException {
+        joinAllMatchingLeftWithMatchingRightBuffer();
+    }
+
+    public void processJoinNewNew() throws HyracksDataException {
+
+        getNextTuple(LEFT_PARTITION);
+        getNextTuple(RIGHT_PARTITION);
+
+        while (makeStreamsEven()) {
+            loadAllRight();
+            joinAllLeft();
         }
         secondaryTupleBufferManager.close();
         closeJoin(writer);
+    }
+
+    //    public void processJoinNew() throws HyracksDataException {
+    //        getNextTuple(LEFT_PARTITION);
+    //        getNextTuple(RIGHT_PARTITION);
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //        boolean loopAgain = inputAccessor[LEFT_PARTITION].exists() && inputAccessor[RIGHT_PARTITION].exists();
+    //
+    //        while (loopAgain) {
+    //            while (inputAccessor[LEFT_PARTITION].exists()
+    //                    && secondaryTupleBufferAccessor.exists()
+    //                    && compareTupleWithBuffer()) {
+    //                join();
+    //                getNextTuple(LEFT_PARTITION);
+    //            }
+    //            clearSavedRight();
+    //
+    //            loopAgain = inputAccessor[LEFT_PARTITION].exists() && inputAccessor[RIGHT_PARTITION].exists();
+    //
+    //            if (loopAgain) {
+    //                int c = compareTuplesInStream();
+    //
+    //                if (c < 0) {
+    //                    getNextTuple(LEFT_PARTITION);
+    //                } else if (c > 0) {
+    //                    getNextTuple(RIGHT_PARTITION);
+    //                } else {
+    //                    loadAllRightIntoBufferNew(); // leaves unmatched right at tupleId
+    //                }
+    //            }
+    //        }
+    //
+    //
+    //        while (loopAgain) {
+    //            if (inputAccessor[LEFT_PARTITION].exists()) {
+    //                if (inputAccessor[RIGHT_PARTITION].exists()) {
+    //                    int c = compareTuplesInStream();
+    //
+    //                    if (c < 0) {
+    //                        getNextTuple(LEFT_PARTITION);
+    //                    } else if (c > 0) {
+    //                        getNextTuple(RIGHT_PARTITION);
+    //                    } else {
+    //                        loadAllRightIntoBufferNew(); // leaves unmatched right at tupleId
+    //                    }
+    //                }
+    //
+    //                while (inputAccessor[LEFT_PARTITION].exists()
+    //                        && secondaryTupleBufferAccessor.exists()
+    //                        && compareTupleWithBuffer()) {
+    //                    join();
+    //                    getNextTuple(LEFT_PARTITION);
+    //                }
+    //                clearSavedRight();
+    //
+    //            }
+    //
+    //
+    //
+    //                else {
+    //
+    //                }
+    //            }
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //        while (inputAccessor[LEFT_PARTITION].exists()) {
+    //            joinAllMatchingLeftWithMatchingRightBuffer(); // leaves unmatched LEFT in tupleId
+    //
+    //            int c = compareTuplesInStream();
+    //
+    //            if (c < 0) {
+    //                getNextTuple(LEFT_PARTITION);
+    //            } else if (c > 0) {
+    //                getNextTuple(RIGHT_PARTITION);
+    //            } else {
+    //                loadAllRightIntoBufferNew(); // leaves unmatched right at tupleId
+    //            }
+    //        }
+    //
+    //        secondaryTupleBufferManager.close();
+    //        closeJoin(writer);
+    //    }
+
+    @Override
+    public void processJoin() throws HyracksDataException {
+        processJoinNewNew();
     }
 
 }
