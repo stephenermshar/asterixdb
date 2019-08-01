@@ -25,7 +25,7 @@ select element {'sid': s.id, 'data':s.data} from S as s order by data;
 */
 
 select element {'R':r, 'S':s}
-\*
+/*
 {'rid':r.id, 'sid':s.id, 'rdata':r.data, 'sdata':s.data, 'rfiller':r.filler, 'sfiller':s.filler}
 */
 from  R as r,
