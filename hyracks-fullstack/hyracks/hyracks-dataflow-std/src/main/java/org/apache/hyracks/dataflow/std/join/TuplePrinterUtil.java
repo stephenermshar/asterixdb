@@ -32,6 +32,32 @@ public class TuplePrinterUtil {
     private TuplePrinterUtil() {
     }
 
+    public static long[] returnTupleFieldsAsBigInts(ITupleAccessor accessor) {
+        if (accessor.exists()) {
+            int tupleId = accessor.getTupleId();
+            int fields = accessor.getFieldCount();
+            long[] fieldLongs = new long[fields];
+            for (int i = 0; i < fields; i++) {
+                int fieldStartOffset = accessor.getFieldStartOffset(tupleId, i);
+                int fieldSlotsLength = accessor.getFieldSlotsLength();
+                int tupleStartOffset = accessor.getTupleStartOffset(tupleId);
+
+                int start = fieldStartOffset + fieldSlotsLength + tupleStartOffset;
+                int end = start + accessor.getFieldLength(tupleId, i);
+
+                byte[] fieldValueBytes = Arrays.copyOfRange(accessor.getBuffer().array(), start, end);
+
+                // https://stackoverflow.com/a/1026804
+                fieldLongs[i] = 0;
+                for (int j = 0; j < fieldValueBytes.length; j++) {
+                    fieldLongs[i] = (fieldLongs[i] << 8) + (fieldValueBytes[j] & 0xff);
+                }
+            }
+            return fieldLongs;
+        }
+        return new long[0];
+    }
+
     public static String[] printTuple(String message, ITupleAccessor accessor) throws HyracksDataException {
         if (accessor.exists()) {
             return printTuple(message, accessor, accessor.getTupleId());
