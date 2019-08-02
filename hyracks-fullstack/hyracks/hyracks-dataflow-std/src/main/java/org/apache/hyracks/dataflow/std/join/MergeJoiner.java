@@ -31,8 +31,6 @@ public class MergeJoiner extends AbstractTupleStreamJoiner {
     private final int runFileAppenderBufferAccessorTupleId;
     private final ITupleAccessor runFileAppenderBufferAccessor;
     private final RunFileStream runFileStream;
-    //    private long[][] currentTuple;
-    //    private long[] currentSecondaryTuple;
 
     public MergeJoiner(IHyracksTaskContext ctx, IConsumerFrame leftCF, IConsumerFrame rightCF, IFrameWriter writer,
             int memoryForJoinInFrames, ITuplePairComparator[] comparators) throws HyracksDataException {
@@ -43,9 +41,6 @@ public class MergeJoiner extends AbstractTupleStreamJoiner {
         runFileAppenderBufferAccessor = new TupleAccessor(consumerFrames[LEFT_PARTITION].getRecordDescriptor());
         runFileAppenderBufferAccessorTupleId = 0;
         // ----------------------------------------------------------
-
-        //        currentTuple = new long[][] { null, null };
-        //        currentSecondaryTuple = new long[] {};
     }
 
     private void getNextTuple(int branch) throws HyracksDataException {
@@ -54,14 +49,6 @@ public class MergeJoiner extends AbstractTupleStreamJoiner {
         } else if (!getNextFrame(branch)) {
             inputAccessor[branch].next();
         }
-        //        currentTuple[branch] = TuplePrinterUtil.returnTupleFieldsAsBigInts(inputAccessor[branch]);
-
-        //        if (currentTuple[branch].length > 0) {
-        //            if (currentTuple[branch][1] == 0) {
-        //                System.err.println("Tuple with data=0 found");
-        //            }
-        //        }
-
     }
 
     private void join() throws HyracksDataException {
@@ -97,8 +84,6 @@ public class MergeJoiner extends AbstractTupleStreamJoiner {
 
         if (secondaryTupleBufferManager.insertTuple(0, inputAccessor[RIGHT_PARTITION],
                 inputAccessor[RIGHT_PARTITION].getTupleId(), tempPtr)) {
-
-            //            currentSecondaryTuple = TuplePrinterUtil.returnTupleFieldsAsBigInts(inputAccessor[RIGHT_PARTITION]);
 
             secondaryTupleBufferAccessor.reset();
             secondaryTupleBufferAccessor.next();
