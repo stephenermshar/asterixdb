@@ -35,6 +35,7 @@ import org.apache.hyracks.algebricks.core.algebra.expressions.AbstractFunctionCa
 import org.apache.hyracks.algebricks.core.algebra.expressions.BroadcastExpressionAnnotation;
 import org.apache.hyracks.algebricks.core.algebra.expressions.BroadcastExpressionAnnotation.BroadcastSide;
 import org.apache.hyracks.algebricks.core.algebra.expressions.IExpressionAnnotation;
+import org.apache.hyracks.algebricks.core.algebra.expressions.MergeJoinExpressionAnnotation;
 import org.apache.hyracks.algebricks.core.algebra.expressions.VariableReferenceExpression;
 import org.apache.hyracks.algebricks.core.algebra.functions.AlgebricksBuiltinFunctions;
 import org.apache.hyracks.algebricks.core.algebra.functions.AlgebricksBuiltinFunctions.ComparisonKind;
@@ -70,7 +71,19 @@ public class JoinUtils {
         ILogicalExpression conditionExpr = op.getCondition().getValue();
         if (isHashJoinCondition(conditionExpr, varsLeft, varsRight, sideLeft, sideRight)) {
             BroadcastSide side = getBroadcastJoinSide(conditionExpr, varsLeft, varsRight);
-            if (true) {
+
+            boolean useMergeJoin = false;
+            if (conditionExpr.getExpressionTag() == LogicalExpressionTag.FUNCTION_CALL) {
+                useMergeJoin = ((AbstractFunctionCallExpression) conditionExpr).getAnnotations()
+                        .containsKey(MergeJoinExpressionAnnotation.INSTANCE);
+            }
+            if (useMergeJoin) {
+                System.err.println("\n---- USING MERGE JOIN ----\n");
+            } else {
+                System.err.println("\n---- ***NOT*** USING MERGE JOIN ----\n");
+            }
+
+            if (useMergeJoin) {
                 // (stephen) force merge join for testing
                 setMergeJoinOp(op, sideLeft, sideRight, context);
             } else if (side == null) {

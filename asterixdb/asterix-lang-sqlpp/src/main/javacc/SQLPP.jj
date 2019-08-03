@@ -188,6 +188,7 @@ import org.apache.hyracks.algebricks.common.utils.Triple;
 import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
 import org.apache.hyracks.algebricks.core.algebra.expressions.IExpressionAnnotation;
 import org.apache.hyracks.algebricks.core.algebra.expressions.IndexedNLJoinExpressionAnnotation;
+import org.apache.hyracks.algebricks.core.algebra.expressions.MergeJoinExpressionAnnotation;
 import org.apache.hyracks.algebricks.core.algebra.functions.FunctionIdentifier;
 import org.apache.hyracks.api.exceptions.SourceLocation;
 import org.apache.hyracks.api.exceptions.Warning;
@@ -231,6 +232,7 @@ class SQLPPParser extends ScopeChecker implements IParser {
     private static final String LIST_VAL_FILE_HINT = "list-val-file";
     private static final String RANGE_HINT = "range";
     private static final String SKIP_SECONDARY_INDEX_SEARCH_HINT = "skip-index";
+    private static final String MERGE_JOIN_HINT = "merge-join";
     private static final String VAL_FILE_HINT = "val-files";
     private static final String VAL_FILE_SAME_INDEX_HINT = "val-file-same-idx";
     private static final String GEN_FIELDS_HINT = "gen-fields";
@@ -2038,11 +2040,13 @@ Expression RelExpr() throws ParseException:
                 annotation = IndexedNLJoinExpressionAnnotation.INSTANCE;
             } else if (mhint.equals(SKIP_SECONDARY_INDEX_SEARCH_HINT)) {
                 annotation = SkipSecondaryIndexSearchExpressionAnnotation.INSTANCE;
+            } else if (mhint.equals(MERGE_JOIN_HINT)) {
+                annotation = MergeJoinExpressionAnnotation.INSTANCE;
             } else if (mhint.equals(BROADCAST_JOIN_HINT)) {
                 broadcast = true;
             } else {
                 warnUnknownHint(mhint, getSourceLocation(getHintToken(token)),
-                    INDEXED_NESTED_LOOP_JOIN_HINT, SKIP_SECONDARY_INDEX_SEARCH_HINT, BROADCAST_JOIN_HINT
+                    INDEXED_NESTED_LOOP_JOIN_HINT, SKIP_SECONDARY_INDEX_SEARCH_HINT, BROADCAST_JOIN_HINT, MERGE_JOIN_HINT
                 );
             }
           }
@@ -2100,9 +2104,11 @@ Expression BetweenExpr() throws ParseException:
                 annotation = IndexedNLJoinExpressionAnnotation.INSTANCE;
             } else if (mhint.equals(SKIP_SECONDARY_INDEX_SEARCH_HINT)) {
                 annotation = SkipSecondaryIndexSearchExpressionAnnotation.INSTANCE;
+            } else if (mhint.equals(MERGE_JOIN_HINT)) {
+                annotation = MergeJoinExpressionAnnotation.INSTANCE;
             } else {
                 warnUnknownHint(mhint, getSourceLocation(getHintToken(token)),
-                    INDEXED_NESTED_LOOP_JOIN_HINT, SKIP_SECONDARY_INDEX_SEARCH_HINT
+                    INDEXED_NESTED_LOOP_JOIN_HINT, SKIP_SECONDARY_INDEX_SEARCH_HINT, MERGE_JOIN_HINT
                 );
             }
           }
