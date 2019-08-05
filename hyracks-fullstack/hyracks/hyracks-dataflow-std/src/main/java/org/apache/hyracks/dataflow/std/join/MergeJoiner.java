@@ -37,7 +37,7 @@ public class MergeJoiner extends AbstractTupleStreamJoiner {
         super(ctx, leftCF, rightCF, memoryForJoinInFrames - JOIN_PARTITIONS, comparators, writer);
         runFileStream = new RunFileStream(ctx, "left", branchStatus[LEFT_PARTITION]);
 
-        // (stephen) ----------- POTENTIAL PROBLEM AREA -------------
+        // (stephen) ----------- POTENTIAL PROBLEM AREA FOR SPILLING -------------
         runFileAppenderBufferAccessor = new TupleAccessor(consumerFrames[LEFT_PARTITION].getRecordDescriptor());
         runFileAppenderBufferAccessorTupleId = 0;
         // ----------------------------------------------------------
