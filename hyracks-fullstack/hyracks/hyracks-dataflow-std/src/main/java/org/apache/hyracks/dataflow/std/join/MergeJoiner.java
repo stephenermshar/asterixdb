@@ -18,29 +18,148 @@
  */
 package org.apache.hyracks.dataflow.std.join;
 
+import java.nio.ByteBuffer;
+import java.util.BitSet;
+
+import org.apache.hyracks.api.comm.IFrame;
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.comm.IFrameWriter;
+import org.apache.hyracks.api.comm.VSizeFrame;
 import org.apache.hyracks.api.context.IHyracksTaskContext;
 import org.apache.hyracks.api.dataflow.value.ITuplePairComparator;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
+import org.apache.hyracks.dataflow.common.comm.io.FrameTupleAppender;
+import org.apache.hyracks.dataflow.common.comm.util.FrameUtils;
+import org.apache.hyracks.dataflow.std.buffermanager.IPartitionedMemoryConstrain;
 import org.apache.hyracks.dataflow.std.buffermanager.ITupleAccessor;
+import org.apache.hyracks.dataflow.std.buffermanager.PreferToSpillFullyOccupiedFramePolicy;
 import org.apache.hyracks.dataflow.std.buffermanager.TupleAccessor;
+import org.apache.hyracks.dataflow.std.buffermanager.VPartitionTupleBufferManager;
+import org.apache.hyracks.dataflow.std.structures.TuplePointer;
 
-public class MergeJoiner extends AbstractTupleStreamJoiner {
+public class MergeJoiner implements IStreamJoiner {
 
+    // MJ
+
+    protected static TuplePointer tempPtr = new TuplePointer(); // (stephen) for method signature, see OptimizedHybridHashJoin
     private final int runFileAppenderBufferAccessorTupleId;
     private final ITupleAccessor runFileAppenderBufferAccessor;
     private final RunFileStream runFileStream;
 
+    // ATSJ
+
+    VPartitionTupleBufferManager secondaryTupleBufferManager;
+    ITupleAccessor secondaryTupleBufferAccessor;
+    ITuplePairComparator[] comparators;
+    IFrameWriter writer;
+
+    // AFSJ
+
+    protected final int availableMemoryForJoinInFrames;
+
+    protected static final int JOIN_PARTITIONS = 2;
+    protected static final int LEFT_PARTITION = 0;
+    protected static final int RIGHT_PARTITION = 1;
+
+    // (stephen) indicates whether each branch is ready to accept more tuples from the input writer
+    protected final MergeBranchStatus[] branchStatus;
+    // (stephen) used for synchronizing when the input writer gets written to and read from.
+    protected final IConsumerFrame[] consumerFrames;
+    // (stephen) used for writing a frame to output
+    private final FrameTupleAppender resultAppender;
+
+    // (stephen) stores a copy of the data that comes in through the input writer
+    protected final IFrame[] inputBuffer;
+    // (stephen) used for accessing tuples from the inputBuffer
+    protected final ITupleAccessor[] inputAccessor;
+
+    // (stephen) counts used for logging
+    protected long[] frameCounts = { 0, 0 };
+    protected long[] tupleCounts = { 0, 0 };
+
     public MergeJoiner(IHyracksTaskContext ctx, IConsumerFrame leftCF, IConsumerFrame rightCF, IFrameWriter writer,
             int memoryForJoinInFrames, ITuplePairComparator[] comparators) throws HyracksDataException {
-        super(ctx, leftCF, rightCF, memoryForJoinInFrames - JOIN_PARTITIONS, comparators, writer);
+
+        // AFSJ
+
+        inputAccessor = new TupleAccessor[JOIN_PARTITIONS];
+        inputAccessor[LEFT_PARTITION] = new TupleAccessor(leftCF.getRecordDescriptor());
+        inputAccessor[RIGHT_PARTITION] = new TupleAccessor(rightCF.getRecordDescriptor());
+
+        inputBuffer = new IFrame[JOIN_PARTITIONS];
+        inputBuffer[LEFT_PARTITION] = new VSizeFrame(ctx);
+        inputBuffer[RIGHT_PARTITION] = new VSizeFrame(ctx);
+
+        branchStatus = new MergeBranchStatus[JOIN_PARTITIONS];
+        branchStatus[LEFT_PARTITION] = new MergeBranchStatus();
+        branchStatus[RIGHT_PARTITION] = new MergeBranchStatus();
+
+        consumerFrames = new IConsumerFrame[JOIN_PARTITIONS];
+        consumerFrames[LEFT_PARTITION] = leftCF;
+        consumerFrames[RIGHT_PARTITION] = rightCF;
+
+        // Result
+        resultAppender = new FrameTupleAppender(new VSizeFrame(ctx));
+
+        // ATSJ
+
+        this.comparators = comparators;
+        this.writer = writer;
+
+        availableMemoryForJoinInFrames = memoryForJoinInFrames - JOIN_PARTITIONS;
+        final int availableMemoryForJoinInBytes = availableMemoryForJoinInFrames * ctx.getInitialFrameSize();
+        int partitions = 1; // (stephen) can probably use partitions for grouping many branches for multi-joins
+        BitSet spilledStatus = new BitSet(partitions);
+        IPartitionedMemoryConstrain memoryConstraint =
+                PreferToSpillFullyOccupiedFramePolicy.createAtMostOneFrameForSpilledPartitionConstrain(spilledStatus);
+        secondaryTupleBufferManager =
+                new VPartitionTupleBufferManager(ctx, memoryConstraint, partitions, availableMemoryForJoinInBytes);
+        secondaryTupleBufferManager.reset();
+        secondaryTupleBufferAccessor = secondaryTupleBufferManager
+                .createPartitionTupleAccessor(consumerFrames[RIGHT_PARTITION].getRecordDescriptor(), 0);
+
+        // MJ
+
         runFileStream = new RunFileStream(ctx, "left", branchStatus[LEFT_PARTITION]);
 
         // (stephen) ----------- POTENTIAL PROBLEM AREA FOR SPILLING -------------
         runFileAppenderBufferAccessor = new TupleAccessor(consumerFrames[LEFT_PARTITION].getRecordDescriptor());
         runFileAppenderBufferAccessorTupleId = 0;
         // ----------------------------------------------------------
+    }
+
+    @Override
+    public boolean getNextFrame(int branch) throws HyracksDataException {
+        if (consumerFrames[branch].hasMoreFrames()) {
+            setFrame(branch, consumerFrames[branch].getFrame());
+            return true;
+        }
+        return false;
+    }
+
+    private void setFrame(int branch, ByteBuffer buffer) throws HyracksDataException {
+        inputBuffer[branch].getBuffer().clear();
+        if (inputBuffer[branch].getFrameSize() < buffer.capacity()) {
+            inputBuffer[branch].resize(buffer.capacity());
+        }
+        inputBuffer[branch].getBuffer().put(buffer.array(), 0, buffer.capacity());
+        inputAccessor[branch].reset(inputBuffer[branch].getBuffer());
+        inputAccessor[branch].next();
+        frameCounts[branch]++;
+        tupleCounts[branch] += inputAccessor[branch].getTupleCount();
+    }
+
+    protected void addToResult(IFrameTupleAccessor accessor1, int index1, IFrameTupleAccessor accessor2, int index2,
+            boolean reversed, IFrameWriter writer) throws HyracksDataException {
+        if (reversed) {
+            FrameUtils.appendConcatToWriter(writer, resultAppender, accessor2, index2, accessor1, index1);
+        } else {
+            FrameUtils.appendConcatToWriter(writer, resultAppender, accessor1, index1, accessor2, index2);
+        }
+    }
+
+    protected void closeJoin(IFrameWriter writer) throws HyracksDataException {
+        resultAppender.write(writer, true);
     }
 
     private void getNextTuple(int branch) throws HyracksDataException {
