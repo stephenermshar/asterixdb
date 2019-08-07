@@ -42,7 +42,6 @@ public class MergeJoiner implements IStreamJoiner {
     // MJ
 
     protected static TuplePointer tempPtr = new TuplePointer(); // (stephen) for method signature, see OptimizedHybridHashJoin
-    private final int runFileAppenderBufferAccessorTupleId;
     private final ITupleAccessor runFileAccessor;
     private final RunFileStream runFileStream;
 
@@ -71,6 +70,7 @@ public class MergeJoiner implements IStreamJoiner {
     // for logging only
     protected long[] frameCounts = { 0, 0 };
     protected long[] tupleCounts = { 0, 0 };
+    private long[][] currentTuple;
 
     public MergeJoiner(IHyracksTaskContext ctx, IConsumerFrame leftCF, IConsumerFrame rightCF, IFrameWriter writer,
             int memoryForJoinInFrames, ITuplePairComparator[] comparators) throws HyracksDataException {
@@ -118,8 +118,9 @@ public class MergeJoiner implements IStreamJoiner {
 
         // (stephen) ----------- POTENTIAL PROBLEM AREA FOR SPILLING -------------
         runFileAccessor = new TupleAccessor(consumerFrames[LEFT_PARTITION].getRecordDescriptor());
-        runFileAppenderBufferAccessorTupleId = 0;
         // ----------------------------------------------------------
+
+        currentTuple = new long[][] { null, null };
     }
 
     @Override
@@ -160,8 +161,8 @@ public class MergeJoiner implements IStreamJoiner {
     private void getNextLeftTupleFromFile() throws HyracksDataException {
         if (runFileAccessor.hasNext()) {
             runFileAccessor.next();
-        } else {
-            runFileStream.loadNextBuffer(runFileAccessor);
+        } else if (!runFileStream.loadNextBuffer(runFileAccessor)) {
+            runFileAccessor.next();
         }
     }
 
@@ -171,6 +172,8 @@ public class MergeJoiner implements IStreamJoiner {
         } else if (!getNextFrame(branch)) {
             inputAccessor[branch].next();
         }
+        currentTuple[branch] = TuplePrinterUtil.returnTupleFieldsAsBigInts(inputAccessor[branch]);
+
     }
 
     private void join(ITupleAccessor leftAccessor) throws HyracksDataException {
@@ -251,44 +254,37 @@ public class MergeJoiner implements IStreamJoiner {
     private void loadAllLeftIntoRunFile() throws HyracksDataException {
         // make sure the runFile is empty (this may be guaranteed naturally)
 
+        // * This should blindly grab a tuple from the left stream and add it to the the runfile.
+        //   it should then attempt to get another tuple from the left stream. if the next tuple from the left stream
+        //   does not exist then this method is done (may need to cleanup first)
+        // * assuming it did not return after attempting to get another tuple and checking its existance, it should check
+        //   whether the new tuple matches the tuple(s) that have been added to the run file. if it does not match it
+        //   should return (after cleanup)
+        // * otherwise it can continue.
+
         runFileStream.createRunFileWriting();
         runFileStream.startRunFileWriting();
-        // add current left to runFile, we know it matches the right buffer because this function is indirectly called
-        // from the equal else branch in process join
         runFileStream.addToRunFile(inputAccessor[LEFT_PARTITION]);
 
         // resetting after adding a tuple in hopes of avoiding a case where the buffer doesn't exist yet.
-        runFileAccessor.reset(runFileStream.getAppenderBuffer());
+        //        runFileAccessor.reset(runFileStream.getAppenderBuffer());
 
-        int c = 0; // don't replace this with a comparison, it's actually supposed to start out as 0, not a dummy init.
+        getNextTuple(LEFT_PARTITION);
 
-        do {
-            getNextTuple(LEFT_PARTITION);
-            //            c = compare(inputAccessor[LEFT_PARTITION], inputAccessor[LEFT_PARTITION].getTupleId(), runFileAccessor,
-            //                    runFileAppenderBufferAccessorTupleId);
-
-            // TODO a safety check for secondaryTupleBufferAccessor
-
+        boolean lastTupleAdded = true;
+        while (lastTupleAdded) {
             if (inputAccessor[LEFT_PARTITION].exists() && secondaryTupleBufferAccessor.exists()
                     && 0 == compare(inputAccessor[LEFT_PARTITION], inputAccessor[LEFT_PARTITION].getTupleId(),
                             secondaryTupleBufferAccessor, secondaryTupleBufferAccessor.getTupleId())) {
-
                 runFileStream.addToRunFile(inputAccessor[LEFT_PARTITION]);
+                getNextTuple(LEFT_PARTITION);
             } else {
-                runFileStream.flushRunFile();
-                return; // current left will need to be compared by the caller (or their caller etc.)
+                lastTupleAdded = false;
             }
-        } while (inputAccessor[LEFT_PARTITION].exists()/*ready[LEFT_PARTITION]*/); // c==0 will always be true here, else function returns first.
+        }
 
         runFileStream.flushRunFile();
         runFileStream.startReadingRunFile(runFileAccessor);
-
-        if (inputAccessor[LEFT_PARTITION].exists()/*ready[LEFT_PARTITION]*/) {
-            // since the current left was added to the run file and the caller of this function expects the current
-            // left to be unprocessed, or ready[LEFT] to be false, once this function ends, get the next left tuple
-            // get the next tuple.
-            getNextTuple(LEFT_PARTITION);
-        }
     }
 
     private void clearRunFile() {
@@ -305,6 +301,7 @@ public class MergeJoiner implements IStreamJoiner {
 
         boolean loadRightSuccessful = false; // because of "RB is full" precondition
         loadAllLeftIntoRunFile(); // satisfies "L is new" post-condition
+        runFileAccessor.next();
 
         while (!loadRightSuccessful) {
             while (runFileAccessor.exists() && secondaryTupleBufferAccessor.exists()) {
@@ -339,7 +336,6 @@ public class MergeJoiner implements IStreamJoiner {
      */
     private void joinMatched() throws HyracksDataException {
         boolean initialLoadSuccessful = loadRight();
-        initialLoadSuccessful = false; // for testing spilling
         if (initialLoadSuccessful) {
             joinFromStream();
         } else {
@@ -401,30 +397,6 @@ public class MergeJoiner implements IStreamJoiner {
             }
 
             saveSuccessful = saveRight(false);
-            //            getNextTuple(RIGHT_PARTITION);
-            //            if (inputAccessor[RIGHT_PARTITION].exists()) {
-            //                // I'd like to do this
-            //                // c = compare(inputAccessor[RIGHT_PARTITION], inputAccessor[RIGHT_PARTITION].getTupleId(),
-            //                //          secondaryTupleBufferAccessor, secondaryTupleBufferAccessor.getTupleId());
-            //                //
-            //                // but the comparator expects the left argument to come from the left stream, so inputAccessor[RIGHT]
-            //                // and secondaryTupleBufferAccessor can't be compared since they both come from the right stream.
-            //                // but, since when loading all Right into buffer we haven't incremented the left stream tupleId from
-            //                // the time we compared it to enter this function, its key should be equivalent to inputAccessor[RIGHT]
-            //                // and it can be used instead.
-            //                c = compare(inputAccessor[LEFT_PARTITION], inputAccessor[LEFT_PARTITION].getTupleId(),
-            //                        inputAccessor[RIGHT_PARTITION], inputAccessor[RIGHT_PARTITION].getTupleId());
-            //                if (c != 0) {
-            //                    return true;
-            //                } else {
-            //                    saveSuccessful = saveRight(false);
-            //                    if (!saveSuccessful) {
-            //                        return false;
-            //                    }
-            //                }
-            //            } else {
-            //                return true;
-            //            }
         }
         return false;
     }
