@@ -312,7 +312,7 @@ public class MergeJoiner implements IStreamJoiner {
                 getNextLeftTupleFromFile();
             }
             runFileStream.startReadingRunFile(runFileAccessor);
-            loadRightSuccessful = loadRight(); // satisfies "R is new" post-condition on last run
+            loadRightSuccessful = loadRight(runFileAccessor); // satisfies "R is new" post-condition on last run
         }
         join(runFileAccessor); // joins remaining not-full RB
         clearRunFile(); // so that the joiner doesn't use the runFile in the main loop.
@@ -347,6 +347,10 @@ public class MergeJoiner implements IStreamJoiner {
         }
     }
 
+    private boolean loadRight() throws HyracksDataException {
+        return loadRight(inputAccessor[LEFT_PARTITION]);
+    }
+
     /**
      * Loads as many right tuples matching the current right tuple key as possible into the buffer.
      * @return true if all matching right tuples were loaded, right tuple at current tupleId is either new or does not
@@ -354,7 +358,7 @@ public class MergeJoiner implements IStreamJoiner {
      *         tuples in the buffer.
      * @throws HyracksDataException
      */
-    private boolean loadRight() throws HyracksDataException {
+    private boolean loadRight(ITupleAccessor leftAccessor) throws HyracksDataException {
         // PRE:  the current right tuple represents the unique key for which all matching right tuples should be saved
         //       the current left and right accessor tupleIds point to valid tuples
         // POST: all right tuples with the same key as the current right tuple when the function was called have been
@@ -364,34 +368,63 @@ public class MergeJoiner implements IStreamJoiner {
         //         FALSE if the tupleId of the right accessor refers to the next tuple of the desired key that has not
         //         been added to the buffer.
 
+        // DOES
+        //
+        // * clears the buffer and then saves the current right tuple. This should always succeed since PRE requires
+        //   defined right tuple.
+        // * If the first save failed return false because there are still more tuples of the key that is supposed to be
+        //   fully loaded remaining in the stream at or after the current right tupleId.
+        // * if the first save succeeded, get another tuple, and compare it to the first. Since both tuples are from the
+        //   right this is not possible. the new tuple must be compared to a tuple originally from the left stream.
+        //    * if this is called before a call to loadAllLeftIntoRunFile() then the right buffer is expected to match
+        //      the left tupleId tuple. if it is called after loadAllLeftIntoRunFile() has been called, then it should
+        //      not match the left tupleId tuple, but it should match a tuple in the run file.
+        //      add a parameter to this function for the left accessor.
+        // * if the new tuple matches the correct left tuple, then it should be added, another should be gotten from
+        //   the right stream and this can continue.
+        // * if the new tuple does not match the correct left tuple, then the function should return true and not
+        //   get a new right tuple
+        // * if at any time a tuple fails to be added but it matched, the function should return false.
+
         boolean saveSuccessful = saveRight(true);
-        int c = 0;
 
         while (saveSuccessful) {
             getNextTuple(RIGHT_PARTITION);
-            if (inputAccessor[RIGHT_PARTITION].exists()) {
-                // I'd like to do this
-                // c = compare(inputAccessor[RIGHT_PARTITION], inputAccessor[RIGHT_PARTITION].getTupleId(),
-                //          secondaryTupleBufferAccessor, secondaryTupleBufferAccessor.getTupleId());
-                //
-                // but the comparator expects the left argument to come from the left stream, so inputAccessor[RIGHT]
-                // and secondaryTupleBufferAccessor can't be compared since they both come from the right stream.
-                // but, since when loading all Right into buffer we haven't incremented the left stream tupleId from
-                // the time we compared it to enter this function, its key should be equivalent to inputAccessor[RIGHT]
-                // and it can be used instead.
-                c = compare(inputAccessor[LEFT_PARTITION], inputAccessor[LEFT_PARTITION].getTupleId(),
-                        inputAccessor[RIGHT_PARTITION], inputAccessor[RIGHT_PARTITION].getTupleId());
-                if (c != 0) {
-                    return true;
-                } else {
-                    saveSuccessful = saveRight(false);
-                    if (!saveSuccessful) {
-                        return false;
-                    }
-                }
-            } else {
+            if (!inputAccessor[RIGHT_PARTITION].exists()) {
                 return true;
             }
+
+            int c = compare(leftAccessor, leftAccessor.getTupleId(), inputAccessor[RIGHT_PARTITION],
+                    inputAccessor[RIGHT_PARTITION].getTupleId());
+            if (c != 0) {
+                return true;
+            }
+
+            saveSuccessful = saveRight(false);
+            //            getNextTuple(RIGHT_PARTITION);
+            //            if (inputAccessor[RIGHT_PARTITION].exists()) {
+            //                // I'd like to do this
+            //                // c = compare(inputAccessor[RIGHT_PARTITION], inputAccessor[RIGHT_PARTITION].getTupleId(),
+            //                //          secondaryTupleBufferAccessor, secondaryTupleBufferAccessor.getTupleId());
+            //                //
+            //                // but the comparator expects the left argument to come from the left stream, so inputAccessor[RIGHT]
+            //                // and secondaryTupleBufferAccessor can't be compared since they both come from the right stream.
+            //                // but, since when loading all Right into buffer we haven't incremented the left stream tupleId from
+            //                // the time we compared it to enter this function, its key should be equivalent to inputAccessor[RIGHT]
+            //                // and it can be used instead.
+            //                c = compare(inputAccessor[LEFT_PARTITION], inputAccessor[LEFT_PARTITION].getTupleId(),
+            //                        inputAccessor[RIGHT_PARTITION], inputAccessor[RIGHT_PARTITION].getTupleId());
+            //                if (c != 0) {
+            //                    return true;
+            //                } else {
+            //                    saveSuccessful = saveRight(false);
+            //                    if (!saveSuccessful) {
+            //                        return false;
+            //                    }
+            //                }
+            //            } else {
+            //                return true;
+            //            }
         }
         return false;
     }
