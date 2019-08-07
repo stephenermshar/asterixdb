@@ -198,6 +198,10 @@ public class MergeJoiner implements IStreamJoiner {
             clearSavedRight();
         }
 
+        if (!inputAccessor[RIGHT_PARTITION].exists()) {
+            return true;
+        }
+
         if (secondaryTupleBufferManager.insertTuple(0, inputAccessor[RIGHT_PARTITION],
                 inputAccessor[RIGHT_PARTITION].getTupleId(), tempPtr)) {
 
@@ -264,10 +268,11 @@ public class MergeJoiner implements IStreamJoiner {
             //                    runFileAppenderBufferAccessorTupleId);
 
             // TODO a safety check for secondaryTupleBufferAccessor
-            c = compare(inputAccessor[LEFT_PARTITION], inputAccessor[LEFT_PARTITION].getTupleId(),
-                    secondaryTupleBufferAccessor, secondaryTupleBufferAccessor.getTupleId());
 
-            if (c == 0) {
+            if (inputAccessor[LEFT_PARTITION].exists() && secondaryTupleBufferAccessor.exists()
+                    && 0 == compare(inputAccessor[LEFT_PARTITION], inputAccessor[LEFT_PARTITION].getTupleId(),
+                            secondaryTupleBufferAccessor, secondaryTupleBufferAccessor.getTupleId())) {
+
                 runFileStream.addToRunFile(inputAccessor[LEFT_PARTITION]);
             } else {
                 runFileStream.flushRunFile();
