@@ -71,6 +71,8 @@ public class MergeJoiner implements IStreamJoiner {
     protected long[] frameCounts = { 0, 0 };
     protected long[] tupleCounts = { 0, 0 };
     private long[][] currentTuple;
+    private long[][] toJoin;
+    private String joinTypeStatus;
 
     public MergeJoiner(IHyracksTaskContext ctx, IConsumerFrame leftCF, IConsumerFrame rightCF, IFrameWriter writer,
             int memoryForJoinInFrames, ITuplePairComparator[] comparators) throws HyracksDataException {
@@ -121,6 +123,8 @@ public class MergeJoiner implements IStreamJoiner {
         // ----------------------------------------------------------
 
         currentTuple = new long[][] { null, null };
+        toJoin = new long[][] { null, null };
+        joinTypeStatus = "";
     }
 
     @Override
@@ -146,6 +150,9 @@ public class MergeJoiner implements IStreamJoiner {
 
     private void addToResult(IFrameTupleAccessor accessor1, int index1, IFrameTupleAccessor accessor2, int index2,
             boolean reversed, IFrameWriter writer) throws HyracksDataException {
+        toJoin[LEFT_PARTITION] = TuplePrinterUtil.returnTupleFieldsAsBigInts((ITupleAccessor) accessor1);
+        toJoin[RIGHT_PARTITION] = TuplePrinterUtil.returnTupleFieldsAsBigInts((ITupleAccessor) accessor2);
+
         if (reversed) {
             FrameUtils.appendConcatToWriter(writer, resultAppender, accessor2, index2, accessor1, index1);
         } else {
@@ -173,7 +180,7 @@ public class MergeJoiner implements IStreamJoiner {
             inputAccessor[branch].next();
         }
         currentTuple[branch] = TuplePrinterUtil.returnTupleFieldsAsBigInts(inputAccessor[branch]);
-
+        return;
     }
 
     private void join(ITupleAccessor leftAccessor) throws HyracksDataException {
@@ -301,7 +308,7 @@ public class MergeJoiner implements IStreamJoiner {
 
         boolean loadRightSuccessful = false; // because of "RB is full" precondition
         loadAllLeftIntoRunFile(); // satisfies "L is new" post-condition
-        runFileAccessor.next();
+        //        runFileAccessor.next();
 
         while (!loadRightSuccessful) {
             while (runFileAccessor.exists() && secondaryTupleBufferAccessor.exists()) {
@@ -311,7 +318,10 @@ public class MergeJoiner implements IStreamJoiner {
             runFileStream.startReadingRunFile(runFileAccessor);
             loadRightSuccessful = loadRight(runFileAccessor); // satisfies "R is new" post-condition on last run
         }
-        join(runFileAccessor); // joins remaining not-full RB
+        while (runFileAccessor.exists() && secondaryTupleBufferAccessor.exists()) { // joins remaining not-full RB
+            join(runFileAccessor);
+            getNextLeftTupleFromFile();
+        }
         clearRunFile(); // so that the joiner doesn't use the runFile in the main loop.
         // no need to clear saved right since it's always cleared before saving new keys.
     }
@@ -335,16 +345,16 @@ public class MergeJoiner implements IStreamJoiner {
      * @throws HyracksDataException
      */
     private void joinMatched() throws HyracksDataException {
-        boolean initialLoadSuccessful = loadRight();
+        boolean initialLoadSuccessful = loadRight(inputAccessor[LEFT_PARTITION]);
         if (initialLoadSuccessful) {
+            joinTypeStatus = "stream";
             joinFromStream();
+            joinTypeStatus = "";
         } else {
+            joinTypeStatus = "file";
             joinFromFile();
+            joinTypeStatus = "";
         }
-    }
-
-    private boolean loadRight() throws HyracksDataException {
-        return loadRight(inputAccessor[LEFT_PARTITION]);
     }
 
     /**
