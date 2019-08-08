@@ -188,6 +188,7 @@ import org.apache.hyracks.algebricks.common.utils.Triple;
 import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
 import org.apache.hyracks.algebricks.core.algebra.expressions.IExpressionAnnotation;
 import org.apache.hyracks.algebricks.core.algebra.expressions.IndexedNLJoinExpressionAnnotation;
+import org.apache.hyracks.algebricks.core.algebra.expressions.MergeJoinExpressionAnnotation;
 import org.apache.hyracks.algebricks.core.algebra.functions.FunctionIdentifier;
 import org.apache.hyracks.api.exceptions.SourceLocation;
 import org.apache.hyracks.api.exceptions.Warning;
@@ -2057,7 +2058,7 @@ Expression RelExpr() throws ParseException:
       LOOKAHEAD(2)( <LT> | <GT> | <LE> | <GE> | <EQ> | <NE> | <LG> |<SIMILAR> | (<NOT> { not = true; })? <IN>)
         {
           Token hintToken = fetchHint(token, SqlppHint.INDEXED_NESTED_LOOP_JOIN_HINT,
-            SqlppHint.SKIP_SECONDARY_INDEX_SEARCH_HINT, SqlppHint.BROADCAST_JOIN_HINT);
+            SqlppHint.SKIP_SECONDARY_INDEX_SEARCH_HINT, SqlppHint.BROADCAST_JOIN_HINT, SqlppHint.MERGE_JOIN_HINT);
           if (hintToken != null) {
             switch (hintToken.hint) {
               case INDEXED_NESTED_LOOP_JOIN_HINT:
@@ -2065,6 +2066,9 @@ Expression RelExpr() throws ParseException:
                 break;
               case SKIP_SECONDARY_INDEX_SEARCH_HINT:
                 annotation = SkipSecondaryIndexSearchExpressionAnnotation.INSTANCE;
+                break;
+              case MERGE_JOIN_HINT:
+                annotation = MergeJoinExpressionAnnotation.INSTANCE;
                 break;
               case BROADCAST_JOIN_HINT:
                 broadcast = true;
@@ -2120,7 +2124,7 @@ Expression BetweenExpr() throws ParseException:
       (<NOT> { not = true; })? <BETWEEN>
         {
           Token hintToken = fetchHint(token, SqlppHint.INDEXED_NESTED_LOOP_JOIN_HINT,
-            SqlppHint.SKIP_SECONDARY_INDEX_SEARCH_HINT);
+            SqlppHint.SKIP_SECONDARY_INDEX_SEARCH_HINT, SqlppHint.MERGE_JOIN_HINT);
           if (hintToken != null) {
             switch (hintToken.hint) {
               case INDEXED_NESTED_LOOP_JOIN_HINT:
@@ -2128,6 +2132,9 @@ Expression BetweenExpr() throws ParseException:
                 break;
               case SKIP_SECONDARY_INDEX_SEARCH_HINT:
                 annotation = SkipSecondaryIndexSearchExpressionAnnotation.INSTANCE;
+                break;
+              case MERGE_JOIN_HINT:
+                annotation = MergeJoinExpressionAnnotation.INSTANCE;
                 break;
             }
           }

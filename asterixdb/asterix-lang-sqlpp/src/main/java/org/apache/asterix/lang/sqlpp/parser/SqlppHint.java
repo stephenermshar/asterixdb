@@ -39,6 +39,7 @@ public enum SqlppHint {
     INTERVAL_HINT("interval"),
     LIST_HINT("list"),
     LIST_VAL_FILE_HINT("list-val-file"),
+    MERGE_JOIN_HINT("merge-join"),
     RANGE_HINT("range"),
     SKIP_SECONDARY_INDEX_SEARCH_HINT("skip-index"),
     VAL_FILE_HINT("val-files"),
