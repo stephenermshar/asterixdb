@@ -35,6 +35,7 @@ import org.apache.hyracks.algebricks.core.algebra.expressions.AbstractFunctionCa
 import org.apache.hyracks.algebricks.core.algebra.expressions.BroadcastExpressionAnnotation;
 import org.apache.hyracks.algebricks.core.algebra.expressions.BroadcastExpressionAnnotation.BroadcastSide;
 import org.apache.hyracks.algebricks.core.algebra.expressions.IExpressionAnnotation;
+import org.apache.hyracks.algebricks.core.algebra.expressions.MergeJoinExpressionAnnotation;
 import org.apache.hyracks.algebricks.core.algebra.expressions.VariableReferenceExpression;
 import org.apache.hyracks.algebricks.core.algebra.functions.AlgebricksBuiltinFunctions;
 import org.apache.hyracks.algebricks.core.algebra.functions.AlgebricksBuiltinFunctions.ComparisonKind;
@@ -48,7 +49,11 @@ import org.apache.hyracks.algebricks.core.algebra.operators.physical.InMemoryHas
 import org.apache.hyracks.algebricks.core.algebra.operators.physical.MergeJoinPOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.physical.NestedLoopJoinPOperator;
 import org.apache.hyracks.algebricks.core.algebra.properties.ILogicalPropertiesVector;
+import org.apache.hyracks.algebricks.core.algebra.util.OperatorPropertiesUtil;
 import org.apache.hyracks.algebricks.core.config.AlgebricksConfig;
+import org.apache.hyracks.api.exceptions.ErrorCode;
+import org.apache.hyracks.api.exceptions.SourceLocation;
+import org.apache.hyracks.api.exceptions.Warning;
 
 public class JoinUtils {
     private JoinUtils() {
@@ -63,10 +68,23 @@ public class JoinUtils {
         List<LogicalVariable> sideRight = new LinkedList<>();
         List<LogicalVariable> varsLeft = op.getInputs().get(0).getValue().getSchema();
         List<LogicalVariable> varsRight = op.getInputs().get(1).getValue().getSchema();
-        if (isHashJoinCondition(op.getCondition().getValue(), varsLeft, varsRight, sideLeft, sideRight)) {
-            BroadcastSide side = getBroadcastJoinSide(op.getCondition().getValue(), varsLeft, varsRight);
-            if (true) {
-                // (Stephen) force merge join for testing
+        ILogicalExpression conditionExpr = op.getCondition().getValue();
+        if (isHashJoinCondition(conditionExpr, varsLeft, varsRight, sideLeft, sideRight)) {
+            BroadcastSide side = getBroadcastJoinSide(conditionExpr, varsLeft, varsRight);
+
+            boolean useMergeJoin = false;
+            if (conditionExpr.getExpressionTag() == LogicalExpressionTag.FUNCTION_CALL) {
+                useMergeJoin = ((AbstractFunctionCallExpression) conditionExpr).getAnnotations()
+                        .containsKey(MergeJoinExpressionAnnotation.INSTANCE);
+            }
+            if (useMergeJoin) {
+                System.err.println("\n---- USING MERGE JOIN ----\n");
+            } else {
+                System.err.println("\n---- ***NOT*** USING MERGE JOIN ----\n");
+            }
+
+            if (useMergeJoin) {
+                // (stephen) force merge join for testing
                 setMergeJoinOp(op, sideLeft, sideRight, context);
             } else if (side == null) {
                 setHashJoinOp(op, JoinPartitioningType.PAIRWISE, sideLeft, sideRight, context);
@@ -93,6 +111,7 @@ public class JoinUtils {
                 }
             }
         } else {
+            warnIfCrossProduct(conditionExpr, op.getSourceLocation(), context);
             setNestedLoopJoinOp(op);
         }
     }
@@ -248,6 +267,13 @@ public class JoinUtils {
             } else {
                 return null;
             }
+        }
+    }
+
+    private static void warnIfCrossProduct(ILogicalExpression conditionExpr, SourceLocation sourceLoc,
+            IOptimizationContext context) {
+        if (OperatorPropertiesUtil.isAlwaysTrueCond(conditionExpr) && sourceLoc != null) {
+            context.getWarningCollector().warn(Warning.forHyracks(sourceLoc, ErrorCode.CROSS_PRODUCT_JOIN));
         }
     }
 }

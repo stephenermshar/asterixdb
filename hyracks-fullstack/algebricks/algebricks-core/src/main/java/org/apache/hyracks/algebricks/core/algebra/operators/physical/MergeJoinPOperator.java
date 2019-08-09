@@ -47,8 +47,7 @@ import org.apache.hyracks.algebricks.core.algebra.properties.UnorderedPartitione
 import org.apache.hyracks.algebricks.core.jobgen.impl.JobGenContext;
 import org.apache.hyracks.algebricks.core.jobgen.impl.JobGenHelper;
 import org.apache.hyracks.algebricks.runtime.base.IScalarEvaluatorFactory;
-import org.apache.hyracks.algebricks.runtime.evaluators.TuplePairEvaluatorFactory;
-import org.apache.hyracks.api.dataflow.value.ITuplePairComparatorFactory;
+import org.apache.hyracks.api.dataflow.value.IBinaryComparatorFactory;
 import org.apache.hyracks.api.dataflow.value.RecordDescriptor;
 import org.apache.hyracks.api.job.IOperatorDescriptorRegistry;
 import org.apache.hyracks.dataflow.std.join.MergeJoinOperatorDescriptor;
@@ -173,11 +172,14 @@ public class MergeJoinPOperator extends AbstractJoinPOperator {
         IScalarEvaluatorFactory cond = expressionRuntimeProvider.createEvaluatorFactory(
                 joinOp.getCondition().getValue(), context.getTypeEnvironment(op), conditionInputSchemas, context);
 
-        ITuplePairComparatorFactory comparatorFactory =
-                new TuplePairEvaluatorFactory(cond, false, context.getBinaryBooleanInspectorFactory());
+        //        ITuplePairComparatorFactory comparatorFactory =
+        //                new TuplePairEvaluatorFactory(cond, false, context.getBinaryBooleanInspectorFactory());
+
+        IBinaryComparatorFactory[] comparatorFactories = JobGenHelper
+                .variablesToAscBinaryComparatorFactories(keysLeftBranch, context.getTypeEnvironment(op), context);
 
         MergeJoinOperatorDescriptor opDesc = new MergeJoinOperatorDescriptor(spec, memSizeInFrames, keysLeft, keysRight,
-                recordDescriptor, comparatorFactory);
+                recordDescriptor, comparatorFactories);
 
         contributeOpDesc(builder, (AbstractLogicalOperator) op, opDesc);
 

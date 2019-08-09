@@ -18,6 +18,7 @@
  */
 package org.apache.hyracks.dataflow.std.join;
 
+import java.nio.ByteBuffer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -201,4 +202,7 @@ public class RunFileStream {
         return status.isRunFileWriting();
     }
 
+    public ByteBuffer getAppenderBuffer() {
+        return runFileAppender.getBuffer();
+    }
 }

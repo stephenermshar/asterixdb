@@ -22,4 +22,9 @@
         <output-dir compare="Text">equi-join</output-dir>
       </compilation-unit>
     </test-case>
+    <test-case FilePath="merge_join">
+      <compilation-unit name="equi-join-spilling">
+        <output-dir compare="Text">equi-join-spilling</output-dir>
+      </compilation-unit>
+    </test-case>
   </test-group>
