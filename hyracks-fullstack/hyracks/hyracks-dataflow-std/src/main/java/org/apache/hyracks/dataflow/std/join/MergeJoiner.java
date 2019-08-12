@@ -115,13 +115,16 @@ public class MergeJoiner implements IStreamJoiner {
         joinTypeStatus = "";
     }
 
-    @Override
-    public boolean getNextFrame(int branch) throws HyracksDataException {
-        if (consumerFrames[branch].hasMoreFrames()) {
-            setFrame(branch, consumerFrames[branch].getFrame());
-            return true;
+    private boolean getNextFrame(int branch, boolean fromFile) throws HyracksDataException {
+        if (fromFile) {
+            return runFileStream.loadNextBuffer(runFileAccessor);
+        } else {
+            if (consumerFrames[branch].hasMoreFrames()) {
+                setFrame(branch, consumerFrames[branch].getFrame());
+                return true;
+            }
+            return false;
         }
-        return false;
     }
 
     private void setFrame(int branch, ByteBuffer buffer) throws HyracksDataException {
@@ -152,25 +155,22 @@ public class MergeJoiner implements IStreamJoiner {
         resultAppender.write(writer, true);
     }
 
-    private void getNextLeftTupleFromFile() throws HyracksDataException {
-        if (runFileAccessor.hasNext()) {
-            runFileAccessor.next();
-        } else if (!runFileStream.loadNextBuffer(runFileAccessor)) {
-            runFileAccessor.next();
+    private void getNextTuple(int branch, boolean fromFile) throws HyracksDataException {
+//        if (accessor.hasNext()) {
+//            accessor.next();
+//        } else if (!getNextFrame(accessor)) {
+//            accessor.next();
+//        }
+
+        ITupleAccessor accessor = fromFile ? runFileAccessor : inputAccessor[branch];
+        if (accessor.hasNext() || !getNextFrame(branch, fromFile)) {
+            // this if block is untested, but is intended to use short-circuit logic to be more brief and avoid
+            // repeating one line.
+            accessor.next();
         }
     }
 
-    private void getNextTuple(int branch) throws HyracksDataException {
-        if (inputAccessor[branch].hasNext()) {
-            inputAccessor[branch].next();
-        } else if (!getNextFrame(branch)) {
-            inputAccessor[branch].next();
-        }
-        currentTuple[branch] = TuplePrinterUtil.returnTupleFieldsAsBigInts(inputAccessor[branch]);
-        return;
-    }
-
-    private void join(ITupleAccessor leftAccessor) throws HyracksDataException {
+    private void joinWithBuffer(ITupleAccessor leftAccessor) throws HyracksDataException {
 
         if (secondaryTupleBufferManager.getNumTuples(0) <= 0) {
             return;
@@ -185,28 +185,40 @@ public class MergeJoiner implements IStreamJoiner {
         }
     }
 
-    private void clearSavedRight() throws HyracksDataException {
-        secondaryTupleBufferManager.clearPartition(0);
+    private void clearSavedTuples(int branch) throws HyracksDataException {
+        if (branch == LEFT_PARTITION) {
+            runFileStream.removeRunFile();
+        } else if (branch == RIGHT_PARTITION) {
+            secondaryTupleBufferManager.clearPartition(0);
+        } else {
+            throw new RuntimeException();
+        }
     }
 
-    private boolean saveRight(boolean clear) throws HyracksDataException {
+    private boolean saveTuple(int branch, boolean clear) throws HyracksDataException {
         if (clear) {
-            clearSavedRight();
+            clearSavedTuples(branch);
         }
 
-        if (!inputAccessor[RIGHT_PARTITION].exists()) {
+        if (!inputAccessor[branch].exists()) {
             return true;
         }
 
-        if (secondaryTupleBufferManager.insertTuple(0, inputAccessor[RIGHT_PARTITION],
-                inputAccessor[RIGHT_PARTITION].getTupleId(), tempPtr)) {
+        boolean saveSuccessful;
 
+        if (branch == LEFT_PARTITION) {
+            runFileStream.addToRunFile(inputAccessor[LEFT_PARTITION]);
+            saveSuccessful = true;
+
+        } else if (branch == RIGHT_PARTITION) {
+            saveSuccessful = secondaryTupleBufferManager.insertTuple(0, inputAccessor[RIGHT_PARTITION],
+                    inputAccessor[RIGHT_PARTITION].getTupleId(), tempPtr);
             secondaryTupleBufferAccessor.reset();
             secondaryTupleBufferAccessor.next();
-            return true;
         } else {
-            return false;
+            throw new RuntimeException();
         }
+        return saveSuccessful;
     }
 
     private int compare(IFrameTupleAccessor leftAccessor, int leftIndex, IFrameTupleAccessor rightAccessor,
@@ -247,17 +259,19 @@ public class MergeJoiner implements IStreamJoiner {
 
         runFileStream.createRunFileWriting();
         runFileStream.startRunFileWriting();
-        runFileStream.addToRunFile(inputAccessor[LEFT_PARTITION]);
+//        runFileStream.addToRunFile(inputAccessor[LEFT_PARTITION]);
+        saveTuple(LEFT_PARTITION, true);
 
-        getNextTuple(LEFT_PARTITION);
+        getNextTuple(LEFT_PARTITION, false);
 
         boolean lastTupleAdded = true;
         while (lastTupleAdded) {
             if (inputAccessor[LEFT_PARTITION].exists() && secondaryTupleBufferAccessor.exists()
                     && 0 == compare(inputAccessor[LEFT_PARTITION], inputAccessor[LEFT_PARTITION].getTupleId(),
                             secondaryTupleBufferAccessor, secondaryTupleBufferAccessor.getTupleId())) {
-                runFileStream.addToRunFile(inputAccessor[LEFT_PARTITION]);
-                getNextTuple(LEFT_PARTITION);
+//                runFileStream.addToRunFile(inputAccessor[LEFT_PARTITION]);
+                saveTuple(LEFT_PARTITION, false);
+                getNextTuple(LEFT_PARTITION, false);
             } else {
                 lastTupleAdded = false;
             }
@@ -267,10 +281,6 @@ public class MergeJoiner implements IStreamJoiner {
         runFileStream.startReadingRunFile(runFileAccessor);
     }
 
-    private void clearRunFile() {
-        runFileStream.removeRunFile();
-    }
-
     private void joinFromFile() throws HyracksDataException {
 
         boolean loadRightSuccessful = false;
@@ -278,27 +288,26 @@ public class MergeJoiner implements IStreamJoiner {
 
         while (!loadRightSuccessful) {
             while (runFileAccessor.exists() && secondaryTupleBufferAccessor.exists()) {
-                join(runFileAccessor);
-                getNextLeftTupleFromFile();
+                joinWithBuffer(runFileAccessor);
+                getNextTuple(LEFT_PARTITION, true);
             }
             runFileStream.startReadingRunFile(runFileAccessor);
             loadRightSuccessful = loadRight(runFileAccessor);
         }
         while (runFileAccessor.exists() && secondaryTupleBufferAccessor.exists()) {
-            join(runFileAccessor);
-            getNextLeftTupleFromFile();
+            joinWithBuffer(runFileAccessor);
+            getNextTuple(LEFT_PARTITION, true);
         }
-        clearRunFile();
     }
 
     private void joinFromStream() throws HyracksDataException {
         while (inputAccessor[LEFT_PARTITION].exists() && secondaryTupleBufferAccessor.exists()
                 && compareTupleWithBuffer()) {
 
-            join(inputAccessor[LEFT_PARTITION]);
-            getNextTuple(LEFT_PARTITION);
+            joinWithBuffer(inputAccessor[LEFT_PARTITION]);
+            getNextTuple(LEFT_PARTITION, false);
         }
-        clearSavedRight();
+        clearSavedTuples(RIGHT_PARTITION);
     }
 
     private void joinMatched() throws HyracksDataException {
@@ -316,10 +325,11 @@ public class MergeJoiner implements IStreamJoiner {
 
     private boolean loadRight(ITupleAccessor leftAccessor) throws HyracksDataException {
 
-        boolean saveSuccessful = saveRight(true);
+//        boolean saveSuccessful = saveRight(true);
+        boolean saveSuccessful = saveTuple(RIGHT_PARTITION, true);
 
         while (saveSuccessful) {
-            getNextTuple(RIGHT_PARTITION);
+            getNextTuple(RIGHT_PARTITION, false);
             if (!inputAccessor[RIGHT_PARTITION].exists()) {
                 return true;
             }
@@ -330,7 +340,8 @@ public class MergeJoiner implements IStreamJoiner {
                 return true;
             }
 
-            saveSuccessful = saveRight(false);
+//            saveSuccessful = saveRight(false);
+            saveSuccessful = saveTuple(RIGHT_PARTITION, false);
         }
         return false;
     }
@@ -340,9 +351,9 @@ public class MergeJoiner implements IStreamJoiner {
             int c = compareTuplesInStream();
 
             if (c < 0) {
-                getNextTuple(LEFT_PARTITION);
+                getNextTuple(LEFT_PARTITION, false);
             } else if (c > 0) {
-                getNextTuple(RIGHT_PARTITION);
+                getNextTuple(RIGHT_PARTITION, false);
             } else {
                 return true;
             }
@@ -352,8 +363,8 @@ public class MergeJoiner implements IStreamJoiner {
 
     @Override
     public void processJoin() throws HyracksDataException {
-        getNextTuple(LEFT_PARTITION);
-        getNextTuple(RIGHT_PARTITION);
+        getNextTuple(LEFT_PARTITION, false);
+        getNextTuple(RIGHT_PARTITION, false);
 
         while (matchStreams()) {
             joinMatched();
