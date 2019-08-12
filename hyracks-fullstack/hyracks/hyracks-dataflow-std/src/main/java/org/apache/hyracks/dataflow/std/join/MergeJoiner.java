@@ -211,7 +211,7 @@ public class MergeJoiner implements IStreamJoiner {
     private int compare(ITupleAccessor leftAccessor, ITupleAccessor rightAccessor) throws HyracksDataException {
         for (ITuplePairComparator comparator : comparators) {
             int c = comparator.compare(leftAccessor, leftAccessor.getTupleId(), rightAccessor,
-                        rightAccessor.getTupleId());
+                    rightAccessor.getTupleId());
             if (c != 0) {
                 return c;
             }
