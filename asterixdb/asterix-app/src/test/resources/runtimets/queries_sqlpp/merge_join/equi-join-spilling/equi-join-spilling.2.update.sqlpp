@@ -35,5 +35,5 @@ upsert into S
 select
   s.id as id,
   s.data as data,
-  repeat('i',10) as filler
+  repeat('i',100000) as filler
 from S as s;
