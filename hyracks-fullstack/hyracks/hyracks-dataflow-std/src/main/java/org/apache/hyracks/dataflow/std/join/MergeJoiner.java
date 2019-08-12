@@ -39,27 +39,24 @@ import org.apache.hyracks.dataflow.std.structures.TuplePointer;
 
 public class MergeJoiner implements IStreamJoiner {
 
-    protected static TuplePointer tempPtr = new TuplePointer();
+    private static TuplePointer tempPtr = new TuplePointer();
     private final ITupleAccessor runFileAccessor;
     private final RunFileStream runFileStream;
 
-    VPartitionTupleBufferManager secondaryTupleBufferManager;
-    ITupleAccessor secondaryTupleBufferAccessor;
-    ITuplePairComparator[] comparators;
-    IFrameWriter writer;
+    private VPartitionTupleBufferManager secondaryTupleBufferManager;
+    private ITupleAccessor secondaryTupleBufferAccessor;
+    private ITuplePairComparator[] comparators;
+    private IFrameWriter writer;
 
-    protected final int availableMemoryForJoinInFrames;
+    private static final int JOIN_PARTITIONS = 2;
+    private static final int LEFT_PARTITION = 0;
+    private static final int RIGHT_PARTITION = 1;
 
-    protected static final int JOIN_PARTITIONS = 2;
-    protected static final int LEFT_PARTITION = 0;
-    protected static final int RIGHT_PARTITION = 1;
-
-    protected final MergeBranchStatus[] branchStatus;
-    protected final IConsumerFrame[] consumerFrames;
+    private final IConsumerFrame[] consumerFrames;
     private final FrameTupleAppender resultAppender;
 
-    protected final IFrame[] inputBuffer;
-    protected final ITupleAccessor[] inputAccessor;
+    private final IFrame[] inputBuffer;
+    private final ITupleAccessor[] inputAccessor;
 
     public MergeJoiner(IHyracksTaskContext ctx, IConsumerFrame leftCF, IConsumerFrame rightCF, IFrameWriter writer,
             int memoryForJoinInFrames, ITuplePairComparator[] comparators) throws HyracksDataException {
@@ -72,10 +69,6 @@ public class MergeJoiner implements IStreamJoiner {
         inputBuffer[LEFT_PARTITION] = new VSizeFrame(ctx);
         inputBuffer[RIGHT_PARTITION] = new VSizeFrame(ctx);
 
-        branchStatus = new MergeBranchStatus[JOIN_PARTITIONS];
-        branchStatus[LEFT_PARTITION] = new MergeBranchStatus();
-        branchStatus[RIGHT_PARTITION] = new MergeBranchStatus();
-
         consumerFrames = new IConsumerFrame[JOIN_PARTITIONS];
         consumerFrames[LEFT_PARTITION] = leftCF;
         consumerFrames[RIGHT_PARTITION] = rightCF;
@@ -85,7 +78,7 @@ public class MergeJoiner implements IStreamJoiner {
         this.comparators = comparators;
         this.writer = writer;
 
-        availableMemoryForJoinInFrames = memoryForJoinInFrames - JOIN_PARTITIONS;
+        int availableMemoryForJoinInFrames = memoryForJoinInFrames - JOIN_PARTITIONS;
         final int availableMemoryForJoinInBytes = availableMemoryForJoinInFrames * ctx.getInitialFrameSize();
         int partitions = 1;
         BitSet spilledStatus = new BitSet(partitions);
@@ -97,6 +90,9 @@ public class MergeJoiner implements IStreamJoiner {
         secondaryTupleBufferAccessor = secondaryTupleBufferManager
                 .createPartitionTupleAccessor(consumerFrames[RIGHT_PARTITION].getRecordDescriptor(), 0);
 
+        MergeBranchStatus[] branchStatus = new MergeBranchStatus[JOIN_PARTITIONS];
+        branchStatus[LEFT_PARTITION] = new MergeBranchStatus();
+        branchStatus[RIGHT_PARTITION] = new MergeBranchStatus();
         runFileStream = new RunFileStream(ctx, "left", branchStatus[LEFT_PARTITION]);
 
         runFileAccessor = new TupleAccessor(consumerFrames[LEFT_PARTITION].getRecordDescriptor());
@@ -180,8 +176,7 @@ public class MergeJoiner implements IStreamJoiner {
         boolean lastTupleAdded = true;
         while (lastTupleAdded) {
             if (inputAccessor[LEFT_PARTITION].exists() && secondaryTupleBufferAccessor.exists()
-                    && 0 == compare(inputAccessor[LEFT_PARTITION], inputAccessor[LEFT_PARTITION].getTupleId(),
-                    secondaryTupleBufferAccessor, secondaryTupleBufferAccessor.getTupleId())) {
+                    && 0 == compare(inputAccessor[LEFT_PARTITION], secondaryTupleBufferAccessor)) {
                 saveTuple(LEFT_PARTITION, false);
                 getNextTuple(LEFT_PARTITION, false);
             } else {
@@ -202,8 +197,7 @@ public class MergeJoiner implements IStreamJoiner {
                 return true;
             }
 
-            int c = compare(leftAccessor, leftAccessor.getTupleId(), inputAccessor[RIGHT_PARTITION],
-                    inputAccessor[RIGHT_PARTITION].getTupleId());
+            int c = compare(leftAccessor, inputAccessor[RIGHT_PARTITION]);
             if (c != 0) {
                 return true;
             }
@@ -214,15 +208,10 @@ public class MergeJoiner implements IStreamJoiner {
 
     // Comparators
 
-    private int compare(IFrameTupleAccessor leftAccessor, int leftIndex, IFrameTupleAccessor rightAccessor,
-            int rightIndex) throws HyracksDataException {
+    private int compare(ITupleAccessor leftAccessor, ITupleAccessor rightAccessor) throws HyracksDataException {
         for (ITuplePairComparator comparator : comparators) {
-            int c;
-            try {
-                c = comparator.compare(leftAccessor, leftIndex, rightAccessor, rightIndex);
-            } catch (Exception ex) {
-                throw ex;
-            }
+            int c = comparator.compare(leftAccessor, leftAccessor.getTupleId(), rightAccessor,
+                        rightAccessor.getTupleId());
             if (c != 0) {
                 return c;
             }
@@ -231,8 +220,7 @@ public class MergeJoiner implements IStreamJoiner {
     }
 
     private int compareTuplesInStream() throws HyracksDataException {
-        return compare(inputAccessor[LEFT_PARTITION], inputAccessor[LEFT_PARTITION].getTupleId(),
-                inputAccessor[RIGHT_PARTITION], inputAccessor[RIGHT_PARTITION].getTupleId());
+        return compare(inputAccessor[LEFT_PARTITION], inputAccessor[RIGHT_PARTITION]);
     }
 
     private boolean compareTupleWithBuffer() throws HyracksDataException {
@@ -244,8 +232,7 @@ public class MergeJoiner implements IStreamJoiner {
             return false;
         }
 
-        return 0 == compare(inputAccessor[LEFT_PARTITION], inputAccessor[LEFT_PARTITION].getTupleId(),
-                secondaryTupleBufferAccessor, secondaryTupleBufferAccessor.getTupleId());
+        return 0 == compare(inputAccessor[LEFT_PARTITION], secondaryTupleBufferAccessor);
     }
 
     // Results
