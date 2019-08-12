@@ -19,15 +19,9 @@
 
 use test;
 
-/*
-select element {'rid': r.id, 'data':r.data} from R as r order by data;
-select element {'sid': s.id, 'data':s.data} from S as s order by data;
-*/
-
-select element {'R':r, 'S':s}
-/*
-{'rid':r.id, 'sid':s.id, 'rdata':r.data, 'sdata':s.data, 'rfiller':r.filler, 'sfiller':s.filler}
-*/
+select element
+{'rid':r.id, 'sid':s.id, 'rdata':r.data, 'sdata':s.data,
+'filler':length(concat(r.filler, s.filler))}
 from  R as r,
       S as s
 where (r.data /*+ merge-join */  = s.data)

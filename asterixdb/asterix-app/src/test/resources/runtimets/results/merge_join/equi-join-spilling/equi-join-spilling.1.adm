@@ -1,15 +1,15 @@
-{ "R": { "id": 0, "data": 0, "filler": "iiiiiiiiii" }, "S": { "id": 10, "data": 0, "filler": "iiiiiiiiii" } }
-{ "R": { "id": 1, "data": 0, "filler": "iiiiiiiiii" }, "S": { "id": 10, "data": 0, "filler": "iiiiiiiiii" } }
-{ "R": { "id": 2, "data": 0, "filler": "iiiiiiiiii" }, "S": { "id": 10, "data": 0, "filler": "iiiiiiiiii" } }
-{ "R": { "id": 3, "data": 4, "filler": "iiiiiiiiii" }, "S": { "id": 6, "data": 4, "filler": "iiiiiiiiii" } }
-{ "R": { "id": 3, "data": 4, "filler": "iiiiiiiiii" }, "S": { "id": 8, "data": 4, "filler": "iiiiiiiiii" } }
-{ "R": { "id": 8, "data": 4, "filler": "iiiiiiiiii" }, "S": { "id": 6, "data": 4, "filler": "iiiiiiiiii" } }
-{ "R": { "id": 8, "data": 4, "filler": "iiiiiiiiii" }, "S": { "id": 8, "data": 4, "filler": "iiiiiiiiii" } }
-{ "R": { "id": 10, "data": 4, "filler": "iiiiiiiiii" }, "S": { "id": 6, "data": 4, "filler": "iiiiiiiiii" } }
-{ "R": { "id": 10, "data": 4, "filler": "iiiiiiiiii" }, "S": { "id": 8, "data": 4, "filler": "iiiiiiiiii" } }
-{ "R": { "id": 5, "data": 5, "filler": "iiiiiiiiii" }, "S": { "id": 0, "data": 5, "filler": "iiiiiiiiii" } }
-{ "R": { "id": 9, "data": 5, "filler": "iiiiiiiiii" }, "S": { "id": 0, "data": 5, "filler": "iiiiiiiiii" } }
-{ "R": { "id": 4, "data": 9, "filler": "iiiiiiiiii" }, "S": { "id": 1, "data": 9, "filler": "iiiiiiiiii" } }
-{ "R": { "id": 4, "data": 9, "filler": "iiiiiiiiii" }, "S": { "id": 2, "data": 9, "filler": "iiiiiiiiii" } }
-{ "R": { "id": 7, "data": 9, "filler": "iiiiiiiiii" }, "S": { "id": 1, "data": 9, "filler": "iiiiiiiiii" } }
-{ "R": { "id": 7, "data": 9, "filler": "iiiiiiiiii" }, "S": { "id": 2, "data": 9, "filler": "iiiiiiiiii" } }
+{ "rid": 0, "sid": 10, "rdata": 0, "sdata": 0, "filler": 100010 }
+{ "rid": 1, "sid": 10, "rdata": 0, "sdata": 0, "filler": 100010 }
+{ "rid": 2, "sid": 10, "rdata": 0, "sdata": 0, "filler": 100010 }
+{ "rid": 3, "sid": 6, "rdata": 4, "sdata": 4, "filler": 100010 }
+{ "rid": 3, "sid": 8, "rdata": 4, "sdata": 4, "filler": 100010 }
+{ "rid": 8, "sid": 6, "rdata": 4, "sdata": 4, "filler": 100010 }
+{ "rid": 8, "sid": 8, "rdata": 4, "sdata": 4, "filler": 100010 }
+{ "rid": 10, "sid": 6, "rdata": 4, "sdata": 4, "filler": 100010 }
+{ "rid": 10, "sid": 8, "rdata": 4, "sdata": 4, "filler": 100010 }
+{ "rid": 5, "sid": 0, "rdata": 5, "sdata": 5, "filler": 100010 }
+{ "rid": 9, "sid": 0, "rdata": 5, "sdata": 5, "filler": 100010 }
+{ "rid": 4, "sid": 1, "rdata": 9, "sdata": 9, "filler": 100010 }
+{ "rid": 4, "sid": 2, "rdata": 9, "sdata": 9, "filler": 100010 }
+{ "rid": 7, "sid": 1, "rdata": 9, "sdata": 9, "filler": 100010 }
+{ "rid": 7, "sid": 2, "rdata": 9, "sdata": 9, "filler": 100010 }
