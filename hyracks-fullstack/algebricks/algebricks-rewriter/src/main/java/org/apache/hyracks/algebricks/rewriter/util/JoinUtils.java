@@ -77,7 +77,6 @@ public class JoinUtils {
                         .containsKey(MergeJoinExpressionAnnotation.INSTANCE);
             }
             if (useMergeJoin) {
-                // (stephen) force merge join for testing
                 setMergeJoinOp(op, sideLeft, sideRight, context);
             } else if (side == null) {
                 setHashJoinOp(op, JoinPartitioningType.PAIRWISE, sideLeft, sideRight, context);
