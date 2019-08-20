@@ -264,9 +264,9 @@ public class MergeJoiner implements IStreamJoiner {
 
     // Main Functions
 
-    private void joinFromFile() throws HyracksDataException {
+    private void joinFromFile(boolean initialLoadRightSuccessful) throws HyracksDataException {
 
-        boolean loadRightSuccessful = false;
+        boolean loadRightSuccessful = initialLoadRightSuccessful;
         loadAllLeftIntoRunFile();
 
         while (!loadRightSuccessful) {
@@ -298,7 +298,7 @@ public class MergeJoiner implements IStreamJoiner {
         if (initialLoadSuccessful) {
             joinFromStream();
         } else {
-            joinFromFile();
+            joinFromFile(false);
         }
     }
 
