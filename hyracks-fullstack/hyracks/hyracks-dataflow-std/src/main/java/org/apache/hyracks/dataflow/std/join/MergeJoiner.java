@@ -328,12 +328,15 @@ public class MergeJoiner implements IStreamJoiner {
 
     @Override
     public void processJoin() throws HyracksDataException {
-        getNextTuple(LEFT_PARTITION, false);
-        getNextTuple(RIGHT_PARTITION, false);
+        try {
+            getNextTuple(LEFT_PARTITION, false);
+            getNextTuple(RIGHT_PARTITION, false);
 
-        while (matchStreams()) {
-            joinMatched();
+            while (matchStreams()) {
+                joinMatched();
+            }
+        } finally {
+            closeJoin();
         }
-        closeJoin();
     }
 }
