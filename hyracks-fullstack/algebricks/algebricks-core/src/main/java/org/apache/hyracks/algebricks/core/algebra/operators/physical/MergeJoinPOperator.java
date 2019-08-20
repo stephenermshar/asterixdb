@@ -29,8 +29,6 @@ import org.apache.hyracks.algebricks.core.algebra.base.ILogicalOperator;
 import org.apache.hyracks.algebricks.core.algebra.base.IOptimizationContext;
 import org.apache.hyracks.algebricks.core.algebra.base.LogicalVariable;
 import org.apache.hyracks.algebricks.core.algebra.base.PhysicalOperatorTag;
-import org.apache.hyracks.algebricks.core.algebra.expressions.IExpressionRuntimeProvider;
-import org.apache.hyracks.algebricks.core.algebra.operators.logical.AbstractBinaryJoinOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.AbstractBinaryJoinOperator.JoinKind;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.AbstractLogicalOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.IOperatorSchema;
@@ -46,7 +44,6 @@ import org.apache.hyracks.algebricks.core.algebra.properties.StructuralPropertie
 import org.apache.hyracks.algebricks.core.algebra.properties.UnorderedPartitionedProperty;
 import org.apache.hyracks.algebricks.core.jobgen.impl.JobGenContext;
 import org.apache.hyracks.algebricks.core.jobgen.impl.JobGenHelper;
-import org.apache.hyracks.algebricks.runtime.base.IScalarEvaluatorFactory;
 import org.apache.hyracks.api.dataflow.value.IBinaryComparatorFactory;
 import org.apache.hyracks.api.dataflow.value.RecordDescriptor;
 import org.apache.hyracks.api.job.IOperatorDescriptorRegistry;
@@ -62,7 +59,6 @@ public class MergeJoinPOperator extends AbstractJoinPOperator {
 
     public MergeJoinPOperator(JoinKind kind, List<LogicalVariable> sideLeft, List<LogicalVariable> sideRight,
             int memSizeInFrames) {
-        // (stephen) Merge Join will never be broadcast (?)
         super(kind, JoinPartitioningType.PAIRWISE);
         this.memSizeInFrames = memSizeInFrames;
         this.keysLeftBranch = sideLeft;
@@ -97,11 +93,6 @@ public class MergeJoinPOperator extends AbstractJoinPOperator {
         for (LogicalVariable v : keysLeftBranch) {
             order.add(new OrderColumn(v, OrderKind.ASC));
         }
-
-        // (stephen) this is a guess, the AbstractHashJoinPOperator appeared to use one side of the join in deciding
-        //           how to pass on the partitioning property. they used an existing property vector though. this might
-        //           be better if it reuses ppLeft from getRequiredPropertiesForChildren() somehow.
-        //
         IPartitioningProperty pp =
                 new UnorderedPartitionedProperty(new ListSet<>(keysLeftBranch), context.getComputationNodeDomain());
         List<ILocalStructuralProperty> propsLocal = new ArrayList<>();
@@ -112,8 +103,6 @@ public class MergeJoinPOperator extends AbstractJoinPOperator {
     @Override
     public PhysicalRequirements getRequiredPropertiesForChildren(ILogicalOperator iop,
             IPhysicalPropertiesVector reqdByParent, IOptimizationContext context) {
-        // (stephen) MergeJoin needs locally ordered partitions that don't need to be ordered globally.
-
         StructuralPropertiesVector[] pv = new StructuralPropertiesVector[2];
         AbstractLogicalOperator op = (AbstractLogicalOperator) iop;
 
@@ -126,8 +115,6 @@ public class MergeJoinPOperator extends AbstractJoinPOperator {
         setRequiredLocalOrderProperty(ispRight, keysRightBranch);
 
         if (op.getExecutionMode() == AbstractLogicalOperator.ExecutionMode.PARTITIONED) {
-            // (stephen) make unordered partitioned property
-            // (stephen) Based on AbstractHashJoinPOperator getRequiredPropertiesForChildren()
             ppLeft = new UnorderedPartitionedProperty(new ListSet<>(keysLeftBranch),
                     context.getComputationNodeDomain());
             ppRight = new UnorderedPartitionedProperty(new ListSet<>(keysRightBranch),
@@ -148,7 +135,6 @@ public class MergeJoinPOperator extends AbstractJoinPOperator {
         for (LogicalVariable v : keysBranch) {
             order.add(new OrderColumn(v, OrderKind.ASC));
         }
-        // (stephen) LocalOrderProperty adds local sorting property
         localStructuralProperties.add(new LocalOrderProperty(order));
     }
 
@@ -163,17 +149,6 @@ public class MergeJoinPOperator extends AbstractJoinPOperator {
         IOperatorDescriptorRegistry spec = builder.getJobSpec();
         RecordDescriptor recordDescriptor =
                 JobGenHelper.mkRecordDescriptor(context.getTypeEnvironment(op), opSchema, context);
-
-        // (stephen) from HybridHashJoinPOperator
-        IOperatorSchema[] conditionInputSchemas = new IOperatorSchema[1];
-        conditionInputSchemas[0] = opSchema;
-        AbstractBinaryJoinOperator joinOp = (AbstractBinaryJoinOperator) op;
-        IExpressionRuntimeProvider expressionRuntimeProvider = context.getExpressionRuntimeProvider();
-        IScalarEvaluatorFactory cond = expressionRuntimeProvider.createEvaluatorFactory(
-                joinOp.getCondition().getValue(), context.getTypeEnvironment(op), conditionInputSchemas, context);
-
-        //        ITuplePairComparatorFactory comparatorFactory =
-        //                new TuplePairEvaluatorFactory(cond, false, context.getBinaryBooleanInspectorFactory());
 
         IBinaryComparatorFactory[] comparatorFactories = JobGenHelper
                 .variablesToAscBinaryComparatorFactories(keysLeftBranch, context.getTypeEnvironment(op), context);

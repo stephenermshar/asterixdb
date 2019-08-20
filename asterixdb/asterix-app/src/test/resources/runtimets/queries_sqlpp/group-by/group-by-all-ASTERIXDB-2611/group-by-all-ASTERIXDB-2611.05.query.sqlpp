@@ -16,23 +16,12 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.hyracks.dataflow.std.join;
 
-import java.io.Serializable;
+use TinySocial;
 
-import org.apache.hyracks.api.context.IHyracksTaskContext;
-import org.apache.hyracks.api.dataflow.value.IRangePartitionType.RangePartitioningType;
-import org.apache.hyracks.api.exceptions.HyracksDataException;
+SET inline_with "false";
 
-public interface IMergeJoinCheckerFactory extends Serializable {
-
-    IMergeJoinChecker createMergeJoinChecker(int[] keys0, int[] keys1, IHyracksTaskContext ctx)
-            throws HyracksDataException;
-
-    RangePartitioningType getLeftPartitioningType();
-
-    RangePartitioningType getRightPartitioningType();
-
-    boolean isOrderAsc();
-
-}
+WITH t AS 1
+SELECT count(`friend-ids`), t
+FROM  FacebookUsers
+where id = t;

@@ -17,13 +17,16 @@
  * under the License.
  */
 
-use test;
+/*
+ * Description  : Testing that variables live after group-by all are properly propagated instead of using decor variables
+ * Expected     : SUCCESS
+ */
 
-select element
-{'rid':r.id, 'sid':s.id, 'rdata':r.data, 'sdata':s.data,
-'filler':length(concat(r.filler, s.filler))}
-from  R as r,
-      S as s
-where (r.data /*+ merge-join */  = s.data)
-order by r.data, r.id, s.id
-;
+drop dataverse TinySocial if exists;
+create dataverse TinySocial;
+
+use TinySocial;
+
+create type FacebookUserType as open { id : bigint };
+create  dataset FacebookUsers(FacebookUserType) primary key id;
+create  dataset GB(FacebookUserType) primary key id;

@@ -71,20 +71,12 @@ public class JoinUtils {
         ILogicalExpression conditionExpr = op.getCondition().getValue();
         if (isHashJoinCondition(conditionExpr, varsLeft, varsRight, sideLeft, sideRight)) {
             BroadcastSide side = getBroadcastJoinSide(conditionExpr, varsLeft, varsRight);
-
             boolean useMergeJoin = false;
             if (conditionExpr.getExpressionTag() == LogicalExpressionTag.FUNCTION_CALL) {
                 useMergeJoin = ((AbstractFunctionCallExpression) conditionExpr).getAnnotations()
                         .containsKey(MergeJoinExpressionAnnotation.INSTANCE);
             }
             if (useMergeJoin) {
-                System.err.println("\n---- USING MERGE JOIN ----\n");
-            } else {
-                System.err.println("\n---- ***NOT*** USING MERGE JOIN ----\n");
-            }
-
-            if (useMergeJoin) {
-                // (stephen) force merge join for testing
                 setMergeJoinOp(op, sideLeft, sideRight, context);
             } else if (side == null) {
                 setHashJoinOp(op, JoinPartitioningType.PAIRWISE, sideLeft, sideRight, context);

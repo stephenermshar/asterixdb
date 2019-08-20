@@ -126,10 +126,6 @@ public class MergeJoinOperatorDescriptor extends AbstractOperatorDescriptor {
                 try {
                     for (int i = 0; i < comparatorFactories.length; i++) {
                         IBinaryComparator comparator = comparatorFactories[i].createBinaryComparator();
-                        // (stephen) i'm assuming that the number of left and right keys equals the number of
-                        // comparators, this seems somewhat safe to assume given that both are accessed througha
-                        // JobGenHelper.variablesTo... function that uses the same keys. Though I haven't explored
-                        // farther at this point.
                         tupleComparators[i] = new JoinComparator(comparator, leftKeys[i], rightKeys[i]);
                     }
                     writer.open();

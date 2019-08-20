@@ -16,21 +16,14 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.hyracks.dataflow.std.join;
 
-import java.io.Serializable;
+use TinySocial;
 
-public class MergeStatus implements Serializable {
-    private static final long serialVersionUID = 1L;
+SET inline_with "true";
 
-    public boolean reloadingLeftFrame = false;
-    public boolean continueRightLoad = false;
-
-    public MergeBranchStatus[] branch = new MergeBranchStatus[2];
-
-    public MergeStatus() {
-        branch[0] = new MergeBranchStatus();
-        branch[1] = new MergeBranchStatus();
-    }
-
-}
+WITH avgFriendCount AS (
+  SELECT VALUE AVG(ARRAY_COUNT(user.friendIds))
+  FROM GB AS user
+)
+SELECT count(`friend-ids`), avgFriendCount
+FROM FacebookUsers;

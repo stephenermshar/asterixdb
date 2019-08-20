@@ -17,13 +17,13 @@
  * under the License.
  */
 
-use test;
+use TinySocial;
 
-select element
-{'rid':r.id, 'sid':s.id, 'rdata':r.data, 'sdata':s.data,
-'filler':length(concat(r.filler, s.filler))}
-from  R as r,
-      S as s
-where (r.data /*+ merge-join */  = s.data)
-order by r.data, r.id, s.id
-;
+SET inline_with "false";
+
+WITH avgFriendCount AS (
+  SELECT COUNT(user.friendIds)
+  FROM GB AS user
+)
+SELECT count(`friend-ids`), avgFriendCount[0]
+FROM FacebookUsers;
