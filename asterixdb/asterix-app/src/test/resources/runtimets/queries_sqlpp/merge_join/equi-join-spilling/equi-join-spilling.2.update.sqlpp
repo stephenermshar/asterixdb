@@ -35,5 +35,5 @@ upsert into S
 select
   s.id as id,
   s.data as data,
-  repeat('i',100000) as filler
+  repeat('i',1000) as filler /* 100000 characters is ~200 KB */
 from S as s;
