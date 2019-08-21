@@ -73,7 +73,7 @@ public class JoinUtils {
             boolean useMergeJoin = ((AbstractFunctionCallExpression) conditionExpr).getAnnotations()
                         .containsKey(MergeJoinExpressionAnnotation.INSTANCE);
             if (useMergeJoin) {
-                setMergeJoinOp(op, sideLeft, sideRight, context);
+                setMergeJoinOp(op, sideLeft, sideRight);
             } else {
                 // TODO: Should `side` go immediately after `useMergeJoin` to avoid nesting so many if/else statements?
                 BroadcastSide side = getBroadcastJoinSide(conditionExpr, varsLeft, varsRight);
@@ -121,12 +121,11 @@ public class JoinUtils {
     }
 
     private static void setMergeJoinOp(AbstractBinaryJoinOperator op, List<LogicalVariable> sideLeft,
-            List<LogicalVariable> sideRight, IOptimizationContext context) {
+            List<LogicalVariable> sideRight) {
 
         JoinKind joinKind = op.getJoinKind();
-        int memoryJoinSize = context.getPhysicalOptimizationConfig().getMaxFramesForJoin();
 
-        IPhysicalOperator newPhysicalOperator = new MergeJoinPOperator(joinKind, sideLeft, sideRight, memoryJoinSize);
+        IPhysicalOperator newPhysicalOperator = new MergeJoinPOperator(joinKind, sideLeft, sideRight);
 
         op.setPhysicalOperator(newPhysicalOperator);
     }

@@ -57,10 +57,9 @@ public class MergeJoinPOperator extends AbstractJoinPOperator {
 
     private static final Logger LOGGER = Logger.getLogger(MergeJoinPOperator.class.getName());
 
-    public MergeJoinPOperator(JoinKind kind, List<LogicalVariable> sideLeft, List<LogicalVariable> sideRight,
-            int memSizeInFrames) {
+    public MergeJoinPOperator(JoinKind kind, List<LogicalVariable> sideLeft, List<LogicalVariable> sideRight) {
         super(kind, JoinPartitioningType.PAIRWISE);
-        this.memSizeInFrames = memSizeInFrames;
+        this.memSizeInFrames = localMemoryRequirements.getMemoryBudgetInFrames();
         this.keysLeftBranch = sideLeft;
         this.keysRightBranch = sideRight;
 
