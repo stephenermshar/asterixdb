@@ -70,7 +70,6 @@ public class JoinUtils {
         List<LogicalVariable> varsRight = op.getInputs().get(1).getValue().getSchema();
         ILogicalExpression conditionExpr = op.getCondition().getValue();
         if (isHashJoinCondition(conditionExpr, varsLeft, varsRight, sideLeft, sideRight)) {
-            BroadcastSide side = getBroadcastJoinSide(conditionExpr, varsLeft, varsRight);
             boolean useMergeJoin = false;
             if (conditionExpr.getExpressionTag() == LogicalExpressionTag.FUNCTION_CALL) {
                 useMergeJoin = ((AbstractFunctionCallExpression) conditionExpr).getAnnotations()
@@ -78,28 +77,31 @@ public class JoinUtils {
             }
             if (useMergeJoin) {
                 setMergeJoinOp(op, sideLeft, sideRight, context);
-            } else if (side == null) {
-                setHashJoinOp(op, JoinPartitioningType.PAIRWISE, sideLeft, sideRight, context);
             } else {
-                switch (side) {
-                    case RIGHT:
-                        setHashJoinOp(op, JoinPartitioningType.BROADCAST, sideLeft, sideRight, context);
-                        break;
-                    case LEFT:
-                        if (op.getJoinKind() == AbstractBinaryJoinOperator.JoinKind.INNER) {
-                            Mutable<ILogicalOperator> opRef0 = op.getInputs().get(0);
-                            Mutable<ILogicalOperator> opRef1 = op.getInputs().get(1);
-                            ILogicalOperator tmp = opRef0.getValue();
-                            opRef0.setValue(opRef1.getValue());
-                            opRef1.setValue(tmp);
-                            setHashJoinOp(op, JoinPartitioningType.BROADCAST, sideRight, sideLeft, context);
-                        } else {
-                            setHashJoinOp(op, JoinPartitioningType.PAIRWISE, sideLeft, sideRight, context);
-                        }
-                        break;
-                    default:
-                        // This should never happen
-                        throw new IllegalStateException(side.toString());
+                BroadcastSide side = getBroadcastJoinSide(conditionExpr, varsLeft, varsRight);
+                if (side == null) {
+                    setHashJoinOp(op, JoinPartitioningType.PAIRWISE, sideLeft, sideRight, context);
+                } else {
+                    switch (side) {
+                        case RIGHT:
+                            setHashJoinOp(op, JoinPartitioningType.BROADCAST, sideLeft, sideRight, context);
+                            break;
+                        case LEFT:
+                            if (op.getJoinKind() == AbstractBinaryJoinOperator.JoinKind.INNER) {
+                                Mutable<ILogicalOperator> opRef0 = op.getInputs().get(0);
+                                Mutable<ILogicalOperator> opRef1 = op.getInputs().get(1);
+                                ILogicalOperator tmp = opRef0.getValue();
+                                opRef0.setValue(opRef1.getValue());
+                                opRef1.setValue(tmp);
+                                setHashJoinOp(op, JoinPartitioningType.BROADCAST, sideRight, sideLeft, context);
+                            } else {
+                                setHashJoinOp(op, JoinPartitioningType.PAIRWISE, sideLeft, sideRight, context);
+                            }
+                            break;
+                        default:
+                            // This should never happen
+                            throw new IllegalStateException(side.toString());
+                    }
                 }
             }
         } else {
