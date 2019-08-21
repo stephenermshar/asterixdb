@@ -46,6 +46,7 @@ public class RunFileStream {
     private RunFileReader runFileReader;
     private final IRunFileStreamStatus status;
     private FileReference runfile;
+    private long readPreviousPtr;
 
     private final IHyracksTaskContext ctx;
 
@@ -71,7 +72,6 @@ public class RunFileStream {
         // TODO make the stream only use one buffer.
         runFileBuffer = new VSizeFrame(ctx);
         runFileAppender = new FrameTupleAppender(new VSizeFrame(ctx));
-
     }
 
     public long getFileCount() {
@@ -140,13 +140,21 @@ public class RunFileStream {
         // Create reader
         runFileReader = runFileWriter.createReader();
         runFileReader.open();
-        runFileReader.reset(startOffset);
+
+        readPreviousPtr = 0;
+        runFileReader.seek(startOffset);
+        readPreviousPtr = runFileReader.position();
 
         // Load first frame
         loadNextBuffer(accessor);
     }
 
     public boolean loadNextBuffer(ITupleAccessor accessor) throws HyracksDataException {
+        if (runFileReader.position() >= runFileReader.getFileSize()) {
+            return false;
+        }
+        readPreviousPtr = runFileReader.position();
+
         if (runFileReader.nextFrame(runFileBuffer)) {
             accessor.reset(runFileBuffer.getBuffer());
             accessor.next();
@@ -189,7 +197,7 @@ public class RunFileStream {
 
     public long getReadPointer() {
         if (runFileReader != null) {
-            return runFileReader.getReadPointer();
+            return readPreviousPtr;
         }
         return -1;
     }
