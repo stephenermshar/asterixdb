@@ -70,14 +70,12 @@ public class JoinUtils {
         List<LogicalVariable> varsRight = op.getInputs().get(1).getValue().getSchema();
         ILogicalExpression conditionExpr = op.getCondition().getValue();
         if (isHashJoinCondition(conditionExpr, varsLeft, varsRight, sideLeft, sideRight)) {
-            boolean useMergeJoin = false;
-            if (conditionExpr.getExpressionTag() == LogicalExpressionTag.FUNCTION_CALL) {
-                useMergeJoin = ((AbstractFunctionCallExpression) conditionExpr).getAnnotations()
+            boolean useMergeJoin = ((AbstractFunctionCallExpression) conditionExpr).getAnnotations()
                         .containsKey(MergeJoinExpressionAnnotation.INSTANCE);
-            }
             if (useMergeJoin) {
                 setMergeJoinOp(op, sideLeft, sideRight, context);
             } else {
+                // TODO: Should `side` go immediately after `useMergeJoin` to avoid nesting so many if/else statements?
                 BroadcastSide side = getBroadcastJoinSide(conditionExpr, varsLeft, varsRight);
                 if (side == null) {
                     setHashJoinOp(op, JoinPartitioningType.PAIRWISE, sideLeft, sideRight, context);
