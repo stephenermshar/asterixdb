@@ -71,7 +71,7 @@ public class JoinUtils {
         ILogicalExpression conditionExpr = op.getCondition().getValue();
         if (isHashJoinCondition(conditionExpr, varsLeft, varsRight, sideLeft, sideRight)) {
             boolean useMergeJoin = ((AbstractFunctionCallExpression) conditionExpr).getAnnotations()
-                        .containsKey(MergeJoinExpressionAnnotation.INSTANCE);
+                    .containsKey(MergeJoinExpressionAnnotation.INSTANCE);
             if (useMergeJoin) {
                 setMergeJoinOp(op, sideLeft, sideRight);
             } else {

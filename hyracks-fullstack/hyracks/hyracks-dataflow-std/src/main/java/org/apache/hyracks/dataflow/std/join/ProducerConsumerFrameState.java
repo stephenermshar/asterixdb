@@ -33,12 +33,16 @@ public class ProducerConsumerFrameState implements IConsumerFrame {
     private Lock lock = new ReentrantLock();
     private Condition frameAvailable = this.lock.newCondition();
     private Condition frameProcessed = this.lock.newCondition();
+    private boolean active = true;
 
     public ProducerConsumerFrameState(RecordDescriptor recordDescriptor) {
         this.recordDescriptor = recordDescriptor;
     }
 
     public void putFrame(ByteBuffer buffer) {
+        if (!active) { // no more data is needed
+            return;
+        }
         lock.lock();
         try {
             while (this.buffer != null) {
@@ -112,6 +116,17 @@ public class ProducerConsumerFrameState implements IConsumerFrame {
             return returnValue;
         } finally {
             this.lock.unlock();
+        }
+    }
+
+    public void closeFrameState() {
+        if (hasMoreFrames()) {
+            this.active = false;
+            getFrame();
+            //            this.buffer = null;
+            //            lock.lock();
+            //            frameProcessed.signal();
+            //            this.lock.unlock();
         }
     }
 

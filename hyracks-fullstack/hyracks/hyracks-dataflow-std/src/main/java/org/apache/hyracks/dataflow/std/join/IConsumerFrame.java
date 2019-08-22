@@ -30,4 +30,6 @@ public interface IConsumerFrame {
 
     public boolean hasMoreFrames();
 
+    public void closeFrameState();
+
 }

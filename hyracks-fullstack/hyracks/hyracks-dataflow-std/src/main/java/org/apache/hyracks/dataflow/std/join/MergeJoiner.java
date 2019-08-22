@@ -58,8 +58,18 @@ public class MergeJoiner implements IStreamJoiner {
     private final IFrame[] inputBuffer;
     private final ITupleAccessor[] inputAccessor;
 
+    private long[] inputTuple;
+    private int findBranch;
+    private int findField;
+    private long findValue;
+    private int countFinds;
+
     public MergeJoiner(IHyracksTaskContext ctx, IConsumerFrame leftCF, IConsumerFrame rightCF, IFrameWriter writer,
             int memoryForJoinInFrames, ITuplePairComparator[] comparators) throws HyracksDataException {
+
+        findBranch = 0;
+        findField = 0;
+        findValue = 0;
 
         inputAccessor = new TupleAccessor[JOIN_PARTITIONS];
         inputAccessor[LEFT_PARTITION] = new TupleAccessor(leftCF.getRecordDescriptor());
@@ -78,7 +88,7 @@ public class MergeJoiner implements IStreamJoiner {
         this.comparators = comparators;
         this.writer = writer;
 
-        int availableMemoryForJoinInFrames = memoryForJoinInFrames - JOIN_PARTITIONS;
+        int availableMemoryForJoinInFrames = memoryForJoinInFrames - JOIN_PARTITIONS - 2;
         final int availableMemoryForJoinInBytes = availableMemoryForJoinInFrames * ctx.getInitialFrameSize();
         int partitions = 1;
         BitSet spilledStatus = new BitSet(partitions);
@@ -127,6 +137,18 @@ public class MergeJoiner implements IStreamJoiner {
         if (accessor.hasNext() || !getNextFrame(branch, fromFile)) {
             accessor.next();
         }
+
+        // --- DEBUGGING ---
+
+        if (branch == 1 && !fromFile) {
+            inputTuple = TuplePrinterUtil.returnTupleFieldsAsBigInts((inputAccessor[findBranch]));
+            if (inputTuple.length > 0 && inputTuple[findField] == findValue) {
+                countFinds = countFinds + 1;
+            }
+        }
+
+        //
+
     }
 
     // Buffer and File
@@ -264,9 +286,9 @@ public class MergeJoiner implements IStreamJoiner {
 
     // Main Functions
 
-    private void joinFromFile(boolean initialLoadRightSuccessful) throws HyracksDataException {
+    private void joinFromFile() throws HyracksDataException {
 
-        boolean loadRightSuccessful = initialLoadRightSuccessful;
+        boolean loadRightSuccessful = false;
         loadAllLeftIntoRunFile();
 
         while (!loadRightSuccessful) {
@@ -298,7 +320,7 @@ public class MergeJoiner implements IStreamJoiner {
         if (initialLoadSuccessful) {
             joinFromStream();
         } else {
-            joinFromFile(false);
+            joinFromFile();
         }
     }
 
@@ -322,6 +344,8 @@ public class MergeJoiner implements IStreamJoiner {
         secondaryTupleBufferManager.close();
         runFileStream.removeRunFile();
         runFileStream.close();
+        consumerFrames[LEFT_PARTITION].closeFrameState();
+        consumerFrames[RIGHT_PARTITION].closeFrameState();
     }
 
     // Entry Function

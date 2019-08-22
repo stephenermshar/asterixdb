@@ -18,7 +18,7 @@
  */
 
 use test;
-set `compiler.joinmemory` "256KB"; /* 256KB is default */
+set `compiler.joinmemory` "160KB";
 
 select element
 {'rid':r.id, 'sid':s.id, 'rdata':r.data, 'sdata':s.data,

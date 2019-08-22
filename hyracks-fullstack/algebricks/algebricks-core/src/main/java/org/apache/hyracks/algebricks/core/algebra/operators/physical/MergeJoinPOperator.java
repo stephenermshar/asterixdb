@@ -19,6 +19,7 @@
 package org.apache.hyracks.algebricks.core.algebra.operators.physical;
 
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -51,7 +52,6 @@ import org.apache.hyracks.dataflow.std.join.MergeJoinOperatorDescriptor;
 
 public class MergeJoinPOperator extends AbstractJoinPOperator {
 
-    private final int memSizeInFrames;
     protected final List<LogicalVariable> keysLeftBranch;
     protected final List<LogicalVariable> keysRightBranch;
 
@@ -59,13 +59,12 @@ public class MergeJoinPOperator extends AbstractJoinPOperator {
 
     public MergeJoinPOperator(JoinKind kind, List<LogicalVariable> sideLeft, List<LogicalVariable> sideRight) {
         super(kind, JoinPartitioningType.PAIRWISE);
-        this.memSizeInFrames = localMemoryRequirements.getMemoryBudgetInFrames();
         this.keysLeftBranch = sideLeft;
         this.keysRightBranch = sideRight;
 
         LOGGER.fine("MergeJoinPOperator constructed with: JoinKind=" + kind + ", JoinPartitioningType="
                 + partitioningType + ", List<LogicalVariable>=" + keysLeftBranch + ", List<LogicalVariable>="
-                + keysRightBranch + ", int memSizeInFrames=" + memSizeInFrames + ".");
+                + keysRightBranch + ".");
     }
 
     public List<LogicalVariable> getKeysLeftBranch() {
@@ -88,15 +87,20 @@ public class MergeJoinPOperator extends AbstractJoinPOperator {
 
     @Override
     public void computeDeliveredProperties(ILogicalOperator iop, IOptimizationContext context) {
-        ArrayList<OrderColumn> order = new ArrayList<>();
-        for (LogicalVariable v : keysLeftBranch) {
-            order.add(new OrderColumn(v, OrderKind.ASC));
+        IPartitioningProperty pp;
+        if (iop.getExecutionMode() == AbstractLogicalOperator.ExecutionMode.PARTITIONED) {
+            pp = new UnorderedPartitionedProperty(new ListSet<>(keysLeftBranch), context.getComputationNodeDomain());
+        } else {
+            pp = IPartitioningProperty.UNPARTITIONED;
         }
-        IPartitioningProperty pp =
-                new UnorderedPartitionedProperty(new ListSet<>(keysLeftBranch), context.getComputationNodeDomain());
-        List<ILocalStructuralProperty> propsLocal = new ArrayList<>();
-        propsLocal.add(new LocalOrderProperty(order));
-        deliveredProperties = new StructuralPropertiesVector(pp, propsLocal);
+
+        AbstractLogicalOperator op0 = (AbstractLogicalOperator) iop.getInputs().get(0).getValue();
+        IPhysicalPropertiesVector pv0 = op0.getPhysicalOperator().getDeliveredProperties();
+        List<ILocalStructuralProperty> lp0 = pv0.getLocalProperties();
+        List<ILocalStructuralProperty> deliveredLocalProperties =
+                lp0 != null ? new LinkedList<>(lp0) : new LinkedList<>();
+
+        deliveredProperties = new StructuralPropertiesVector(pp, deliveredLocalProperties);
     }
 
     @Override
@@ -152,6 +156,7 @@ public class MergeJoinPOperator extends AbstractJoinPOperator {
         IBinaryComparatorFactory[] comparatorFactories = JobGenHelper
                 .variablesToAscBinaryComparatorFactories(keysLeftBranch, context.getTypeEnvironment(op), context);
 
+        int memSizeInFrames = localMemoryRequirements.getMemoryBudgetInFrames();
         MergeJoinOperatorDescriptor opDesc = new MergeJoinOperatorDescriptor(spec, memSizeInFrames, keysLeft, keysRight,
                 recordDescriptor, comparatorFactories);
 
